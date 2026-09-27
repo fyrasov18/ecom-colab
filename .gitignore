@@ -37,4 +37,5 @@ next-env.d.ts
 /ids.txt
 /setup*.log
 /*_out.txt
+verify_tsc.txt
 
