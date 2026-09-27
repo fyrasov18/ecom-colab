@@ -31,7 +31,12 @@ function Login($email, $password) {
           '&callbackUrl=%2F&json=true'
   $r = Invoke-WebRequest "$base/api/auth/callback/credentials" -Method Post -Body $body `
     -ContentType 'application/x-www-form-urlencoded' -WebSession $s -UseBasicParsing
-  return @{ session = $s; ok = ($r.StatusCode -eq 200) }
+
+  # The HTTP status is NOT a valid success signal: NextAuth answers 200 even for
+  # a rejected sign-in (it re-renders /login?error=CredentialsSignin). The only
+  # trustworthy check is whether a session cookie was actually issued.
+  $hasSession = ($s.Cookies.GetCookies($base) | Where-Object { $_.Name -like '*session*' }).Count -gt 0
+  return @{ session = $s; ok = $hasSession }
 }
 
 $ids = Get-Ids
