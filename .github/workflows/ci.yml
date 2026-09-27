@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# A new push to the same branch cancels the previous in-flight run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Non-production placeholders. The settlement-cron tests override
+  # CRON_SECRET themselves, and no real secret is ever needed in CI.
+  AUTH_SECRET: ci-only-not-a-real-secret-0000000000000000000000000000
+  AUTH_TRUST_HOST: "true"
+  NEXTAUTH_URL: http://localhost:3000
+
+jobs:
+  quality:
+    name: Lint, types, unit tests, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        # `allowScripts` in package.json already whitelists prisma / esbuild /
+        # unrs-resolver, so their postinstalls run without an interactive
+        # `npm approve-scripts` (which cannot be used on a runner).
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+  integration:
+    name: Integration tests (real PostgreSQL)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ecomcolab
+          POSTGRES_PASSWORD: ecomcolab
+          POSTGRES_DB: ecomcolab
+        # 5433 on the runner keeps parity with the documented local setup
+        # (a local PostgreSQL may already own 5432).
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U ecomcolab -d ecomcolab"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://ecomcolab:ecomcolab@localhost:5433/ecomcolab?schema=public
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Push schema
+        run: npx prisma db push --skip-generate
+
+      - name: Seed baseline data
+        # finance.int.test.ts pins the settings it depends on, but seeding keeps
+        # the fixtures (partners, products) that the other suites reuse.
+        run: npm run db:seed
+
+      - name: Integration tests
+        run: npm run test:int

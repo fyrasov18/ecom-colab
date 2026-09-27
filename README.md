@@ -180,6 +180,20 @@ Règles : la logique métier vit dans `src/modules/**/service.ts` (jamais dans l
 - **Isolation en lecture** : `markAsRead` / `markAllAsRead` vérifiés contre la
   tentative de marquer la notification d'un autre, et la pagination vérifiée
   bornée au slice de l'appelant (avec un test sur le clamp 5..50).
+- **CI GitHub Actions** (`.github/workflows/ci.yml`) — deux jobs déclenchés à
+  chaque push / PR sur `main` :
+  - `quality` : `npm ci` → `prisma generate` → `tsc --noEmit` → tests
+    unitaires → `npm run build` ;
+  - `integration` : service conteneur `postgres:16-alpine` (port 5433),
+    `prisma db push` → `db:seed` → `npm run test:int`.
+  - `concurrency` annule le run précédent sur la même branche.
+  - La séquence du job `integration` a été **rejouée localement sur une base
+    vide**, pour valider ce que le runner fera réellement.
+- **Correction de `package.json`** : `allowScripts` approuvait
+  `prisma@7.10.0` / `@prisma/engines@7.10.0` alors que le projet est figé sur
+  **6.19.3** (cf. `setup2.ps1`). Un `npm ci` propre bloquait donc le
+  postinstall de Prisma — invisible en local, puisque l'approbation avait déjà
+  été faite à la main. Sans ce correctif, le job CI casse à l'installation.
 
 
 ## Tests
