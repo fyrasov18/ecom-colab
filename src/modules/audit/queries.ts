@@ -51,9 +51,11 @@ export async function listAuditLogs(filters: AuditFilters = {}) {
     prisma.auditLog.count({ where }),
     prisma.auditLog.findMany({
       where,
+      // id tie-breaker: keeps a total, stable order across OFFSET pages when
+      // rows share a createdAt millisecond (otherwise rows can repeat/skip).
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       skip,
       take: pageSize,
-      orderBy: { createdAt: "desc" },
       include: {
         actor: {
           select: {

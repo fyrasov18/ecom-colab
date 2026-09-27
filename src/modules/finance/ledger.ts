@@ -324,7 +324,8 @@ export async function listLedgerTransactions(opts: {
   const [items, total] = await Promise.all([
     prisma.financialTransaction.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      // id tie-breaker: stable total order across pages on createdAt ties.
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       skip: (page - 1) * pageSize,
       take: pageSize,
       include: {
