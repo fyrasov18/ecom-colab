@@ -27,7 +27,9 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          # Node 24 (Active LTS). vitest 5 requires ^22.12.0 || ^24 || >=26, and
+          # Node 20 is end-of-life, so the runner tracks a supported runtime.
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
@@ -77,7 +79,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
