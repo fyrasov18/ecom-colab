@@ -103,7 +103,7 @@ Règles : la logique métier vit dans `src/modules/**/service.ts` (jamais dans l
 - **Cycle de vie des retraits (`Withdrawal`)** :
   - Statuts : `REQUESTED` → `APPROVED` → `PAID` (ou `REJECTED`).
   - Le montant retirable est strictement basé sur le solde `AVAILABLE` déduit des demandes déjà en cours (`drawable = availableBalance - activeRequests`). Les gains en attente (`PENDING`) ne sont jamais retirables.
-  - Minimum de retrait configurable via `MIN_WITHDRAWAL_AMOUNT` (défaut : 50 DT).
+  - Minimum de retrait configurable via `MIN_WITHDRAWAL_AMOUNT` (défaut : 100 DT).
   - Débit réel appliqué au `availableBalance` lors du passage à `PAID` avec génération de la transaction `WITHDRAWAL` correspondante.
 - **Interfaces & Pages** :
   - `/finance` (Admin) : vue d'ensemble du ledger, filtres par type/statut/partenaire, validation/approbation/rejet/paiement des demandes de retrait, audit complet.
@@ -162,14 +162,31 @@ Règles : la logique métier vit dans `src/modules/**/service.ts` (jamais dans l
   historique de notifications authentique (audit trail inclus) au lieu de
   lignes insérées à la main.
 
-Prochaine phase : **Phase 8 — Durcissement, tests d'intégration et CI**.
+**Phase 8 — Durcissement & tests d'intégration** : en cours.
+
+- **Atomicité des notifications prouvée** (`tests/integration/notifications.int.test.ts`,
+  18 tests) — c'était jusqu'ici une affirmation, pas une garantie vérifiée :
+  - une notification écrite via le client de transaction **est annulée** si
+    l'opération métier échoue (et survit si elle est écrite hors transaction,
+    ce qui explique pourquoi le client `tx` est passé partout) ;
+  - une transition refusée ne laisse **ni notification, ni ligne d'historique,
+    ni trace d'audit** derrière elle ;
+  - chaque audience est vérifiée : un changement de statut ne notifie
+    que le partenaire concerné (ni l'opérateur, ni un autre partenaire) ;
+  - un gain annulé par un retour produit bien **deux** notifications
+    distinctes (statut + impact financier) ;
+  - la règle anti-saturation du stock est validée en base : alerte au
+    franchissement du seuil, silence ensuite.
+- **Isolation en lecture** : `markAsRead` / `markAllAsRead` vérifiés contre la
+  tentative de marquer la notification d'un autre, et la pagination vérifiée
+  bornée au slice de l'appelant (avec un test sur le clamp 5..50).
 
 
 ## Tests
 
 ```bash
 npm test                # unitaires (116 tests Vitest)
-npm run test:int        # intégration DB réelle (26 tests Vitest)
+npm run test:int        # intégration DB réelle (44 tests Vitest)
 npm run db:finance-seed # jeu d'essai financier (transactions, retraits, portefeuilles)
 # smoke HTTP (serveur lancé) :
 npx tsx scripts/pick-ids.ts
