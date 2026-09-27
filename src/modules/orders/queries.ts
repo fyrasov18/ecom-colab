@@ -62,7 +62,8 @@ export async function listOrders(filters: OrderListFilters) {
     prisma.order.count({ where }),
     prisma.order.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      // id tie-breaker: stable total order across pages on createdAt ties.
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
       include: {
@@ -89,7 +90,8 @@ export async function listPartnerOrders(
     prisma.order.count({ where }),
     prisma.order.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      // id tie-breaker: stable total order across pages on createdAt ties.
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
       include: {

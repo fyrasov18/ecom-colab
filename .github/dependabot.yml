@@ -1,0 +1,15 @@
+# Keeps dependencies and CI actions on supported versions.
+# PRs from Dependabot trigger the same required CI checks as any other PR.
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
