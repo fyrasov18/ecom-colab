@@ -28,6 +28,7 @@ const serviceMock = {
   finishSession: vi.fn(),
   applyAnswer: vi.fn(),
   createProductDraft: vi.fn(),
+  recordUpdate: vi.fn(),
 };
 
 // `vi.mock` is hoisted above these consts, so the factories reference the mocks
@@ -55,6 +56,7 @@ vi.mock("@/modules/telegram/service", () => ({
   finishSession: (...a: unknown[]) => serviceMock.finishSession(...a),
   applyAnswer: (...a: unknown[]) => serviceMock.applyAnswer(...a),
   createProductDraft: (...a: unknown[]) => serviceMock.createProductDraft(...a),
+  recordUpdate: (...a: unknown[]) => serviceMock.recordUpdate(...a),
 }));
 
 vi.mock("@/lib/rate-limit", () => ({
@@ -91,7 +93,10 @@ beforeEach(() => {
   vi.clearAllMocks();
   process.env.TELEGRAM_WEBHOOK_SECRET = SECRET;
   delete process.env.TELEGRAM_BOT_TOKEN;
+  // The route records idempotency through the domain module (routes must not
+  // touch Prisma directly), so these assert on the service seam.
   prismaMock.telegramUpdate.create.mockResolvedValue({ id: "u1" });
+  serviceMock.recordUpdate.mockResolvedValue(true);
   serviceMock.isAuthorized.mockResolvedValue(true);
   serviceMock.getActiveSession.mockResolvedValue(null);
   serviceMock.startSession.mockResolvedValue({ id: "s1" });
@@ -129,14 +134,13 @@ describe("Telegram webhook — authentication", () => {
   it("returns 400 on malformed JSON (before any DB write)", async () => {
     const res = await POST(req("{not json", authed));
     expect(res.status).toBe(400);
-    expect(prismaMock.telegramUpdate.create).not.toHaveBeenCalled();
+    expect(serviceMock.recordUpdate).not.toHaveBeenCalled();
   });
 });
 describe("Telegram webhook — idempotency", () => {
   it("treats a repeated update_id as a duplicate and does nothing else", async () => {
-    prismaMock.telegramUpdate.create.mockRejectedValueOnce(
-      new Error("Unique constraint failed"),
-    );
+    // recordUpdate() returns false when the update_id was already seen.
+    serviceMock.recordUpdate.mockResolvedValueOnce(false);
     const res = await POST(req(update(99, "/newproduct"), authed));
     expect(res.status).toBe(200);
     expect((await res.json()).duplicate).toBe(true);
@@ -147,8 +151,10 @@ describe("Telegram webhook — idempotency", () => {
 
   it("records the update before processing", async () => {
     await POST(req(update(100, "/start"), authed));
-    expect(prismaMock.telegramUpdate.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ updateId: "100", telegramUserId: "555" }),
+    expect(serviceMock.recordUpdate).toHaveBeenCalledWith({
+      updateId: "100",
+      telegramUserId: "555",
+      kind: "message",
     });
   });
 });
@@ -177,11 +183,7 @@ describe("Telegram webhook — commands", () => {
     serviceMock.getActiveSession.mockResolvedValue({ id: "s9", step: "NAME" });
     const res = await POST(req(update(301, "/cancel"), authed));
     expect((await res.json()).action).toBe("cancel");
-    expect(serviceMock.finishSession).toHaveBeenCalledWith(
-      expect.anything(),
-      "s9",
-      "CANCELLED",
-    );
+    expect(serviceMock.finishSession).toHaveBeenCalledWith("s9", "CANCELLED");
   });
 });
 

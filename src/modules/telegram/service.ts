@@ -115,14 +115,15 @@ export async function revokeTelegramUser(telegramUserId: string, actorId: string
 }
 /** Current ACTIVE, unexpired session — or null. Expired rows are ignored. */
 /**
- * These helpers accept an explicit transaction client so they can join a
- * caller's transaction. Route handlers omit the argument and fall back to the
- * shared client — keeping `@/lib/prisma` out of `src/app/**` (eslint guard).
+ * These helpers accept an OPTIONAL trailing transaction client so they can join
+ * a caller's transaction. Route handlers simply omit it and get the shared
+ * client — which keeps `@/lib/prisma` out of `src/app/**` (the eslint guard that
+ * forbids direct Prisma use in routes and components).
  */
 export async function getActiveSession(
-  db: Db = prisma,
   telegramUserId: string,
-  now = new Date(),
+  now: Date = new Date(),
+  db: Db = prisma,
 ) {
   return db.telegramSession.findFirst({
     where: { telegramUserId, status: "ACTIVE", expiresAt: { gt: now } },
@@ -130,7 +131,10 @@ export async function getActiveSession(
   });
 }
 
-export async function startSession(db: Db = prisma, telegramUserId: string) {
+export async function startSession(
+  telegramUserId: string,
+  db: Db = prisma,
+) {
   // Only one live conversation per user: an existing one is replaced, not stacked.
   await db.telegramSession.updateMany({
     where: { telegramUserId, status: "ACTIVE" },
@@ -148,10 +152,10 @@ export async function startSession(db: Db = prisma, telegramUserId: string) {
 
 /** Close the session; pass productId to link the created DRAFT. */
 export async function finishSession(
-  db: Db = prisma,
   sessionId: string,
   status: "COMPLETED" | "CANCELLED",
   productId?: string,
+  db: Db = prisma,
 ) {
   return db.telegramSession.update({
     where: { id: sessionId },
@@ -161,9 +165,9 @@ export async function finishSession(
 
 /** Store one answer on the session and return the next step. */
 export async function applyAnswer(
-  db: Db = prisma,
   session: { id: string; step: string; data?: unknown },
   raw: string,
+  db: Db = prisma,
 ): Promise<{ ok: true; step: TelegramStep } | { ok: false; error: string }> {
   if (!isKnownStep(session.step) || session.step === "IDLE") {
     return { ok: false, error: "Aucune saisie en cours." };
@@ -263,7 +267,7 @@ export async function createProductDraft(
     });
 
     if (meta.sessionId) {
-      await finishSession(tx, meta.sessionId, "COMPLETED", created.id);
+      await finishSession(meta.sessionId, "COMPLETED", created.id, tx);
     }
 
     await notifyBackOffice(tx, {

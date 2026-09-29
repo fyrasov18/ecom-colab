@@ -174,13 +174,13 @@ export async function POST(request: Request) {
     }
 
     if (command?.command === "cancel") {
-      const open = await getActiveSession(undefined, telegramUserId);
-      if (open) await finishSession(undefined, open.id, "CANCELLED");
+      const open = await getActiveSession(telegramUserId);
+      if (open) await finishSession(open.id, "CANCELLED");
       await sendMessage(chatId, "Saisie annulée.");
       return NextResponse.json({ ok: true, action: "cancel" });
     }
 
-    const session = await getActiveSession(undefined, telegramUserId);
+    const session = await getActiveSession(telegramUserId);
     const compact = parseCompactProduct(command?.args || text);
 
     // Compact message (alone, or sent mid-wizard) creates the draft directly.
@@ -194,7 +194,7 @@ export async function POST(request: Request) {
     }
 
     if (command?.command === "newproduct" || !session) {
-      await startSession(undefined, telegramUserId);
+      await startSession(telegramUserId);
       await sendMessage(chatId, WIZARD_PROMPTS.NAME);
       return NextResponse.json({ ok: true, action: "wizard_started" });
     }
@@ -205,7 +205,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, step: session.step });
     }
 
-    const advanced = await applyAnswer(undefined, session, text);
+    const advanced = await applyAnswer(session, text);
     if (!advanced.ok) {
       await sendMessage(chatId, advanced.error);
       return NextResponse.json({ ok: false, error: advanced.error });
