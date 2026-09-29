@@ -37,10 +37,19 @@ enum SocialPlatform {
 }
 
 enum ProductStatus {
+  // Draft = created by an ingestion channel (Telegram) and awaiting Admin
+  // review. It is deliberately NOT sellable: it must be reviewed before ACTIVE.
+  DRAFT
   ACTIVE
   INACTIVE
   OUT_OF_STOCK
   ARCHIVED
+}
+
+/** Where a product record originated. ADMIN = created in the dashboard. */
+enum ProductSource {
+  ADMIN
+  TELEGRAM
 }
 
 enum MediaType {
@@ -57,6 +66,9 @@ enum MarketingAssetKind {
   SCRIPT
   FAQ
   CREATIVE
+  OFFER
+  SELLING_POINT
+  OBJECTION_ANSWER
 }
 
 enum PartnerProductStatus {
@@ -167,6 +179,12 @@ model Partner {
   defaultCommissionValue Decimal       @default(60) @db.Decimal(12, 3)
   notes        String?
 
+  /// Optional performance tier. NULL until an Admin assigns one — while NULL the
+  /// existing commission resolution chain stays authoritative, so no historical
+  /// order is ever recalculated by introducing levels.
+  performanceLevelId String?
+  performanceLevel   PerformanceLevel? @relation(fields: [performanceLevelId], references: [id], onDelete: SetNull)
+
   socialAccounts    PartnerSocialAccount[]
   assignedProducts  PartnerProduct[]
   orders            Order[]
@@ -196,6 +214,38 @@ model PartnerSocialAccount {
   @@index([partnerId])
 }
 
+// ───────────────────────── Performance levels ─────────────────────────
+//
+// Profit-share architecture. A level carries the share percentage applied to
+// the order's profit pool, plus a free-form `criteria` document so Admin can
+// define progression rules later WITHOUT a code change.
+//
+// Deliberately NOT seeded: the levels and their percentages are a business
+// decision that has not been finalised yet (see docs/phase-5-6-report.md).
+// Until an Admin configures levels, `Partner.performanceLevelId` stays NULL
+// and the existing commission resolution chain remains authoritative.
+
+model PerformanceLevel {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+  /// Percentage of the profit pool routed to the partner (0–100, validated).
+  sharePercentage Decimal @db.Decimal(5, 2)
+  /// Free-form criteria document (thresholds, windows, weights). Intentionally
+  /// untyped so the criteria can evolve without a migration.
+  criteria    Json?
+  isActive    Boolean @default(true)
+  /// Ascending priority: higher sortOrder = higher tier.
+  sortOrder   Int     @default(0)
+
+  partners    Partner[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
 // ───────────────────────── Catalog ─────────────────────────
 
 model Product {
@@ -213,10 +263,23 @@ model Product {
   commissionType    CommissionType?
   commissionValue   Decimal?      @db.Decimal(12, 3)
 
+  // Ingestion provenance. `source` stays ADMIN for anything created in the
+  // dashboard, so the column is safe to filter on without backfilling.
+  source            ProductSource @default(ADMIN)
+  // Free-text references supplied by a supplier / ingestion channel. Optional
+  // by design: they are matching hints, never a business key.
+  sku               String?
+  category          String?
+  supplierRef       String?
+  // Set when the record came from an ingestion channel, so the audit trail can
+  // point back to the exact conversation that produced it.
+  ingestedFrom      String?
+
   media           ProductMedia[]
   marketingAssets ProductMarketingAsset[]
   partnerAssignations PartnerProduct[]
   orderItems      OrderItem[]
+  telegramSessions TelegramSession[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -225,12 +288,13 @@ model Product {
 }
 
 model ProductMedia {
-  id        String    @id @default(cuid())
-  productId String
-  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-  type      MediaType
-  url       String
-  sortOrder Int       @default(0)
+  id              String    @id @default(cuid())
+  productId       String
+  product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  type            MediaType
+  googleDriveUrl  String
+  title           String?
+  sortOrder       Int       @default(0)
 
   createdAt DateTime @default(now())
 
@@ -324,6 +388,13 @@ model Order {
   partnerEarning    Decimal         @db.Decimal(12, 3)
   platformShare     Decimal         @db.Decimal(12, 3)
   adjustmentsTotal  Decimal         @default(0) @db.Decimal(12, 3)
+
+  // Performance-tier provenance. NULL on every order created before levels
+  // existed — they remain valid, immutable history. When a partner holds a
+  // PerformanceLevel, its name and the share % actually applied are copied
+  // here at snapshot time, so a later tier change can never rewrite the past.
+  performanceLevelName String?
+  partnerSharePercentage Decimal?      @db.Decimal(5, 2)
 
   // ── Settlement ──
   deliveredAt     DateTime?
@@ -519,6 +590,65 @@ model SystemSetting {
   updatedAt DateTime @updatedAt
 
   @@index([category])
+}
+
+// ───────────────────────── Telegram ingestion ─────────────────────────
+//
+// Telegram is an INGESTION CHANNEL, never a second product database: it
+// produces DRAFT products that an Admin must review before they can go ACTIVE.
+//
+// Authorisation is keyed on the stable `telegramUserId`, never on a username
+// (usernames are mutable and can be handed to someone else).
+
+model TelegramAuthorizedUser {
+  id              String    @id @default(cuid())
+  /// Stable Telegram identity (numeric id). Never the @username.
+  telegramUserId  String    @unique
+  displayName     String?
+  status          UserStatus @default(ACTIVE)
+  authorizedAt    DateTime  @default(now())
+  revokedAt       DateTime?
+  /// Who inside E-COM COLAB granted this access.
+  authorizedById  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+model TelegramSession {
+  id              String  @id @default(cuid())
+  telegramUserId  String
+  /// Current wizard step, or IDLE once the conversation is finished.
+  step            String  @default("IDLE")
+  /// Partially collected product data; validated on completion.
+  data            Json?
+  status          String  @default("ACTIVE")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  /// Hard expiry: an abandoned conversation must never resurrect.
+  expiresAt       DateTime
+
+  productId       String?
+  product         Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([telegramUserId, status])
+  @@index([expiresAt])
+}
+
+/// Processed-update ledger. The unique update_id is what makes the webhook
+/// idempotent: Telegram retries deliveries, and a retry must not create a
+/// second product.
+model TelegramUpdate {
+  id          String   @id @default(cuid())
+  /// Telegram's per-update identifier.
+  updateId    String   @unique
+  telegramUserId String?
+  kind        String
+  processedAt DateTime @default(now())
+
+  @@index([telegramUserId])
 }
 
 

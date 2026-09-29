@@ -11,11 +11,13 @@ import {
 import { productStatusSchema } from "@/modules/products/schemas";
 import {
   addProductMedia,
+  updateProductMedia,
+  reorderProductMedia,
   createMarketingAsset,
   deleteMarketingAsset,
   deleteProductMedia,
 } from "@/modules/marketing/service";
-import { saveUpload } from "@/lib/storage";
+import { isValidGoogleDriveUrl } from "@/lib/google-drive";
 
 export type ActionState = {
   ok: boolean;
@@ -96,7 +98,7 @@ export async function changeProductStatus(
   if (id) revalidatePath(`/produits/${id}`);
 }
 
-export async function uploadProductMedia(
+export async function addGoogleDriveMedia(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
@@ -104,20 +106,94 @@ export async function uploadProductMedia(
   const productId = str(formData.get("productId"));
   const typeRaw = str(formData.get("type")) || "IMAGE";
   const type = z.enum(["IMAGE", "VIDEO", "THUMBNAIL"]).parse(typeRaw);
-  const file = formData.get("file");
+  const googleDriveUrl = str(formData.get("googleDriveUrl"));
+  const title = str(formData.get("title")) || undefined;
 
-  if (!(file instanceof File) || file.size === 0) {
-    return { ok: false, error: "Sélectionnez un fichier." };
+  if (!googleDriveUrl) {
+    return { ok: false, error: "Lien Google Drive requis." };
+  }
+
+  if (!isValidGoogleDriveUrl(googleDriveUrl)) {
+    return {
+      ok: false,
+      error: "Lien Google Drive invalide. Utilisez un lien de partage (ex: https://drive.google.com/file/d/.../view).",
+    };
   }
 
   try {
-    const kind = type === "VIDEO" ? "video" : "image";
-    const { url } = await saveUpload(file, { subdir: "products", kind });
-    await addProductMedia({ productId, type, url }, user.id);
+    await addProductMedia(
+      {
+        productId,
+        type,
+        googleDriveUrl,
+        title,
+      },
+      user.id,
+    );
     revalidatePath(`/produits/${productId}`);
-    return { ok: true, message: "Média ajouté." };
+    revalidatePath("/catalogue");
+    revalidatePath(`/catalogue/${productId}`);
+    return { ok: true, message: "Média Google Drive ajouté avec succès." };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Upload impossible." };
+    return { ok: false, error: e instanceof Error ? e.message : "Ajout impossible." };
+  }
+}
+
+export async function editGoogleDriveMedia(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const user = await requireSession(["SUPER_ADMIN", "ADMIN"]);
+  const id = str(formData.get("id"));
+  const productId = str(formData.get("productId"));
+  const typeRaw = str(formData.get("type")) || "IMAGE";
+  const type = z.enum(["IMAGE", "VIDEO", "THUMBNAIL"]).parse(typeRaw);
+  const googleDriveUrl = str(formData.get("googleDriveUrl"));
+  const title = str(formData.get("title"));
+
+  if (!googleDriveUrl) {
+    return { ok: false, error: "Lien Google Drive requis." };
+  }
+
+  if (!isValidGoogleDriveUrl(googleDriveUrl)) {
+    return {
+      ok: false,
+      error: "Lien Google Drive invalide.",
+    };
+  }
+
+  try {
+    await updateProductMedia(
+      id,
+      {
+        type,
+        googleDriveUrl,
+        title: title || undefined,
+      },
+      user.id,
+    );
+    revalidatePath(`/produits/${productId}`);
+    revalidatePath("/catalogue");
+    revalidatePath(`/catalogue/${productId}`);
+    return { ok: true, message: "Média modifié avec succès." };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Modification impossible." };
+  }
+}
+
+export async function reorderProductMediaAction(
+  productId: string,
+  mediaIds: string[],
+): Promise<ActionState> {
+  const user = await requireSession(["SUPER_ADMIN", "ADMIN"]);
+  try {
+    await reorderProductMedia(productId, mediaIds, user.id);
+    revalidatePath(`/produits/${productId}`);
+    revalidatePath("/catalogue");
+    revalidatePath(`/catalogue/${productId}`);
+    return { ok: true, message: "Ordre des médias mis à jour." };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Réorganisation impossible." };
   }
 }
 
@@ -127,6 +203,8 @@ export async function removeProductMedia(formData: FormData): Promise<void> {
   const productId = str(formData.get("productId"));
   await deleteProductMedia(id, user.id);
   revalidatePath(`/produits/${productId}`);
+  revalidatePath("/catalogue");
+  revalidatePath(`/catalogue/${productId}`);
 }
 
 export async function addMarketingAsset(

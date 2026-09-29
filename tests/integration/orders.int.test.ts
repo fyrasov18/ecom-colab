@@ -151,11 +151,14 @@ describe("Order lifecycle integration (spec §33)", () => {
     expect(order.partnerConfirmedAt).not.toBeNull();
     expect(order.orderNumber).toBeGreaterThan(1000);
 
-    // Snapshot math: revenue120 − product40 − packaging2 − delivery7 =71
-    expect(order.contribution.toFixed(3)).toBe("71.000");
+    // The snapshot is derived from the PRODUCT price (50 × 2), never from the
+    // `sellingPrice` the caller sends — a partner cannot inflate their earning.
+    // revenue 100 − product 40 − packaging 2 − delivery 7 = 51
+    expect(order.unitSellingPrice.toFixed(3)).toBe("50.000");
+    expect(order.contribution.toFixed(3)).toBe("51.000");
     // Partner default commission =60% (model default)
-    expect(order.partnerEarning.toFixed(3)).toBe("42.600");
-    expect(order.platformShare.toFixed(3)).toBe("28.400");
+    expect(order.partnerEarning.toFixed(3)).toBe("30.600");
+    expect(order.platformShare.toFixed(3)).toBe("20.400");
     expect(order.partnerEarning.plus(order.platformShare).toFixed(3)).toBe(
       order.contribution.toFixed(3),
     );
@@ -168,6 +171,24 @@ describe("Order lifecycle integration (spec §33)", () => {
     });
     expect(history?.newStatus).toBe("CONFIRMED");
     expect(history?.reason).toContain("Je confirme que le client a accepté");
+  });
+
+  it("#1b ignores a client-supplied sellingPrice (price tampering)", async () => {
+    // Spec §42/§47: never trust client-supplied money. A partner posting
+    // sellingPrice: 9999 must still be billed at the product price, so they
+    // cannot manufacture a fake profit pool / earning for themselves.
+    const order = await createOrder(
+      orderInput({ sellingPrice: 9999, phone: "22998877" }),
+      { partnerId: partnerAId, actorId: partnerAUserId },
+    );
+
+    expect(order.unitSellingPrice.toFixed(3)).toBe("50.000");
+    // 50 × 2 = 100 revenue − 40 product − 2 packaging − 7 delivery = 51
+    expect(order.contribution.toFixed(3)).toBe("51.000");
+    // A tampered price must not produce a bigger earning than the real one.
+    expect(Number(order.partnerEarning.toFixed(3))).toBe(30.6);
+
+    await prisma.order.delete({ where: { id: order.id } });
   });
 
   it("#2 REJECTS creation without the confirmation checkbox", async () => {

@@ -2,71 +2,154 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ============================================================
+   E-COM COLAB - DESIGN TOKENS
+   Colour, radius and type are defined here and nowhere else.
+   Components consume the SEMANTIC layer (bg-primary, text-muted-
+   foreground). The RAMP layer (brand-600, ink-200, success-700)
+   is for charts, badges and precise brand references.
+   ============================================================ */
+
 :root {
-  --background: oklch(0.985 0.002 240);
-  --foreground: oklch(0.16 0.02 260);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.16 0.02 260);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.16 0.02 260);
-  --primary: oklch(0.45 0.17 262);
-  --primary-foreground: oklch(0.98 0.005 240);
-  --secondary: oklch(0.95 0.008 245);
-  --secondary-foreground: oklch(0.25 0.02 260);
-  --muted: oklch(0.955 0.006 245);
-  --muted-foreground: oklch(0.5 0.015 255);
-  --accent: oklch(0.94 0.02 262);
-  --accent-foreground: oklch(0.32 0.1 262);
-  --destructive: oklch(0.55 0.2 25);
-  --destructive-foreground: oklch(0.98 0.005 240);
-  --border: oklch(0.91 0.006 245);
-  --input: oklch(0.9 0.006 245);
-  --ring: oklch(0.45 0.17 262);
-  --success: oklch(0.55 0.13 155);
-  --warning: oklch(0.7 0.14 75);
-  --chart-1: oklch(0.55 0.17 262);
-  --chart-2: oklch(0.65 0.15 155);
-  --chart-3: oklch(0.72 0.14 75);
-  --chart-4: oklch(0.6 0.18 320);
-  --chart-5: oklch(0.65 0.15 200);
-  --radius: 0.625rem;
+  /* Brand ramp */
+  --brand-50: #eff6ff;
+  --brand-100: #dbeafe;
+  --brand-500: #3b82f6;
+  --brand-600: #2563eb;
+  --brand-700: #1d4ed8;
+  --brand-800: #1e3a8a;
+  --brand-900: #172554;
+
+  /* Neutral ramp */
+  --ink-50: #f8fafc;
+  --ink-100: #f3f4f6;
+  --ink-200: #e5e7eb;
+  --ink-300: #d1d5db;
+  --ink-400: #9ca3af;
+  --ink-500: #6b7280;
+  --ink-600: #4b5563;
+  --ink-700: #374151;
+  --ink-800: #1f2937;
+  --ink-900: #111827;
+  --ink-950: #0f172a;
+
+  /* Success */
+  --success-50: #f0fdf4;
+  --success-100: #dcfce7;
+  --success-600: #16a34a;
+  --success-700: #15803d;
+
+  /* Warning */
+  --warning-50: #fffbeb;
+  --warning-100: #fef3c7;
+  --warning-600: #d97706;
+  --warning-700: #b45309;
+
+  /* Danger */
+  --danger-50: #fef2f2;
+  --danger-100: #fee2e2;
+  --danger-600: #dc2626;
+  --danger-700: #b91c1c;
+
+  /* Info */
+  --info-50: #f0f9ff;
+  --info-100: #e0f2fe;
+  --info-600: #0284c7;
+  --info-700: #0369a1;
+
+  /* Surfaces */
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --muted: #f3f4f6;
+  --muted-foreground: #4b5563;
+
+  /* Actions */
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f4f6;
+  --secondary-foreground: #1f2937;
+  --accent: #eff6ff;
+  --accent-foreground: #1d4ed8;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+
+  /* Lines and focus */
+  --border: #e5e7eb;
+  --input: #d1d5db;
+  --ring: #2563eb;
+
+  /* Tone aliases used by status colours */
+  --success: #16a34a;
+  --warning: #d97706;
+  --info: #0284c7;
+
+  /* Chart series */
+  --chart-1: #2563eb;
+  --chart-2: #16a34a;
+  --chart-3: #d97706;
+  --chart-4: #1e3a8a;
+  --chart-5: #0284c7;
+
+  /* Radius scale: sm 6 / md 8 / lg 12 / xl 16 */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius: 8px;
 }
 
 .dark {
-  --background: oklch(0.15 0.015 260);
-  --foreground: oklch(0.97 0.003 240);
-  --card: oklch(0.19 0.015 260);
-  --card-foreground: oklch(0.97 0.003 240);
-  --popover: oklch(0.19 0.015 260);
-  --popover-foreground: oklch(0.97 0.003 240);
-  --primary: oklch(0.62 0.15 262);
-  --primary-foreground: oklch(0.15 0.02 262);
-  --secondary: oklch(0.25 0.015 260);
-  --secondary-foreground: oklch(0.97 0.003 240);
-  --muted: oklch(0.24 0.015 260);
-  --muted-foreground: oklch(0.68 0.01 255);
-  --accent: oklch(0.28 0.03 262);
-  --accent-foreground: oklch(0.85 0.06 262);
-  --destructive: oklch(0.62 0.19 25);
-  --destructive-foreground: oklch(0.97 0.003 240);
-  --border: oklch(0.28 0.015 260);
-  --input: oklch(0.3 0.015 260);
-  --ring: oklch(0.62 0.15 262);
+  --background: #0f172a;
+  --foreground: #f8fafc;
+  --card: #111827;
+  --card-foreground: #f8fafc;
+  --popover: #111827;
+  --popover-foreground: #f8fafc;
+  --muted: #1f2937;
+  --muted-foreground: #9ca3af;
+
+  --primary: #3b82f6;
+  --primary-foreground: #0f172a;
+  --secondary: #1f2937;
+  --secondary-foreground: #f3f4f6;
+  --accent: #172554;
+  --accent-foreground: #dbeafe;
+  --destructive: #ef4444;
+  --destructive-foreground: #0f172a;
+
+  --border: #1f2937;
+  --input: #374151;
+  --ring: #3b82f6;
+
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --info: #38bdf8;
+
+  --chart-1: #3b82f6;
+  --chart-2: #22c55e;
+  --chart-3: #f59e0b;
+  --chart-4: #60a5fa;
+  --chart-5: #38bdf8;
 }
 
 @theme inline {
+  /* Semantic layer */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
@@ -76,16 +159,83 @@
   --color-ring: var(--ring);
   --color-success: var(--success);
   --color-warning: var(--warning);
+  --color-info: var(--info);
+
+  /* Brand ramp */
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
+
+  /* Neutral ramp */
+  --color-ink-50: var(--ink-50);
+  --color-ink-100: var(--ink-100);
+  --color-ink-200: var(--ink-200);
+  --color-ink-300: var(--ink-300);
+  --color-ink-400: var(--ink-400);
+  --color-ink-500: var(--ink-500);
+  --color-ink-600: var(--ink-600);
+  --color-ink-700: var(--ink-700);
+  --color-ink-800: var(--ink-800);
+  --color-ink-900: var(--ink-900);
+  --color-ink-950: var(--ink-950);
+
+  /* Semantic scale (badges, subtle surfaces) */
+  --color-success-50: var(--success-50);
+  --color-success-100: var(--success-100);
+  --color-success-600: var(--success-600);
+  --color-success-700: var(--success-700);
+  --color-warning-50: var(--warning-50);
+  --color-warning-100: var(--warning-100);
+  --color-warning-600: var(--warning-600);
+  --color-warning-700: var(--warning-700);
+  --color-danger-50: var(--danger-50);
+  --color-danger-100: var(--danger-100);
+  --color-danger-600: var(--danger-600);
+  --color-danger-700: var(--danger-700);
+  --color-info-50: var(--info-50);
+  --color-info-100: var(--info-100);
+  --color-info-600: var(--info-600);
+  --color-info-700: var(--info-700);
+
+  /* Charts */
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+
+  /* Radius */
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+
+  /* Type */
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --text-display: 30px;
+  --text-display--line-height: 1.2;
+  --text-display--font-weight: 700;
+  --text-h2: 24px;
+  --text-h2--line-height: 1.3;
+  --text-h2--font-weight: 700;
+  --text-h3: 20px;
+  --text-h3--line-height: 1.35;
+  --text-h3--font-weight: 600;
+  --text-h4: 16px;
+  --text-h4--line-height: 1.4;
+  --text-h4--font-weight: 600;
+  --text-body-lg: 16px;
+  --text-body-lg--line-height: 24px;
+  --text-body: 14px;
+  --text-body--line-height: 20px;
+  --text-small: 13px;
+  --text-small--line-height: 18px;
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
 }
 
 @layer base {
@@ -94,5 +244,9 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
+  }
+  /* Always-visible keyboard focus (accessibility). */
+  :focus-visible {
+    @apply outline-ring outline-2 outline-offset-2;
   }
 }

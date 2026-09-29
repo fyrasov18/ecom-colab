@@ -7,7 +7,6 @@ import { listNotifications, markAllAsRead, markAsRead, countUnread, Notification
 import { createOrder } from "@/modules/orders/create";
 import { changeOrderStatus } from "@/modules/orders/status";
 import { requestWithdrawal } from "@/modules/finance/withdrawals";
-import { settleDueEarnings } from "@/modules/finance/ledger";
 
 const prisma = new PrismaClient();
 const stamp = Date.now();

@@ -6,7 +6,6 @@ import {
   Bell,
   FilePlus2,
   LayoutDashboard,
-  ListChecks,
   Package,
   PieChart,
   ShoppingCart,

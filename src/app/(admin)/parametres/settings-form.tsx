@@ -6,6 +6,7 @@ import { Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import {
   Card,
   CardContent,
@@ -93,7 +94,7 @@ export function FinanceSettingsForm({
 
           <div className="space-y-2">
             <Label htmlFor="returnCostRule">Règle de coût retour/refus</Label>
-            <select
+            <NativeSelect
               id="returnCostRule"
               name="returnCostRule"
               defaultValue={String(
@@ -101,7 +102,6 @@ export function FinanceSettingsForm({
                   "REVERSE_PENDING_EARNING",
               )}
               disabled={!canEdit}
-              className="flex h-9 w-full rounded-md border border-input bg-card px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
             >
               <option value="REVERSE_PENDING_EARNING">
                 Réverser le gain en attente (défaut, livraison à la plateforme)
@@ -110,9 +110,52 @@ export function FinanceSettingsForm({
                 Réverser le gain + facturer la livraison au partenaire
               </option>
               <option value="NO_COST">Aucun coût partenaire</option>
-            </select>
+            </NativeSelect>
             <p className="text-xs text-muted-foreground">
               Appliquée lors des retours et refus.
+            </p>
+          </div>
+
+          <div className="space-y-2 sm:col-span-3">
+            <Label htmlFor="globalCommissionType">
+              Commission globale par défaut
+            </Label>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <NativeSelect
+                id="globalCommissionType"
+                name="globalCommissionType"
+                defaultValue={String(
+                  (
+                    getValue("finance.global_commission") as
+                      | { commissionType?: string }
+                      | undefined
+                  )?.commissionType ?? "PERCENTAGE",
+                )}
+                disabled={!canEdit}
+              >
+                <option value="PERCENTAGE">Pourcentage (%)</option>
+                <option value="FIXED">Montant fixe (DT)</option>
+              </NativeSelect>
+              <Input
+                id="globalCommissionValue"
+                name="globalCommissionValue"
+                type="number"
+                min={0}
+                step="0.001"
+                defaultValue={Number(
+                  (
+                    getValue("finance.global_commission") as
+                      | { commissionValue?: number }
+                      | undefined
+                  )?.commissionValue ?? 60,
+                )}
+                disabled={!canEdit}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Utilisée uniquement si aucune règle plus précise (assignment →
+              partenaire → produit) ne s&apos;applique. Les commandes existantes
+              conservent la commission figée à leur création.
             </p>
           </div>
 

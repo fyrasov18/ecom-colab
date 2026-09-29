@@ -90,10 +90,12 @@ export async function getLaneOrders(
     prisma.order.count({ where }),
     prisma.order.findMany({
       where,
+      // id as tie-breaker: lanes are FIFO (oldest first) and orders created in
+      // the same millisecond must keep a total order across OFFSET pages.
       orderBy:
         lane.key === "RETURNS"
-          ? { updatedAt: "desc" }
-          : { createdAt: "asc" }, // oldest first = FIFO for ops
+          ? [{ updatedAt: "desc" }, { id: "desc" }]
+          : [{ createdAt: "asc" }, { id: "asc" }], // oldest first = FIFO for ops
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
       include: {

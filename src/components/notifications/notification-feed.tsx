@@ -47,7 +47,15 @@ export function NotificationFeed({
   }
 
   const nowDate = new Date(now);
-  let currentBucket: string | null = null;
+  // Buckets are precomputed rather than tracked by a mutable render variable:
+  // React 19 forbids reassigning a render-scope variable while rendering, and a
+  // day heading is simply the first row of that day group.
+  const buckets = items.map((n) => dayBucket(new Date(n.createdAt), nowDate));
+  const rows = items.map((item, i) => ({
+    item,
+    bucket: buckets[i],
+    showHeading: i === 0 || buckets[i - 1] !== buckets[i],
+  }));
 
   return (
     <div className="space-y-6">
@@ -58,11 +66,7 @@ export function NotificationFeed({
       )}
 
       <ul className="space-y-2">
-        {items.map((n) => {
-          const created = new Date(n.createdAt);
-          const bucket = dayBucket(created, nowDate);
-          const showHeading = bucket !== currentBucket;
-          currentBucket = bucket;
+        {rows.map(({ item: n, bucket, showHeading }) => {
           const isUnread = n.readAt === null;
 
           return (

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { getPartnerAdmin } from "@/modules/partners/service";
+import { listPerformanceLevels } from "@/modules/finance/performance-service";
 import { listProductOptions } from "@/modules/products/service";
 import { getPartnerFinanceCard } from "@/modules/finance/queries";
 import {
@@ -26,6 +27,7 @@ import {
   removeAssignment,
   removePartnerSocial,
 } from "../actions";
+import { changePartnerLevel } from "../../parametres/performance-actions";
 import { AssignProductForm } from "./assign-product-form";
 
 export const metadata: Metadata = { title: "Partenaire" };
@@ -50,10 +52,11 @@ export default async function PartnerDetailPage({
 }) {
   const { id } = await params;
   const user = await requireSession(["SUPER_ADMIN", "ADMIN"]);
-  const [partner, productOptions, finance] = await Promise.all([
+  const [partner, productOptions, finance, levels] = await Promise.all([
     getPartnerAdmin(id),
     listProductOptions(),
     getPartnerFinanceCard(id, { limit: 5 }),
+    listPerformanceLevels(),
   ]);
   if (!partner) notFound();
 
@@ -358,7 +361,64 @@ export default async function PartnerDetailPage({
           </CardContent>
         </Card>
 
-        {/* Assigned products */}
+        {/* Performance level */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Niveau de performance</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {partner.performanceLevel ? (
+              <>
+                <Badge variant="info">
+                  {partner.performanceLevel.name}
+                </Badge>
+                <span className="text-sm text-muted-foreground">
+                  Partage du profit :{" "}
+                  <strong className="text-foreground">
+                    {partner.performanceLevel.sharePercentage.toString()} %
+                  </strong>
+                </span>
+              </>
+            ) : (
+              <Badge variant="secondary">Aucun niveau attribué</Badge>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Les conditions de progression sont configurables depuis Paramètres.
+            Le niveau s&apos;applique uniquement aux nouvelles commandes : les
+            gains déjà calculés restent inchangés.
+          </p>
+          {user.role === "SUPER_ADMIN" && levels.length > 0 && (
+            <form action={changePartnerLevel} className="flex items-end gap-2">
+              <input type="hidden" name="partnerId" value={partner.id} />
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium" htmlFor="perf-level">
+                  Attribuer un niveau
+                </label>
+                <NativeSelect
+                  id="perf-level"
+                  name="performanceLevelId"
+                  defaultValue={partner.performanceLevelId ?? ""}
+                  className="w-56"
+                >
+                  <option value="">— Aucun —</option>
+                  {levels.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.name} ({l.sharePercentage.toString()} %)
+                    </option>
+                  ))}
+                </NativeSelect>
+              </div>
+              <Button type="submit" variant="outline" size="sm">
+                Appliquer
+              </Button>
+            </form>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Assigned products */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Produits assignés</CardTitle>

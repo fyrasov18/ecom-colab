@@ -94,17 +94,14 @@ async function main() {
     });
     const cityKey = rand(Object.keys(CITIES));
     const phone = String(20000000 + Math.floor(Math.random() * 79999999));
-    const variation = 0.9 + Math.random() * 0.2; // ±10 %
-    const sellingPrice = Math.max(
-      Number(product.purchaseCost) + Number(product.deliveryCost) + 1,
-      Math.round(Number(product.sellingPrice) * variation * 1000) / 1000,
-    );
 
+    // No price is passed here on purpose: createOrder derives the selling price
+    // from the Product inside its transaction (spec §42/§47). The seed therefore
+    // cannot drift from the real pricing rules.
     const order = await createOrder(
       {
         productId: product.id,
         quantity: 1 + Math.floor(Math.random() * 3),
-        sellingPrice,
         customerFullName: `${rand(FIRST_NAMES)} ${rand(LAST_NAMES)}`,
         phone,
         governorate: cityKey.replace("_", " "),

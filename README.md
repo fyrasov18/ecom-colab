@@ -19,7 +19,7 @@ docker compose up -d        # PostgreSQL sur le port 5433 (5432 peut être pris 
 npm install
 npm approve-scripts prisma @prisma/engines esbuild unrs-resolver && npm rebuild
 cp .env.example .env        # puis ajuster AUTH_SECRET en production
-npm run db:push             # crée le schéma
+npm run db:migrate          # applique les migrations Prisma (crée le schéma)
 npm run db:seed             # données de développement
 npm run dev                 # http://localhost:3000
 ```
@@ -27,6 +27,37 @@ npm run dev                 # http://localhost:3000
 > Remarque npm (≥ 11.13) : les scripts d'installation des paquets sont bloqués
 > tant qu'ils ne sont pas approuvés (`npm approve-scripts …`). Les paquets
 > Prisma (engines) et en ont besoin pour `prisma generate/db push`.
+
+## Base de données
+
+- **Développement** : `npm run db:migrate` (`prisma migrate dev`) — crée/applique
+  une migration et régénère le client.
+- **Production** : `npx prisma migrate deploy` — applique uniquement les
+  migrations déjà commitées. **Jamais** `migrate reset`, `db push --force-reset`
+  ni `migrate dev` sur une base de production.
+- Vérifier l'absence de dérive entre le schéma et la base :
+  `node scripts/check-drift.cjs` (lit `DATABASE_URL`, ne l'affiche jamais).
+
+> `npm run db:seed` est réservé au développement : il crée des comptes de
+> démonstration à mots de passe connus et **refuse** de s'exécuter si la base
+> n'est pas locale ou si `NODE_ENV=production`.
+
+## Déploiement
+
+GitHub (`main`) → Vercel → PostgreSQL managé, avec un cron horaire pour le
+règlement des gains. Le processus complet (variables d'environnement,
+migrations, création du premier administrateur, cron, vérifications) est
+documenté dans **[docs/deployment.md](docs/deployment.md)**.
+
+Résumé :
+
+```bash
+# Base de production (après avoir renseigné DATABASE_URL côté Vercel)
+npx prisma migrate deploy
+
+# Premier administrateur (mot de passe via variable d'environnement)
+ADMIN_EMAIL=… ADMIN_PASSWORD='…' npx tsx scripts/create-admin.ts
+```
 
 ### Comptes de développement (seed — jamais en production)
 
@@ -42,9 +73,16 @@ npm run dev                 # http://localhost:3000
 |---|---|
 | `npm run dev` | serveur de développement |
 | `npm run build` | build de production (génère Prisma puis compile) |
-| `npm run db:push` | synchronise le schéma Prisma vers la BDD |
+| `npm run lint` | ESLint 9 (config flat `eslint.config.mjs`) — exécuté en CI |
+| `npm run db:migrate` | crée/applique une migration (développement) |
+| `npm run db:migrate:deploy` | applique les migrations sans prompt (CI / production) |
+| `npm run db:migrate:status` | compare la base aux migrations |
 | `npm run db:seed` | seed de développement (idempotent) |
-| `npm test` | tests Vitest (règles métier critiques) |
+| `npm test` | tests Vitest unitaires (règles métier critiques) |
+| `npm run test:int` | tests d'intégration Vitest (base PostgreSQL réelle) |
+
+`npm run db:push` reste disponible pour prototyper un schéma jetable, mais
+`prisma/migrations/**` est désormais la source de vérité (voir CI).
 
 ## Architecture
 
@@ -59,7 +97,37 @@ prisma/           # schema.prisma + seed.ts
 tests/            # Vitest — règles métier critiques
 ```
 
-Règles : la logique métier vit dans `src/modules/**/service.ts` (jamais dans les composants React) ; toutes les permissions sont validées côté serveur ; les montants utilisent `decimal.js`, jamais de flottants.
+Règles : la logique métier vit dans `src/modules/**/service.ts` (jamais dans les composants React) ; toutes les permissions sont validées côté serveur ; les montants utilisent `decimal.js`, jamais de flottants. La frontière « aucune route ne parle à Prisma » n'est plus une convention : `eslint.config.mjs` l'interdit (`no-restricted-imports` sur `@/lib/prisma` pour `src/app/**` et `src/components/**`).
+
+## Socle (fondations) — garanties vérifiées
+
+- **Sessions** : JWT, 12 h absolues + 1 h de rafraîchissement glissant
+  (`src/lib/auth-config.ts`) ; cookie httpOnly / `SameSite=Lax` / `Secure` en
+  HTTPS géré par Auth.js. Un utilisateur passé `DISABLED` ne peut plus se
+  connecter, et une session déjà ouverte expire au plus tard au bout de 12 h
+  (une session JWT n'est pas révocable à chaud — compromis assumé et borné).
+- **Audit d'authentification** : chaque connexion écrit `LOGIN_SUCCEEDED` ou
+  `LOGIN_FAILED` (motif, IP, user-agent) dans le journal d'audit. L'écriture est
+  *best effort* : un échec d'audit ne bloque jamais une connexion valide.
+- **RBAC** : 3 rôles (`SUPER_ADMIN`, `ADMIN`, `PARTNER`) ; garde serveur
+  `requireSession([...])` dans chaque layout et chaque action ; verrouillage des
+  préfixes de routes (admin / partenaire) et redirection `/` → page d'accueil du
+  rôle dans `src/middleware.ts` (`lib/roles.ts` reste pur, donc testable et
+  utilisable en edge).
+- **Appartenance partenaire** : jamais lue depuis l'URL. Chaque requête
+  partenaire filtre sur le `partnerId` de la session — c'est la garantie
+  d'isolation, pas une vérification a posteriori.
+- **Frontière d'architecture** : les routes/composants n'accèdent pas à Prisma
+  (`eslint` interdit `@/lib/prisma` dans `src/app/**` et `src/components/**`) ;
+  toute lecture/écriture passe par un module de domaine.
+- **Migrations** : `prisma/migrations/**` est la source de vérité ; la CI
+  applique `migrate deploy` sur une base vierge puis échoue si le schéma et les
+  migrations divergent (`migrate diff --exit-code`).
+- **Paramètres système** (`/parametres`) : tous les réglages déclarés ont un
+  défaut et une validation Zod (`src/modules/settings/schemas.ts`) ; période de
+  settlement (1–720 h), minimum de retrait, règle de coût de retour et
+  commission globale par défaut sont modifiables par le Super Admin, et chaque
+  modification est auditée (`SETTING_UPDATED`).
 
 ## Phases livrées
 
@@ -182,10 +250,11 @@ Règles : la logique métier vit dans `src/modules/**/service.ts` (jamais dans l
   bornée au slice de l'appelant (avec un test sur le clamp 5..50).
 - **CI GitHub Actions** (`.github/workflows/ci.yml`) — deux jobs déclenchés à
   chaque push / PR sur `main` :
-  - `quality` : `npm ci` → `prisma generate` → `tsc --noEmit` → tests
-    unitaires → `npm run build` ;
+  - `quality` : `npm ci` → `prisma generate` → `npm run lint` → `tsc --noEmit`
+    → tests unitaires → `npm run build` ;
   - `integration` : service conteneur `postgres:16-alpine` (port 5433),
-    `prisma db push` → `db:seed` → `npm run test:int`.
+    `prisma migrate deploy` (base vierge) → contrôle de dérive
+    (`migrate diff --exit-code`) → `db:seed` → `npm run test:int`.
   - `concurrency` annule le run précédent sur la même branche.
   - La séquence du job `integration` a été **rejouée localement sur une base
     vide**, pour valider ce que le runner fera réellement.

@@ -26,15 +26,7 @@ export async function requireSession(roles?: Role[]): Promise<SessionUser> {
   return user;
 }
 
-/**
- * Server-side ownership guard: a partner may only access resources
- * belonging to them. Never trust IDs coming from the URL.
- */
-export function assertPartnerOwnership(
-  resourcePartnerId: string,
-  user: SessionUser,
-): void {
-  if (user.role === "PARTNER" && resourcePartnerId !== user.partnerId) {
-    throw new Error("FORBIDDEN");
-  }
-}
+// Ownership (a partner may only reach their own resources) is enforced where it
+// cannot be bypassed: every partner-facing query scopes by the `partnerId` read
+// from the session, never by an id coming from the URL. A standalone assertion
+// helper would only duplicate that guarantee, so none is exported here.

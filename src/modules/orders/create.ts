@@ -1,4 +1,6 @@
 import { Prisma } from "@prisma/client";
+import type { CommissionType } from "@prisma/client";
+import type Decimal from "decimal.js";
 import { prisma } from "@/lib/prisma";
 import { d, roundMoney } from "@/lib/money";
 import { recordAudit } from "@/modules/audit/service";
@@ -9,6 +11,8 @@ import {
   computePartnerEarning,
   resolveCommission,
 } from "@/modules/finance/commission";
+import { resolvePerformanceShare } from "@/modules/finance/performance-levels";
+import { readPartnerLevel } from "@/modules/finance/performance-service";
 import {
   CONFIRMATION_TEXT,
   createOrderSchema,
@@ -81,7 +85,11 @@ export async function createOrder(
     });
 
     const quantity = data.quantity;
-    const revenue = d(data.sellingPrice).times(quantity);
+    // SECURITY (spec §42/§47): the selling price is NEVER taken from the client.
+    // It is read from the product inside the transaction, so a partner cannot
+    // POST a manipulated price to inflate their own earning.
+    const unitSellingPrice = d(product.sellingPrice);
+    const revenue = unitSellingPrice.times(quantity);
     const productCost = roundMoney(d(product.purchaseCost).times(quantity));
     const packagingCost = roundMoney(d(product.packagingCost).times(quantity));
     const deliveryCost = roundMoney(product.deliveryCost); // one parcel per order
@@ -94,7 +102,34 @@ export async function createOrder(
           `(Minimum : ${roundMoney(productCost.plus(packagingCost).plus(deliveryCost))} DT)`,
       );
     }
-    const { earning, platformShare } = computePartnerEarning(contribution, rule);
+
+    // Performance tier wins when the partner has an ACTIVE level assigned.
+    // Otherwise the existing commission chain applies unchanged, so orders for
+    // partners without a level behave exactly as before.
+    const level = await readPartnerLevel(tx, partnerId);
+    const share = resolvePerformanceShare(level, {
+      sharePercentage: rule.value.toNumber(),
+    });
+
+    let earning: Decimal;
+    let platformShare: Decimal;
+    let commissionType: CommissionType;
+    let commissionValue: Decimal;
+
+    if (share.source === "PERFORMANCE_LEVEL") {
+      // A tier is a percentage of the profit pool by definition.
+      const pct = d(share.sharePercentage);
+      earning = roundMoney(contribution.times(pct).dividedBy(100));
+      platformShare = roundMoney(contribution.minus(earning));
+      commissionType = "PERCENTAGE";
+      commissionValue = pct;
+    } else {
+      const computed = computePartnerEarning(contribution, rule);
+      earning = computed.earning;
+      platformShare = computed.platformShare;
+      commissionType = rule.type;
+      commissionValue = rule.value;
+    }
 
     // ── Customer (phone dedup per partner) ──
     const customer = await tx.customer.upsert({
@@ -129,21 +164,24 @@ export async function createOrder(
         quantity,
         notes: data.notes || null,
         partnerConfirmedAt: new Date(),
-        unitSellingPrice: String(data.sellingPrice),
+        unitSellingPrice: unitSellingPrice.toFixed(3),
         productCost: productCost.toFixed(3),
         packagingCost: packagingCost.toFixed(3),
         deliveryCost: deliveryCost.toFixed(3),
         contribution: contribution.toFixed(3),
-        commissionType: rule.type,
-        commissionValue: rule.value.toFixed(3),
-        commissionSource: rule.source,
+        commissionType,
+        commissionValue: commissionValue.toFixed(3),
+        commissionSource: share.source === "PERFORMANCE_LEVEL" ? "PARTNER" : rule.source,
         partnerEarning: earning.toFixed(3),
         platformShare: platformShare.toFixed(3),
+        performanceLevelName: share.performanceLevelName,
+        partnerSharePercentage:
+          share.source === "PERFORMANCE_LEVEL" ? share.sharePercentage.toFixed(2) : null,
         items: {
           create: {
             productId: product.id,
             quantity,
-            unitPrice: String(data.sellingPrice),
+            unitPrice: unitSellingPrice.toFixed(3),
             productName: product.name,
             productSlug: product.slug,
           },
@@ -183,6 +221,8 @@ export async function createOrder(
         contribution: order.contribution,
         partnerEarning: order.partnerEarning,
         commissionSource: order.commissionSource,
+        performanceLevelName: order.performanceLevelName,
+        partnerSharePercentage: order.partnerSharePercentage,
         customerId: customer.id,
         partnerConfirmed: true,
       },

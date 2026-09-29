@@ -48,28 +48,119 @@ export async function deleteMarketingAsset(id: string, actorId: string) {
   });
 }
 
-// ── Product media ──
+// ── Product media (Google Drive) ──
 
 export async function addProductMedia(
-  input: { productId: string; type: "IMAGE" | "VIDEO" | "THUMBNAIL"; url: string; sortOrder?: number },
+  input: {
+    productId: string;
+    type: "IMAGE" | "VIDEO" | "THUMBNAIL";
+    googleDriveUrl: string;
+    title?: string;
+    sortOrder?: number;
+  },
   actorId: string,
 ) {
+  // If sortOrder is not explicitly provided, place it at the end
+  let sortOrder = input.sortOrder;
+  if (sortOrder === undefined) {
+    const last = await prisma.productMedia.findFirst({
+      where: { productId: input.productId },
+      orderBy: { sortOrder: "desc" },
+      select: { sortOrder: true },
+    });
+    sortOrder = (last?.sortOrder ?? -1) + 1;
+  }
+
   const media = await prisma.productMedia.create({
     data: {
       productId: input.productId,
       type: input.type,
-      url: input.url,
-      sortOrder: input.sortOrder ?? 0,
+      googleDriveUrl: input.googleDriveUrl.trim(),
+      title: input.title?.trim() || null,
+      sortOrder,
     },
   });
+
   await recordAudit(prisma, {
     actorId,
     action: "PRODUCT_MEDIA_ADDED",
     entityType: "ProductMedia",
     entityId: media.id,
-    after: { productId: input.productId, type: input.type, url: input.url },
+    after: {
+      productId: input.productId,
+      type: input.type,
+      googleDriveUrl: input.googleDriveUrl,
+      title: input.title,
+    },
   });
   return media;
+}
+
+export async function updateProductMedia(
+  id: string,
+  input: {
+    type?: "IMAGE" | "VIDEO" | "THUMBNAIL";
+    googleDriveUrl?: string;
+    title?: string;
+    sortOrder?: number;
+  },
+  actorId: string,
+) {
+  const existing = await prisma.productMedia.findUniqueOrThrow({ where: { id } });
+
+  const updated = await prisma.productMedia.update({
+    where: { id },
+    data: {
+      ...(input.type !== undefined ? { type: input.type } : {}),
+      ...(input.googleDriveUrl !== undefined ? { googleDriveUrl: input.googleDriveUrl.trim() } : {}),
+      ...(input.title !== undefined ? { title: input.title.trim() || null } : {}),
+      ...(input.sortOrder !== undefined ? { sortOrder: input.sortOrder } : {}),
+    },
+  });
+
+  await recordAudit(prisma, {
+    actorId,
+    action: "PRODUCT_MEDIA_UPDATED",
+    entityType: "ProductMedia",
+    entityId: id,
+    before: {
+      type: existing.type,
+      googleDriveUrl: existing.googleDriveUrl,
+      title: existing.title,
+      sortOrder: existing.sortOrder,
+    },
+    after: {
+      type: updated.type,
+      googleDriveUrl: updated.googleDriveUrl,
+      title: updated.title,
+      sortOrder: updated.sortOrder,
+    },
+  });
+
+  return updated;
+}
+
+export async function reorderProductMedia(
+  productId: string,
+  mediaIds: string[],
+  actorId: string,
+) {
+  await prisma.$transaction(
+    mediaIds.map((id, index) =>
+      prisma.productMedia.update({
+        where: { id, productId },
+        data: { sortOrder: index },
+      }),
+    ),
+  );
+
+  await recordAudit(prisma, {
+    actorId,
+    action: "PRODUCT_MEDIA_REORDERED",
+    entityType: "ProductMedia",
+    entityId: productId,
+    after: { mediaIds },
+  });
 }
 
 export async function deleteProductMedia(id: string, actorId: string) {
@@ -80,6 +171,6 @@ export async function deleteProductMedia(id: string, actorId: string) {
     action: "PRODUCT_MEDIA_DELETED",
     entityType: "ProductMedia",
     entityId: id,
-    before: { productId: media.productId, url: media.url },
+    before: { productId: media.productId, googleDriveUrl: media.googleDriveUrl },
   });
 }

@@ -23,7 +23,9 @@ export async function listWithdrawals(opts: {
   const [items, total] = await Promise.all([
     prisma.withdrawal.findMany({
       where,
-      orderBy: [{ requestedAt: "desc" }],
+      // id as tie-breaker: withdrawals requested in the same second must keep a
+      // total order across OFFSET pages.
+      orderBy: [{ requestedAt: "desc" }, { id: "desc" }],
       skip: (page - 1) * pageSize,
       take: pageSize,
       include: {

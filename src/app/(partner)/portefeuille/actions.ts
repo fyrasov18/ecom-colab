@@ -8,6 +8,7 @@ import {
   requestWithdrawal,
   WithdrawalError,
 } from "@/modules/finance/withdrawals";
+import { checkRateLimit, rateLimitMessage } from "@/lib/rate-limit";
 
 export type WalletActionState = {
   ok: boolean;
@@ -31,6 +32,13 @@ export async function submitWithdrawalRequest(
   const user = await requireSession(["PARTNER"]);
   if (!user.partnerId) {
     return { ok: false, error: "Compte partenaire introuvable." };
+  }
+
+  // Per-partner brake (spec §46): the ledger already blocks overdrafts, this
+  // stops a client spamming the endpoint.
+  const limit = await checkRateLimit("WITHDRAWAL_REQUEST", user.partnerId);
+  if (!limit.allowed) {
+    return { ok: false, error: rateLimitMessage(limit) };
   }
 
   const parsed = withdrawalRequestSchema.safeParse({

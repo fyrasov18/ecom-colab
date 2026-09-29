@@ -26,10 +26,12 @@ export const CONFIRMATION_TEXT =
 export const createOrderSchema = z.object({
   productId: z.string().min(1, "Produit requis"),
   quantity: z.coerce.number().int().min(1, "Quantité minimale : 1").max(99),
-  sellingPrice: z.coerce
-    .number({ message: "Prix de vente invalide" })
-    .positive("Prix de vente requis")
-    .max(1_000_000),
+  /**
+   * NOT part of this schema on purpose (spec §42/§47).
+   * The selling price is read from the Product inside the order transaction;
+   * accepting it from the client would let a partner inflate their own earning.
+   * A stray `sellingPrice` field is stripped rather than honoured.
+   */
   customerFullName: z.string().trim().min(3, "Nom complet requis").max(160),
   phone: phoneSchema,
   governorate: z.string().trim().min(2, "Gouvernorat requis").max(80),

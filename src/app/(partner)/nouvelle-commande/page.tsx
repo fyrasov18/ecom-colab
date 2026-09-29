@@ -1,29 +1,20 @@
 import type { Metadata } from "next";
 import { requireSession } from "@/lib/rbac";
-import { prisma } from "@/lib/prisma";
-import { getSetting } from "@/modules/settings/service";
-import { SETTING_KEYS } from "@/modules/settings/defaults";
+import { getGlobalCommission } from "@/modules/settings/service";
 import { resolveCommission } from "@/modules/finance/commission";
+import { getPartnerById } from "@/modules/partners/queries";
+import { listOrderableAssignments } from "@/modules/products/partner-catalogue";
 import { OrderForm } from "./order-form";
 
 export const metadata: Metadata = { title: "Nouvelle commande" };
 
 export default async function NewOrderPage() {
   const user = await requireSession(["PARTNER"]);
-  const partner = await prisma.partner.findUniqueOrThrow({
-    where: { id: user.partnerId! },
-  });
+  const partner = await getPartnerById(user.partnerId!);
 
-  const assignments = await prisma.partnerProduct.findMany({
-    where: { partnerId: partner.id, status: "ACTIVE" },
-    include: { product: true },
-    orderBy: { assignedAt: "desc" },
-  });
+  const assignments = await listOrderableAssignments(partner.id);
 
-  const globalCommission = await getSetting<{
-    commissionType: "PERCENTAGE" | "FIXED";
-    commissionValue: number;
-  }>(SETTING_KEYS.GLOBAL_COMMISSION);
+  const globalCommission = await getGlobalCommission();
 
   const products = assignments
     .filter((a) => a.product.status === "ACTIVE" || a.product.status === "OUT_OF_STOCK")

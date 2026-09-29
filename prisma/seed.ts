@@ -3,6 +3,36 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
+/**
+ * SAFETY GUARD — this seed creates development fixtures with well-known
+ * passwords (see SEED_USERS). Running it against production would leave a
+ * publicly-known admin login in place, so refuse unless explicitly allowed.
+ *
+ * Escape hatch: ALLOW_DEMO_SEED=1 (local/testing only — never on production).
+ */
+if (process.env.ALLOW_DEMO_SEED !== "1") {
+  const host = (() => {
+    try {
+      return new URL(process.env.DATABASE_URL ?? "").hostname;
+    } catch {
+      return "";
+    }
+  })();
+  const looksLocal =
+    host === "localhost" || host === "127.0.0.1" || host.endsWith(".local");
+  const inProduction = process.env.NODE_ENV === "production";
+
+  if (inProduction || (!looksLocal && host !== "")) {
+    console.error(
+      "\n[seed] REFUSÉ : ce seed contient des comptes de démonstration " +
+        "(mots de passe connus) et ne doit pas toucher une base de production.\n" +
+        "        Base détectée : " + (host || "(inconnue)") + "\n" +
+        "        Pour une base de dev, définir ALLOW_DEMO_SEED=1.\n",
+    );
+    process.exit(1);
+  }
+}
+
 /** Dev/seed credentials — development only, never reuse in production. */
 export const SEED_USERS = {
   superAdmin: { email: "admin@ecomcolab.tn", password: "Admin123!" },

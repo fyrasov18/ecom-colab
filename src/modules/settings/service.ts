@@ -1,4 +1,3 @@
-import { z } from "zod";
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/modules/audit/service";
@@ -9,25 +8,9 @@ import {
   SETTING_KEYS,
   type SettingKey,
 } from "./defaults";
+import { SETTING_VALUE_SCHEMAS, type GlobalCommission } from "./schemas";
 
 type Db = PrismaClient | Prisma.TransactionClient;
-
-const settingValueSchemas: Record<string, z.ZodTypeAny> = {
-  [SETTING_KEYS.SETTLEMENT_PERIOD_HOURS]: z
-    .number()
-    .int("Doit être un entier")
-    .min(1, "Minimum 1 heure")
-    .max(720, "Maximum 720 heures (30 jours)"),
-  [SETTING_KEYS.MIN_WITHDRAWAL_AMOUNT]: z
-    .number()
-    .positive("Doit être positif")
-    .max(1_000_000),
-  [SETTING_KEYS.RETURN_COST_RULE]: z.enum([
-    "REVERSE_PENDING_EARNING",
-    "REVERSE_PLUS_DELIVERY",
-    "NO_COST",
-  ]),
-};
 
 /** Read a setting, falling back to the compiled default. */
 export async function getSetting<T = unknown>(
@@ -49,6 +32,11 @@ export async function getMinWithdrawalAmount(db: Db = prisma): Promise<number> {
 
 export async function getReturnCostRule(db: Db = prisma) {
   return getSetting<string>(SETTING_KEYS.RETURN_COST_RULE, db);
+}
+
+/** Platform-wide fallback commission (used when nothing more specific exists). */
+export async function getGlobalCommission(db: Db = prisma): Promise<GlobalCommission> {
+  return getSetting<GlobalCommission>(SETTING_KEYS.GLOBAL_COMMISSION, db);
 }
 
 export type SettingDTO = {
@@ -83,7 +71,7 @@ export async function updateSetting(opts: {
   actorId: string;
 }): Promise<void> {
   const { key, value, actorId } = opts;
-  const schema = settingValueSchemas[key];
+  const schema = SETTING_VALUE_SCHEMAS[key];
   if (!schema) throw new Error(`Unknown setting: ${key}`);
 
   const parsed = schema.parse(value);

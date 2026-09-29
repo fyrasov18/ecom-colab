@@ -41,6 +41,9 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
 
+      - name: Lint
+        run: npm run lint
+
       - name: Typecheck
         run: npx tsc --noEmit
 
@@ -88,8 +91,14 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
 
-      - name: Push schema
-        run: npx prisma db push --skip-generate
+      - name: Apply migrations
+        # Verifies prisma/migrations on a brand-new database: the schema must be
+        # reproducible from the committed migrations alone (not `db push`).
+        run: npx prisma migrate deploy
+
+      - name: Check for schema drift
+        # Fails if schema.prisma and prisma/migrations ever diverge.
+        run: npx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel prisma/schema.prisma --exit-code
 
       - name: Seed baseline data
         # finance.int.test.ts pins the settings it depends on, but seeding keeps
