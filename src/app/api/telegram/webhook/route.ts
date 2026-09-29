@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import {
   checkRateLimit,
   clientIpFrom,
@@ -10,6 +9,7 @@ import {
   finishSession,
   getActiveSession,
   isAuthorized,
+  recordUpdate,
   startSession,
 } from "@/modules/telegram/service";
 import {
@@ -138,11 +138,12 @@ export async function POST(request: Request) {
   const chatId = message.from.id;
 
   // 2. Idempotency: Telegram retries deliveries; a retry must be a no-op.
-  try {
-    await prisma.telegramUpdate.create({
-      data: { updateId: String(updateId), telegramUserId, kind: "message" },
-    });
-  } catch {
+  const isNew = await recordUpdate({
+    updateId: String(updateId),
+    telegramUserId,
+    kind: "message",
+  });
+  if (!isNew) {
     return NextResponse.json({ ok: true, duplicate: true });
   }
 
@@ -173,13 +174,13 @@ export async function POST(request: Request) {
     }
 
     if (command?.command === "cancel") {
-      const open = await getActiveSession(prisma, telegramUserId);
-      if (open) await finishSession(prisma, open.id, "CANCELLED");
+      const open = await getActiveSession(undefined, telegramUserId);
+      if (open) await finishSession(undefined, open.id, "CANCELLED");
       await sendMessage(chatId, "Saisie annulée.");
       return NextResponse.json({ ok: true, action: "cancel" });
     }
 
-    const session = await getActiveSession(prisma, telegramUserId);
+    const session = await getActiveSession(undefined, telegramUserId);
     const compact = parseCompactProduct(command?.args || text);
 
     // Compact message (alone, or sent mid-wizard) creates the draft directly.
@@ -193,7 +194,7 @@ export async function POST(request: Request) {
     }
 
     if (command?.command === "newproduct" || !session) {
-      await startSession(prisma, telegramUserId);
+      await startSession(undefined, telegramUserId);
       await sendMessage(chatId, WIZARD_PROMPTS.NAME);
       return NextResponse.json({ ok: true, action: "wizard_started" });
     }
@@ -204,7 +205,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, step: session.step });
     }
 
-    const advanced = await applyAnswer(prisma, session, text);
+    const advanced = await applyAnswer(undefined, session, text);
     if (!advanced.ok) {
       await sendMessage(chatId, advanced.error);
       return NextResponse.json({ ok: false, error: advanced.error });

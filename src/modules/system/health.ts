@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { prisma as _prisma } from "@/lib/prisma";
 
 /**
  * System health — lightweight operational checks for the back office.
@@ -21,7 +20,7 @@ export type HealthCheck = {
 async function checkDatabase(): Promise<HealthCheck> {
   const started = Date.now();
   try {
-    await _prisma.$queryRaw`SELECT 1`;
+    await prisma.$queryRaw`SELECT 1`;
     return {
       key: "database",
       label: "Base de données",
@@ -99,10 +98,10 @@ async function checkSettlement(): Promise<HealthCheck> {
   try {
     const now = new Date();
     const [due, upcoming] = await Promise.all([
-      _prisma.financialTransaction.count({
+      prisma.financialTransaction.count({
         where: { status: "PENDING", availableAt: { lte: now } },
       }),
-      _prisma.financialTransaction.count({
+      prisma.financialTransaction.count({
         where: { status: "PENDING", availableAt: { gt: now } },
       }),
     ]);
@@ -156,18 +155,27 @@ async function checkNotifications(): Promise<HealthCheck> {
 
 async function checkRateLimiting(): Promise<HealthCheck> {
   try {
-    const { RATE_LIMITS, __setRateLimitStore, createMemoryStore } = await import(
-      "@/lib/rate-limit"
-    );
-    // Prove the store is wired and writable rather than assuming it.
-    const probe = createMemoryStore();
-    __setRateLimitStore(probe);
-    const rules = Object.keys(RATE_LIMITS).length;
+    // Non-mutating: describes the rules and the live store without calling
+    // `hit()`/`reset()`. This page is rendered on demand, and mutating the
+    // global store here would clear every in-flight throttle counter.
+    const { describeRateLimits } = await import("@/lib/rate-limit");
+    const { rules, trackedBuckets, invalidRules } = describeRateLimits();
+
+    if (invalidRules.length > 0) {
+      return {
+        key: "rate_limit",
+        label: "Limitation de débit",
+        status: "error",
+        detail: `Règle(s) invalide(s) : ${invalidRules.join(", ")} — le frein est désactivé.`,
+      };
+    }
+
+    const tracked = trackedBuckets === null ? "" : `, ${trackedBuckets} compteur(s) actif(s)`;
     return {
       key: "rate_limit",
       label: "Limitation de débit",
       status: "operational",
-      detail: `${rules} règles actives (mémoire par instance — voir src/lib/rate-limit.ts).`,
+      detail: `${rules} règles actives${tracked} (mémoire par instance — voir src/lib/rate-limit.ts).`,
     };
   } catch {
     return {

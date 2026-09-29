@@ -85,6 +85,33 @@ export function __setRateLimitStore(next: RateLimitStore): void {
   store = next;
 }
 
+/**
+ * Read-only description of the limiter's configuration and live state.
+ *
+ * Deliberately non-mutating: it inspects `store` and never calls `hit()` or
+ * `reset()`. The system-health page calls this on every render, so a mutating
+ * probe would wipe in-flight counters (letting an attacker reset a login
+ * throttle just by opening the back-office health screen).
+ */
+export function describeRateLimits(): {
+  rules: number;
+  /** Buckets currently tracked, when the store exposes `size()`. */
+  trackedBuckets: number | null;
+  /** Rules with a non-positive limit or window — these would disable the brake. */
+  invalidRules: string[];
+} {
+  const entries = Object.entries(RATE_LIMITS) as [RateLimitKind, RateLimitRule][];
+  const invalidRules = entries
+    .filter(([, r]) => !(r.limit > 0) || !(r.windowSeconds > 0))
+    .map(([kind]) => kind);
+
+  const sized = store as RateLimitStore & { size?: () => number };
+  const trackedBuckets =
+    typeof sized.size === "function" ? sized.size() : null;
+
+  return { rules: entries.length, trackedBuckets, invalidRules };
+}
+
 export function __resetRateLimit(): void {
   store.reset();
 }

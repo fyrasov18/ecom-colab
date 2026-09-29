@@ -1,7 +1,7 @@
 // Dev-only: verify prisma/schema.prisma matches the migrated database.
 // Reads DATABASE_URL from .env and NEVER prints it.
-const fs = require("node:fs");
-const { execFileSync } = require("node:child_process");
+import fs from "node:fs";
+import { execFileSync } from "node:child_process";
 
 const envText = fs.readFileSync(".env", "utf8");
 const match = envText.match(/^DATABASE_URL\s*=\s*["']?([^"'\r\n]+)/m);

@@ -59,10 +59,10 @@ vers la production **temporairement**, ou via variables d'environnement) :
 ```bash
 npx prisma migrate deploy      # applique les migrations en attente
 npx prisma migrate status      # doit indiquer "up to date"
-node scripts/check-drift.cjs   # vérifie schema.prisma == base
+node scripts/check-drift.mjs  # vérifie schema.prisma == base
 ```
 
-`check-drift.cjs` lit `DATABASE_URL` dans `.env` sans jamais l'afficher.
+`check-drift.mjs` lit `DATABASE_URL` dans `.env` sans jamais l'afficher.
 
 ⚠️ Ne jamais exécuter `prisma migrate dev` ni `db push` en production.
 

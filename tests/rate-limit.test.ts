@@ -2,8 +2,11 @@ import { describe, it, expect, beforeEach } from "vitest";
 import {
   RATE_LIMITS,
   __resetRateLimit,
+  __setRateLimitStore,
   checkRateLimit,
   clientIpFrom,
+  createMemoryStore,
+  describeRateLimits,
   rateLimitKey,
   rateLimitMessage,
 } from "@/lib/rate-limit";
@@ -128,3 +131,60 @@ describe("rateLimitMessage", () => {
     expect(rateLimitMessage(long)).toContain("minute");
   });
 });
+
+describe("describeRateLimits — non-mutating health probe", () => {
+  it("reports every configured rule and flags none as invalid", () => {
+    const info = describeRateLimits();
+    expect(info.rules).toBe(Object.keys(RATE_LIMITS).length);
+    expect(info.invalidRules).toEqual([]);
+  });
+
+  // Regression: the system-health page used to swap the global store for a
+  // fresh probe, which silently cleared every in-flight counter — letting an
+  // attacker reset a login throttle just by opening the back office.
+  it("does NOT clear live counters when observed", async () => {
+    const now = new Date("2026-01-01T10:00:00.000Z");
+    const limit = RATE_LIMITS.LOGIN_ACCOUNT.limit;
+
+    for (let i = 0; i < limit; i += 1) {
+      await checkRateLimit("LOGIN_ACCOUNT", "1.2.3.4|a@b.c", now);
+    }
+    // The next attempt is blocked...
+    const blocked = await checkRateLimit("LOGIN_ACCOUNT", "1.2.3.4|a@b.c", now);
+    expect(blocked.allowed).toBe(false);
+
+    // ...and observing health must not hand the attacker a fresh budget.
+    describeRateLimits();
+
+    const afterProbe = await checkRateLimit("LOGIN_ACCOUNT", "1.2.3.4|a@b.c", now);
+    expect(afterProbe.allowed).toBe(false);
+    expect(afterProbe.remaining).toBe(0);
+  });
+
+  it("exposes the number of tracked buckets without touching them", async () => {
+    const now = new Date("2026-01-01T10:00:00.000Z");
+    await checkRateLimit("LOGIN", "5.6.7.8", now);
+    const first = describeRateLimits();
+    expect(first.trackedBuckets).toBe(1);
+
+    await checkRateLimit("SEARCH", "5.6.7.8", now);
+    expect(describeRateLimits().trackedBuckets).toBe(2);
+  });
+
+  // Proof the regression test has teeth: this is what the old health probe did
+  // (swap the global store for a fresh one). A victim whose counter was
+  // exhausted suddenly regains a full budget — exactly the bug.
+  it("a store swap WOULD have cleared the counter (guards the guard)", async () => {
+    const now = new Date("2026-01-01T10:00:00.000Z");
+    const limit = RATE_LIMITS.LOGIN_ACCOUNT.limit;
+    for (let i = 0; i < limit; i += 1) {
+      await checkRateLimit("LOGIN_ACCOUNT", "9.9.9.9|x@y.z", now);
+    }
+    expect((await checkRateLimit("LOGIN_ACCOUNT", "9.9.9.9|x@y.z", now)).allowed).toBe(false);
+
+    __setRateLimitStore(createMemoryStore()); // the old, mutating behaviour
+
+    expect((await checkRateLimit("LOGIN_ACCOUNT", "9.9.9.9|x@y.z", now)).allowed).toBe(true);
+  });
+});
+

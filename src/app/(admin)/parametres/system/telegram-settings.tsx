@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/rbac";
 import { listAuthorizedUsers } from "@/modules/telegram/service";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +14,9 @@ const fieldClass =
 
 export async function TelegramSettings() {
   // Managing who may import products is a security decision → SUPER_ADMIN.
-  const user = await requireSession(["SUPER_ADMIN"]);
+  // requireSession() throws when the caller lacks the role, so the result is
+  // not needed here.
+  await requireSession(["SUPER_ADMIN"]);
   const users = await listAuthorizedUsers();
 
   return (

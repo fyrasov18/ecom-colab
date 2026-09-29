@@ -13,6 +13,30 @@ export class TelegramError extends Error {}
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
+/**
+ * Record a delivered update. Returns false when the update_id was already
+ * processed — this unique key is what makes the webhook idempotent, so a
+ * Telegram retry can never create a second product.
+ */
+export async function recordUpdate(input: {
+  updateId: string;
+  telegramUserId: string;
+  kind: string;
+}): Promise<boolean> {
+  try {
+    await prisma.telegramUpdate.create({ data: input });
+    return true;
+  } catch {
+    // P2002 = duplicate update_id → already handled.
+    return false;
+  }
+}
+
+/** Look up a session by id (used to update wizard state from a route). */
+export async function getSessionById(id: string) {
+  return prisma.telegramSession.findUnique({ where: { id } });
+}
+
 /** Abandoned conversations expire: they must never be resumed weeks later. */
 export const SESSION_TTL_MINUTES = 60;
 
@@ -90,8 +114,13 @@ export async function revokeTelegramUser(telegramUserId: string, actorId: string
   });
 }
 /** Current ACTIVE, unexpired session — or null. Expired rows are ignored. */
+/**
+ * These helpers accept an explicit transaction client so they can join a
+ * caller's transaction. Route handlers omit the argument and fall back to the
+ * shared client — keeping `@/lib/prisma` out of `src/app/**` (eslint guard).
+ */
 export async function getActiveSession(
-  db: Db,
+  db: Db = prisma,
   telegramUserId: string,
   now = new Date(),
 ) {
@@ -101,7 +130,7 @@ export async function getActiveSession(
   });
 }
 
-export async function startSession(db: Db, telegramUserId: string) {
+export async function startSession(db: Db = prisma, telegramUserId: string) {
   // Only one live conversation per user: an existing one is replaced, not stacked.
   await db.telegramSession.updateMany({
     where: { telegramUserId, status: "ACTIVE" },
@@ -119,7 +148,7 @@ export async function startSession(db: Db, telegramUserId: string) {
 
 /** Close the session; pass productId to link the created DRAFT. */
 export async function finishSession(
-  db: Db,
+  db: Db = prisma,
   sessionId: string,
   status: "COMPLETED" | "CANCELLED",
   productId?: string,
@@ -132,7 +161,7 @@ export async function finishSession(
 
 /** Store one answer on the session and return the next step. */
 export async function applyAnswer(
-  db: Db,
+  db: Db = prisma,
   session: { id: string; step: string; data?: unknown },
   raw: string,
 ): Promise<{ ok: true; step: TelegramStep } | { ok: false; error: string }> {

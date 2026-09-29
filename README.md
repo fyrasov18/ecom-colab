@@ -36,7 +36,7 @@ npm run dev                 # http://localhost:3000
   migrations déjà commitées. **Jamais** `migrate reset`, `db push --force-reset`
   ni `migrate dev` sur une base de production.
 - Vérifier l'absence de dérive entre le schéma et la base :
-  `node scripts/check-drift.cjs` (lit `DATABASE_URL`, ne l'affiche jamais).
+  `node scripts/check-drift.mjs` (lit `DATABASE_URL`, ne l'affiche jamais).
 
 > `npm run db:seed` est réservé au développement : il crée des comptes de
 > démonstration à mots de passe connus et **refuse** de s'exécuter si la base

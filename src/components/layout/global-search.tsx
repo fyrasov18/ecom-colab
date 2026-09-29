@@ -12,38 +12,46 @@ import type { SearchResults } from "@/modules/search/service";
 export function GlobalSearch() {
   const router = useRouter();
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchResults | null>(null);
+  // The last query that finished loading, plus its data (null on failure).
+  // `loading`/`results` are derived from it during render instead of being
+  // set inside the effect, which avoids a cascading render per keystroke.
+  const [settled, setSettled] = useState<{
+    query: string;
+    data: SearchResults | null;
+  } | null>(null);
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
 
-  // Debounced fetch; an in-flight request is ignored so results cannot race.
+  const q = query.trim();
+  const active = q.length >= 2;
+  // Still loading whenever the visible query differs from the last one settled.
+  const loading = active && settled?.query !== q;
+  const results = !active || settled?.query !== q ? null : settled.data;
+
+  // Debounced fetch. State is only updated from the timer callback, i.e. in
+  // response to the network — never synchronously in the effect body.
   useEffect(() => {
-    const q = query.trim();
-    if (q.length < 2) {
-      setResults(null);
-      setLoading(false);
-      return;
-    }
+    if (!active) return;
     let cancelled = false;
-    setLoading(true);
     const timer = setTimeout(async () => {
       try {
         const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
-        if (!res.ok) return;
-        const data = (await res.json()) as SearchResults;
-        if (!cancelled) setResults(data);
+        if (res.ok) {
+          const data = (await res.json()) as SearchResults;
+          if (!cancelled) setSettled({ query: q, data });
+        } else if (!cancelled) {
+          setSettled({ query: q, data: null });
+        }
       } catch {
         // Search is best-effort: a failure must not break the header.
-      } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setSettled({ query: q, data: null });
       }
     }, 250);
     return () => {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [query]);
+  }, [q, active]);
 
   // Close on outside click.
   useEffect(() => {
