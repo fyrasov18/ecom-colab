@@ -8,6 +8,8 @@ import { formatPrice } from "@/lib/money";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Timeline } from "@/components/ui/timeline";
+import { ORDER_STATUS_LABELS } from "@/modules/orders/labels";
 import { OrderStatusBadge } from "@/components/orders/order-status-badge";
 import { OrderStatusActions as StatusActions } from "./status-actions";
 import { ShipmentCard } from "./shipment-card";
@@ -179,7 +181,7 @@ export default async function OrderDetailPage({
               snapshot.
             </div>
             {order.status === "DELIVERED" && (
-              <div className="rounded-lg bg-emerald-50 p-3 text-xs text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+              <div className="rounded-lg bg-success-50 p-3 text-xs text-success-700">
                 Livrée le {fr(order.deliveredAt)} · gain disponible le{" "}
                 <strong>{fr(order.settlementDueAt)}</strong> (figé à la livraison).
               </div>
@@ -193,27 +195,30 @@ export default async function OrderDetailPage({
             <CardTitle className="text-base">Timeline &amp; historique</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-4">
-              {order.statusHistory.map((h) => (
-                <li key={h.id} className="relative flex gap-3 text-sm">
-                  <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <OrderStatusBadge status={h.newStatus} />
-                      <span className="text-xs text-muted-foreground">
-                        {fr(h.createdAt)}
-                        {h.changedBy
-                          ? ` · ${h.changedBy.firstName} ${h.changedBy.lastName}`
-                          : ""}
-                      </span>
-                    </div>
-                    {h.reason ? (
-                      <p className="mt-1 text-xs text-muted-foreground">{h.reason}</p>
-                    ) : null}
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <Timeline
+              entries={[...order.statusHistory]
+                .sort(
+                  (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+                )
+                .map((h) => ({
+                  id: h.id,
+                  title: ORDER_STATUS_LABELS[h.newStatus] ?? h.newStatus,
+                  at: h.createdAt,
+                  actor: h.changedBy
+                    ? `${h.changedBy.firstName} ${h.changedBy.lastName}`
+                    : null,
+                  detail: h.reason,
+                  tone:
+                    h.newStatus === "DELIVERED"
+                      ? "success"
+                      : h.newStatus === "REFUSED" || h.newStatus === "RETURNED"
+                        ? "destructive"
+                        : h.newStatus === "ON_HOLD"
+                          ? "warning"
+                          : "default",
+                }))}
+              emptyLabel="Aucun changement de statut enregistré."
+            />
           </CardContent>
         </Card>
       </div>

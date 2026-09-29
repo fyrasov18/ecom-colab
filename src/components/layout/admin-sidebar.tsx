@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Activity,
   BarChart3,
   Bell,
   Contact,
@@ -37,6 +38,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/marketing", label: "Marketing", icon: Megaphone },
   { href: "/notifications", label: "Notifications", icon: Bell },
   { href: "/parametres", label: "Paramètres", icon: Settings },
+  { href: "/parametres/system", label: "État du système", icon: Activity },
   { href: "/audit", label: "Audit", icon: ScrollText, superAdminOnly: true },
 ];
 
@@ -57,8 +59,13 @@ export function AdminSidebar({ isSuperAdmin }: { isSuperAdmin: boolean }) {
       </div>
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
         {items.map((item) => {
+          // Segment-aware nesting, except for /parametres: it is a landing page
+          // whose children (/parametres/system) are listed separately, so it
+          // must match exactly or both entries would highlight at once.
           const active =
-            pathname === item.href || pathname.startsWith(`${item.href}/`);
+            item.href === "/parametres"
+              ? pathname === "/parametres"
+              : pathname === item.href || pathname.startsWith(`${item.href}/`);
           const Icon = item.icon;
           return (
             <Link

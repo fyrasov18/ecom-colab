@@ -132,7 +132,6 @@ async function uniqueSlug(base: string, excludeId?: string): Promise<string> {
   const root = slugify(base) || "produit";
   let candidate = root;
   let i = 1;
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     const existing = await prisma.product.findUnique({ where: { slug: candidate } });
     if (!existing || existing.id === excludeId) return candidate;

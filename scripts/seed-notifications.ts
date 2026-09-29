@@ -13,7 +13,6 @@ import { settleDueEarnings } from "../src/modules/finance/ledger";
 import {
   approveWithdrawal,
   payWithdrawal,
-  rejectWithdrawal,
   WithdrawalError,
 } from "../src/modules/finance/withdrawals";
 

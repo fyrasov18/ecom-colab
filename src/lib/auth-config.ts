@@ -5,7 +5,14 @@ import type { NextAuthConfig } from "next-auth";
  * usable from middleware as well as the full server config.
  */
 export const authConfig = {
-  session: { strategy: "jwt" },
+  // JWT sessions cannot be revoked mid-life, so the lifetime is deliberately
+  // bounded: 12 h absolute with a 1 h sliding refresh keeps a normal ops shift
+  // signed in while capping how long a disabled user / role change survives.
+  session: {
+    strategy: "jwt",
+    maxAge: 12 * 60 * 60,
+    updateAge: 60 * 60,
+  },
   pages: { signIn: "/login" },
   // Edge-safe config carries no providers; lib/auth.ts spreads the
   // Credentials provider in for the full server instance.

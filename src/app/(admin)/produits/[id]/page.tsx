@@ -6,7 +6,6 @@ import { listPartnerOptions } from "@/modules/partners/service";
 import { requireSession } from "@/lib/rbac";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/empty-state";
 import { ProductForm } from "../product-form";
 import { changeProductStatus } from "../actions";
 import { MediaSection } from "./media-section";
@@ -88,7 +87,13 @@ export default async function ProductDetailPage({
         <CardContent className="space-y-6 p-6">
           <MediaSection
             productId={product.id}
-            media={product.media.map((m) => ({ id: m.id, type: m.type, url: m.url }))}
+            media={product.media.map((m) => ({
+              id: m.id,
+              type: m.type,
+              googleDriveUrl: m.googleDriveUrl,
+              title: m.title,
+              sortOrder: m.sortOrder,
+            }))}
           />
           <MarketingSection
             productId={product.id}

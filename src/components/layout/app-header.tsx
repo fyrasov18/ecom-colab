@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { Bell, Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Bell } from "lucide-react";
 import { LogoutButton } from "./logout-button";
+import { GlobalSearch } from "./global-search";
 import { formatUnreadCount } from "@/modules/notifications/labels";
 
 export function AppHeader({
@@ -21,15 +21,7 @@ export function AppHeader({
 
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center gap-4 border-b bg-card/95 px-4 backdrop-blur lg:px-6">
-      <div className="relative hidden max-w-md flex-1 md:block">
-        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-        <Input
-          type="search"
-          placeholder="Rechercher une commande, un client…"
-          className="h-9 bg-muted/50 pl-8"
-          aria-label="Recherche globale"
-        />
-      </div>
+      <GlobalSearch />
       <div className="ml-auto flex items-center gap-3">
         <Link
           href={notificationsHref}

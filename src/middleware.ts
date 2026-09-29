@@ -13,10 +13,14 @@ const { auth } = NextAuth(authConfig);
 export default auth((req) => {
   const { pathname } = new URL(req.url);
   const user = req.auth?.user;
+  // Machine-to-machine endpoints. The Telegram webhook cannot carry a session —
+  // it authenticates with its own shared secret inside the route handler, so it
+  // MUST stay reachable here or Telegram deliveries get a login redirect.
   const isPublic =
     pathname === "/login" ||
     pathname.startsWith("/api/auth") ||
-    pathname.startsWith("/api/cron");
+    pathname.startsWith("/api/cron") ||
+    pathname.startsWith("/api/telegram");
 
   const redirectTo = (path: string) =>
     NextResponse.redirect(new URL(path, req.url));

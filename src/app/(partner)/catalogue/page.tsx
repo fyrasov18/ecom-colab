@@ -7,6 +7,7 @@ import { formatPrice } from "@/lib/money";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
+import { deriveGoogleDriveUrls } from "@/lib/google-drive";
 
 export const metadata: Metadata = { title: "Produits" };
 
@@ -34,16 +35,17 @@ export default async function CataloguePage() {
           {assignments.map(({ product }) => {
             const cover = product.media.find((m) => m.type === "THUMBNAIL")
               ?? product.media.find((m) => m.type === "IMAGE");
+            const coverDrive = cover ? deriveGoogleDriveUrls(cover.googleDriveUrl) : null;
             return (
               <Link key={product.id} href={`/catalogue/${product.id}`} className="group">
                 <Card className="h-full transition-shadow group-hover:shadow-md">
                   <div className="relative h-40 overflow-hidden rounded-t-xl bg-muted">
-                    {cover ? (
+                    {coverDrive ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={cover.url}
+                        src={coverDrive.previewUrl}
                         alt={product.name}
-                        className="h-full w-full object-cover"
+                        className="h-full w-full object-cover transition group-hover:scale-105"
                       />
                     ) : (
                       <div className="flex h-full items-center justify-center text-xs text-muted-foreground">

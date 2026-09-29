@@ -22,7 +22,9 @@ export async function listCustomers(filters: { search?: string; page?: number })
     prisma.customer.count({ where }),
     prisma.customer.findMany({
       where,
-      orderBy: { updatedAt: "desc" },
+      // id as tie-breaker: rows sharing an updatedAt second must keep a total
+      // order, otherwise OFFSET pagination can repeat or skip a customer.
+      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
       include: {

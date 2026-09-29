@@ -32,7 +32,7 @@ export default async function ClientsPage({
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Clients</h1>
         <p className="text-sm text-muted-foreground">
-          {total} client(s) — chaque client appartient au partenaire qui l'a
+          {total} client(s) — chaque client appartient au partenaire qui l&apos;a
           saisi (téléphone = identifiant par partenaire).
         </p>
       </div>

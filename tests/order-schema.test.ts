@@ -35,7 +35,8 @@ describe("createOrderSchema — CRITICAL confirmation checkbox (spec §33.2)", (
   });
 
   it("REJECTS when the confirmation checkbox is missing", () => {
-    const { confirmed: _omitted, ...rest } = validInput;
+    const rest = { ...validInput };
+    delete (rest as Partial<typeof validInput>).confirmed;
     const r = createOrderSchema.safeParse(rest);
     expect(r.success).toBe(false);
     if (!r.success) {

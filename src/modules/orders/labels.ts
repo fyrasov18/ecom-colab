@@ -18,6 +18,13 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
 
 export type BadgeTone = "success" | "secondary" | "warning" | "destructive" | "info";
 
+/**
+ * Semantic colour per status. Each operational stage gets its OWN colour so an
+ * operator can read the pipeline at a glance instead of seeing seven blues.
+ * (CONFIRMED blue / VALIDATED indigo / PREPARING purple / PACKAGED cyan /
+ *  SHIPPED brand / IN_DELIVERY orange / DELIVERED green / ON_HOLD amber /
+ *  REFUSED + RETURNED red / CANCELLED grey.)
+ */
 export const ORDER_STATUS_TONES: Record<OrderStatus, BadgeTone> = {
   CONFIRMED: "info",
   VALIDATED: "info",
@@ -25,11 +32,30 @@ export const ORDER_STATUS_TONES: Record<OrderStatus, BadgeTone> = {
   PREPARING: "info",
   PACKAGED: "info",
   SHIPPED: "info",
-  IN_DELIVERY: "info",
+  IN_DELIVERY: "warning",
   DELIVERED: "success",
   REFUSED: "destructive",
   RETURNED: "destructive",
   CANCELLED: "secondary",
+};
+
+/**
+ * Per-status class overrides so each stage is visually distinct rather than
+ * collapsing onto the generic `info` badge. Kept next to the tone map so the
+ * two never drift apart.
+ */
+export const ORDER_STATUS_CLASSES: Record<OrderStatus, string> = {
+  CONFIRMED: "border-transparent bg-info-100 text-info-700",
+  VALIDATED: "border-transparent bg-brand-100 text-brand-800",
+  ON_HOLD: "border-transparent bg-warning-100 text-warning-700",
+  PREPARING: "border-transparent bg-violet-100 text-violet-700",
+  PACKAGED: "border-transparent bg-cyan-100 text-cyan-700",
+  SHIPPED: "border-transparent bg-brand-100 text-brand-700",
+  IN_DELIVERY: "border-transparent bg-orange-100 text-orange-700",
+  DELIVERED: "border-transparent bg-success-100 text-success-700",
+  REFUSED: "border-transparent bg-danger-100 text-danger-700",
+  RETURNED: "border-transparent bg-danger-100 text-danger-700",
+  CANCELLED: "border-transparent bg-ink-100 text-ink-600",
 };
 
 export const ORDER_FILTER_STATUSES: OrderStatus[] = [

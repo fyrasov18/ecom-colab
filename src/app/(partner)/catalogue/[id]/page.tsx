@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CopyButton } from "./copy-button";
+import { PartnerMediaGallery } from "./media-gallery";
 
 export const metadata: Metadata = { title: "Produit" };
 
@@ -31,9 +32,6 @@ export default async function PartnerProductPage({
   const user = await requireSession(["PARTNER"]);
   const assignment = await getAssignedProduct(user.partnerId!, id);
   const product = assignment.product;
-
-  const images = product.media.filter((m) => m.type !== "VIDEO");
-  const videos = product.media.filter((m) => m.type === "VIDEO");
 
   return (
     <div className="space-y-6">
@@ -60,42 +58,16 @@ export default async function PartnerProductPage({
         </p>
       )}
 
-      {/* Media gallery */}
-      {(images.length > 0 || videos.length > 0) && (
-        <section className="space-y-3">
-          <h2 className="text-base font-semibold">Visuels &amp; vidéos</h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {images.map((m) => (
-              <a
-                key={m.id}
-                href={m.url}
-                target="_blank"
-                rel="noreferrer"
-                className="group relative overflow-hidden rounded-lg border"
-                title="Ouvrir en plein écran"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={m.url} alt="" className="h-32 w-full object-cover transition group-hover:scale-105" />
-              </a>
-            ))}
-            {videos.map((m) => (
-              <video key={m.id} src={m.url} className="h-32 w-full rounded-lg border object-cover" controls muted />
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {images.map((m) => (
-              <a
-                key={`dl-${m.id}`}
-                href={m.url}
-                download
-                className="inline-flex items-center gap-1 text-xs text-primary underline-offset-2 hover:underline"
-              >
-                <Download className="h-3 w-3" /> Télécharger
-              </a>
-            ))}
-          </div>
-        </section>
-      )}
+      {/* Google Drive Media Gallery for Partners */}
+      <PartnerMediaGallery
+        media={product.media.map((m) => ({
+          id: m.id,
+          type: m.type,
+          googleDriveUrl: m.googleDriveUrl,
+          title: m.title,
+          sortOrder: m.sortOrder,
+        }))}
+      />
 
       {/* Marketing kit */}
       <section className="space-y-4">

@@ -39,14 +39,14 @@ export function OrderForm({ products }: { products: ProductOption[] }) {
 
   const [productId, setProductId] = useState(products[0]?.id ?? "");
   const [quantity, setQuantity] = useState(1);
-  const [price, setPrice] = useState(products[0]?.sellingPrice ?? 0);
   const [confirmed, setConfirmed] = useState(false);
+  // The price is *derived* rather than synchronised by an effect: it follows
+  // the selected product until the partner types a price of their own, and
+  // changing product clears that override.
+  const [priceOverride, setPriceOverride] = useState<number | null>(null);
 
   const product = products.find((p) => p.id === productId);
-
-  useEffect(() => {
-    if (product) setPrice(product.sellingPrice);
-  }, [product]);
+  const price = priceOverride ?? product?.sellingPrice ?? 0;
 
   useEffect(() => {
     if (state.ok) {
@@ -89,7 +89,10 @@ export function OrderForm({ products }: { products: ProductOption[] }) {
                 id="productId"
                 name="productId"
                 value={productId}
-                onChange={(e) => setProductId(e.target.value)}
+                onChange={(e) => {
+                  setProductId(e.target.value);
+                  setPriceOverride(null);
+                }}
               >
                 {products.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -128,7 +131,7 @@ export function OrderForm({ products }: { products: ProductOption[] }) {
                 step="0.001"
                 min="0.001"
                 value={price}
-                onChange={(e) => setPrice(Number(e.target.value) || 0)}
+                onChange={(e) => setPriceOverride(Number(e.target.value) || 0)}
                 required
               />
             </div>

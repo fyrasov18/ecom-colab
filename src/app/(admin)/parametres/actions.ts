@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { ZodError } from "zod";
 import { requireSession } from "@/lib/rbac";
 import { SETTING_KEYS } from "@/modules/settings/defaults";
 import { updateSetting } from "@/modules/settings/service";
@@ -20,6 +21,8 @@ export async function saveFinanceSettings(
   const settlementHours = Number(formData.get("settlementPeriodHours"));
   const minWithdrawal = Number(formData.get("minWithdrawalAmount"));
   const returnRule = String(formData.get("returnCostRule") ?? "");
+  const globalCommissionType = String(formData.get("globalCommissionType") ?? "");
+  const globalCommissionValue = Number(formData.get("globalCommissionValue"));
 
   try {
     await updateSetting({
@@ -37,7 +40,23 @@ export async function saveFinanceSettings(
       value: returnRule,
       actorId: user.id,
     });
+    await updateSetting({
+      key: SETTING_KEYS.GLOBAL_COMMISSION,
+      value: {
+        commissionType: globalCommissionType,
+        commissionValue: globalCommissionValue,
+      },
+      actorId: user.id,
+    });
   } catch (e) {
+    // A ZodError from a field the operator typed is a normal outcome: report
+    // the field message instead of dumping the raw issue array.
+    if (e instanceof ZodError) {
+      return {
+        ok: false,
+        error: `Valeur invalide : ${e.issues.map((i) => i.message).join(", ")}`,
+      };
+    }
     return {
       ok: false,
       error:

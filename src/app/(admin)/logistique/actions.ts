@@ -3,9 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/rbac";
 import { bulkChangeStatus } from "@/modules/logistics/bulk";
+import {
+  resumeOrderFromHold,
+  upsertShipmentInfo,
+} from "@/modules/logistics/service";
 import { StatusError } from "@/modules/orders/status";
-import { prisma } from "@/lib/prisma";
-import { recordAudit } from "@/modules/audit/service";
 
 export type LogisticsState = {
   ok: boolean;
@@ -73,20 +75,17 @@ export async function resumeOrder(
   const user = await requireSession(["SUPER_ADMIN", "ADMIN"]);
   const orderId = str(formData.get("orderId"));
   try {
-    const order = await prisma.order.findUniqueOrThrow({ where: { id: orderId } });
-    if (!order.statusBeforeHold) {
-      return { ok: false, error: "Cette commande n'est pas en attente." };
-    }
-    const { changeOrderStatus } = await import("@/modules/orders/status");
-    await changeOrderStatus({
+    const resumed = await resumeOrderFromHold({
       orderId,
-      to: order.statusBeforeHold,
       actorId: user.id,
       role: user.role,
     });
+    if (!resumed) {
+      return { ok: false, error: "Cette commande n'est pas en attente." };
+    }
     revalidatePath("/logistique");
     revalidatePath(`/commandes/${orderId}`);
-    return { ok: true, message: `Commande #${order.orderNumber} reprise.` };
+    return { ok: true, message: `Commande #${resumed.orderNumber} reprise.` };
   } catch (e) {
     if (e instanceof StatusError) return { ok: false, error: e.message };
     return { ok: false, error: "Reprise impossible." };
@@ -104,21 +103,11 @@ export async function saveShipmentInfo(
   const trackingNumber = str(formData.get("trackingNumber"));
 
   try {
-    const before = await prisma.shipment.findUnique({ where: { orderId } });
-    const shipment = await prisma.shipment.upsert({
-      where: { orderId },
-      create: { orderId, carrier: carrier || null, trackingNumber: trackingNumber || null },
-      update: { carrier: carrier || null, trackingNumber: trackingNumber || null },
-    });
-    await recordAudit(prisma, {
+    await upsertShipmentInfo({
+      orderId,
+      carrier: carrier || null,
+      trackingNumber: trackingNumber || null,
       actorId: user.id,
-      action: before ? "SHIPMENT_UPDATED" : "SHIPMENT_CREATED",
-      entityType: "Shipment",
-      entityId: shipment.id,
-      before: before
-        ? { carrier: before.carrier, trackingNumber: before.trackingNumber }
-        : null,
-      after: { carrier: shipment.carrier, trackingNumber: shipment.trackingNumber },
     });
     revalidatePath(`/commandes/${orderId}`);
     revalidatePath("/logistique");
