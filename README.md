@@ -282,8 +282,8 @@ Règles : la logique métier vit dans `src/modules/**/service.ts` (jamais dans l
 ## Tests
 
 ```bash
-npm test                # unitaires (116 tests Vitest)
-npm run test:int        # intégration DB réelle (44 tests Vitest)
+npm test                # unitaires (208 tests Vitest)
+npm run test:int        # intégration DB réelle (45 tests Vitest)
 npm run db:finance-seed # jeu d'essai financier (transactions, retraits, portefeuilles)
 # smoke HTTP (serveur lancé) :
 npx tsx scripts/pick-ids.ts
