@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -129,6 +129,45 @@ const PARTNER_BOTTOM: NavItem[] = [
 
 const STORAGE_KEY = "ecc:shell:collapsed";
 
+/* Client-only state is read through useSyncExternalStore rather than an effect
+   that calls setState: the server snapshot is rendered during SSR *and* during
+   hydration, then React re-renders with the browser value. Same output as an
+   effect, minus the cascading render. */
+
+/** Stable snapshots — inline arrows would be a new reference on every render. */
+function snapshotFalse(): boolean {
+  return false;
+}
+function snapshotTrue(): boolean {
+  return true;
+}
+
+/** The snapshots above never change on their own, so there is nothing to watch. */
+function subscribeNothing(): () => void {
+  return () => {};
+}
+
+/** Stored collapse preference. Returns a boolean so the snapshot stays stable. */
+function readCollapsedPref(): boolean {
+  try {
+    return window.localStorage.getItem(STORAGE_KEY) === "1";
+  } catch {
+    // Storage can be unavailable (private mode) — the shell still works.
+    return false;
+  }
+}
+
+/** Keeps the preference in sync across tabs; same-tab writes are optimistic. */
+function subscribeCollapsedPref(onStoreChange: () => void): () => void {
+  window.addEventListener("storage", onStoreChange);
+  return () => window.removeEventListener("storage", onStoreChange);
+}
+
+/** False on the server and during hydration, true once React is client-side. */
+function useHydrated(): boolean {
+  return useSyncExternalStore(subscribeNothing, snapshotTrue, snapshotFalse);
+}
+
 /**
  * The app shell owns the chrome: sidebar (collapsible on desktop, drawer on
  * mobile), topbar and the content region. Layouts stay server components and
@@ -142,29 +181,27 @@ export function AppShell({
   children,
 }: AppShellProps) {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // Restore the collapse preference after hydration so SSR and the first
-  // client render always match (expanded), then apply what was saved.
-  useEffect(() => {
-    try {
-      if (window.localStorage.getItem(STORAGE_KEY) === "1") setCollapsed(true);
-    } catch {
-      // Storage can be unavailable (private mode) — the shell still works.
-    }
-  }, []);
+  // Server snapshot = expanded, so SSR and the first client render match, then
+  // React applies the saved preference on its own.
+  const storedCollapsed = useSyncExternalStore(
+    subscribeCollapsedPref,
+    readCollapsedPref,
+    snapshotFalse,
+  );
+  // The local toggle wins over the store so the button reacts instantly.
+  const [toggledCollapsed, setToggledCollapsed] = useState<boolean | null>(null);
+  const collapsed = toggledCollapsed ?? storedCollapsed;
 
   function toggleCollapsed() {
-    setCollapsed((c) => {
-      const next = !c;
-      try {
-        window.localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
-      } catch {
-        // Ignore quota/private-mode failures; the state still toggles.
-      }
-      return next;
-    });
+    const next = !collapsed;
+    setToggledCollapsed(next);
+    try {
+      window.localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
+    } catch {
+      // Ignore quota/private-mode failures; the state still toggles.
+    }
   }
 
   const groups =
@@ -450,20 +487,16 @@ function Brand({
 
 /** Today's date, formatted on the client to avoid a timezone mismatch at hydration. */
 function TodayChip() {
-  const [label, setLabel] = useState<string | null>(null);
-  useEffect(() => {
-    setLabel(
-      new Intl.DateTimeFormat("fr-FR", {
-        weekday: "short",
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      }).format(new Date()),
-    );
-  }, []);
-  if (!label) {
+  const hydrated = useHydrated();
+  if (!hydrated) {
     return <div className="hidden h-8 w-44 rounded-lg bg-muted lg:block" aria-hidden="true" />;
   }
+  const label = new Intl.DateTimeFormat("fr-FR", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(new Date());
   return (
     <div className="hidden h-8 items-center rounded-lg border bg-card px-3 text-xs font-medium text-muted-foreground lg:flex">
       {label}
