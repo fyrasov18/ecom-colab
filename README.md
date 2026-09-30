@@ -59,6 +59,20 @@ npx prisma migrate deploy
 ADMIN_EMAIL=… ADMIN_PASSWORD='…' npx tsx scripts/create-admin.ts
 ```
 
+Autres comptes (`ADMIN`, `PARTNER`) — même principe, rôle explicite et mot de
+passe toujours fourni par variable d'environnement :
+
+```bash
+USER_EMAIL=… USER_PASSWORD='…' USER_ROLE=ADMIN npx tsx scripts/create-user.ts
+```
+
+> Un compte `PARTNER` crée aussi sa fiche partenaire et son portefeuille : sans
+> elles, le `partnerId` de la session est vide et l'espace partenaire est
+> inutilisable. Sous PowerShell, définir les variables avant la commande :
+> `$env:USER_EMAIL='…'; $env:USER_PASSWORD='…'; $env:USER_ROLE='PARTNER'; npx tsx scripts/create-user.ts`
+> (`PARTNER_NAME` / `PARTNER_CODE` facultatifs — le code `P###` suivant est
+> généré automatiquement).
+
 ### Comptes de développement (seed — jamais en production)
 
 | Rôle | E-mail | Mot de passe |

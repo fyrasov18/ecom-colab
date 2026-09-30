@@ -81,6 +81,27 @@ ADMIN_EMAIL=… ADMIN_PASSWORD=… npx tsx scripts/create-admin.ts
 
 Le mot de passe n'est ni écrit dans le code ni dans Git.
 
+### 6.1 Créer les autres comptes (ADMIN, PARTNER)
+
+Il n'y a volontairement pas d'écran de gestion des utilisateurs (voir
+`docs/phase-1-foundation.md`) : l'approvisionnement se fait par le script
+`scripts/create-user.ts`, idempotent — le relancer sur un e-mail existant remet
+le mot de passe et le rôle à jour au lieu de créer un doublon.
+
+```bash
+# Compte opérations (back-office, hors SUPER_ADMIN)
+USER_EMAIL=ops2@ecomcolab.tn USER_PASSWORD=… USER_ROLE=ADMIN npx tsx scripts/create-user.ts
+
+# Compte partenaire : crée aussi la fiche Partner et le Wallet associés
+USER_EMAIL=… USER_PASSWORD=… USER_ROLE=PARTNER PARTNER_NAME='…' npx tsx scripts/create-user.ts
+```
+
+`USER_ROLE` est obligatoire (`SUPER_ADMIN` | `ADMIN` | `PARTNER`) et le mot de
+passe doit faire 12 caractères minimum. La commande doit être lancée avec le
+`DATABASE_URL` de la base visée (production : récupérer l'URL managée, ne jamais
+la committer). Vérification : `npx tsx scripts/db-state.ts` liste les comptes
+(e-mail, rôle, statut) et les volumes par table.
+
 ## 7. Premier compte / accès
 
 - Se connecter avec le compte administrateur créé en §6.
