@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import NextAuth from "next-auth";
 import { authConfig } from "@/lib/auth-config";
 import {
@@ -9,6 +9,26 @@ import {
 } from "@/lib/roles";
 
 const { auth } = NextAuth(authConfig);
+
+/**
+ * Origin the client actually used to reach us.
+ *
+ * next-auth rewrites `req.url` from `AUTH_URL`/`NEXTAUTH_URL` before this
+ * callback runs (`reqWithEnvURL`), so a stale or dev-only value (e.g.
+ * localhost) would leak into our redirects. The forwarded headers always
+ * describe the host the browser requested (Vercel sets them), and we fall
+ * back to `req.url` locally where they are absent — so redirects follow the
+ * environment instead of a hardcoded origin.
+ */
+function requestOrigin(req: NextRequest): string {
+  const host =
+    req.headers.get("x-forwarded-host")?.split(",")[0]?.trim() ||
+    req.headers.get("host");
+  if (!host) return new URL(req.url).origin;
+  const protocol =
+    req.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() || "http";
+  return `${protocol}://${host}`;
+}
 
 export default auth((req) => {
   const { pathname } = new URL(req.url);
@@ -23,11 +43,11 @@ export default auth((req) => {
     pathname.startsWith("/api/telegram");
 
   const redirectTo = (path: string) =>
-    NextResponse.redirect(new URL(path, req.url));
+    NextResponse.redirect(new URL(path, requestOrigin(req)));
 
   // Unauthenticated → login page (except public routes).
   if (!user && !isPublic) {
-    const loginUrl = new URL("/login", req.url);
+    const loginUrl = new URL("/login", requestOrigin(req));
     loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);
   }
