@@ -94,6 +94,19 @@
   --chart-4: #1e3a8a;
   --chart-5: #0284c7;
 
+  /* App shell (dark sidebar, same tone in both colour modes) */
+  --sidebar: #0f172a;
+  --sidebar-foreground: #e2e8f0;
+  --sidebar-muted: #94a3b8;
+  --sidebar-faint: #64748b;
+  --sidebar-hover: rgba(255, 255, 255, 0.06);
+  --sidebar-active: #2563eb;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+
+  /* Elevation */
+  --shadow-soft: 0 1px 2px 0 rgb(15 23 42 / 0.05);
+  --shadow-lift: 0 8px 24px -10px rgb(15 23 42 / 0.18);
+
   /* Radius scale: sm 6 / md 8 / lg 12 / xl 16 */
   --radius-sm: 6px;
   --radius-md: 8px;
@@ -208,6 +221,19 @@
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
 
+  /* App shell */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-faint: var(--sidebar-faint);
+  --color-sidebar-hover: var(--sidebar-hover);
+  --color-sidebar-active: var(--sidebar-active);
+  --color-sidebar-border: var(--sidebar-border);
+
+  /* Elevation */
+  --shadow-soft: var(--shadow-soft);
+  --shadow-lift: var(--shadow-lift);
+
   /* Radius */
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
@@ -236,6 +262,13 @@
   --text-small--line-height: 18px;
   --text-caption: 12px;
   --text-caption--line-height: 16px;
+  /* KPI numbers — big, tight, tabular */
+  --text-kpi: 28px;
+  --text-kpi--line-height: 1.15;
+  --text-kpi--font-weight: 700;
+  --text-kpi-sm: 20px;
+  --text-kpi-sm--line-height: 1.2;
+  --text-kpi-sm--font-weight: 700;
 }
 
 @layer base {
@@ -248,5 +281,46 @@
   /* Always-visible keyboard focus (accessibility). */
   :focus-visible {
     @apply outline-ring outline-2 outline-offset-2;
+  }
+}
+
+/* ============================================================
+   Shell motion (mobile drawer) — dependency-free keyframes.
+   ============================================================ */
+@keyframes shell-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes shell-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes shell-drawer-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@keyframes shell-drawer-out {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [class*="animate-[shell-"] {
+    animation-duration: 1ms !important;
   }
 }
