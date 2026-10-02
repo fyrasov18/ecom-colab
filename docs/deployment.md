@@ -224,12 +224,25 @@ c'est la configuration serveur qui est refusée.
    bon. Vérifier la **colonne Valeur** dans Vercel.
 4. `AUTH_TRUST_HOST` absent d'une plateforme qui n'expose pas `VERCEL`.
 
-**Où lire la cause exacte** : `assertAuthEnvironment()` dans `src/lib/auth.ts`
-reproduit `setEnvDefaults` + `assertConfig` et **échoue en nommant la variable**
-(`MissingSecret:` ou `UntrustedHost:`) — le message apparaît dans le build
-Vercel (ou, si le module n'est évalué qu'à l'exécution, dans
-**Functions → Logs**). Auth.js lui-même logge aussi l'erreur via
-`logger.error` (`@auth/core/index.js:78`) : filtrer les logs sur `/api/auth`.
+**Où lire la cause exacte** : `assertAuthEnvironment()` dans `src/lib/auth-config.ts`
+— le module partagé par les **deux** instances Auth.js du projet
+(`src/lib/auth.ts` côté route handlers/Node et `src/middleware.ts` côté Edge ;
+celui-ci traite aussi les requêtes `/api/auth/*`, son `matcher` couvrant tout
+hors assets statiques). Il reproduit `setEnvDefaults` + `assertConfig` et
+**échoue en nommant la variable** (`MissingSecret:` ou `UntrustedHost:`) — le
+message apparaît dans le build Vercel (ou, si le module n'est évalué qu'à
+l'exécution, dans **Functions → Logs**).
+
+Auth.js logge de son côté l'erreur native, reconnaissable à ce format :
+
+```
+[auth][error] MissingSecret: Please define a `secret`. Read more at https://errors.authjs.dev#missingsecret
+[auth][error] UntrustedHost: ...
+```
+
+C'est `@auth/core` lui-même (`assert.js:59` et `assert.js:77`) qui l'écrit via
+`logger.error` (`@auth/core/index.js:78`) — **`MissingSecret` signifie
+`AUTH_SECRET` absent ou vide**. Filtrer les logs sur `/api/auth`.
 
 > Une erreur de build ne met rien hors service : Vercel continue de servir le
 > dernier déploiement réussi tant que le nouveau n'est pas vert.

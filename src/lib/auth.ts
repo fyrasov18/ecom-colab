@@ -7,54 +7,6 @@ import { authConfig } from "@/lib/auth-config";
 import { recordAudit, type AuditEntry } from "@/modules/audit/service";
 import { checkRateLimit, clientIpFrom } from "@/lib/rate-limit";
 
-/**
- * Auth.js refuses to run with a bad configuration, but its failure mode is the
- * opaque `/api/auth/error?error=Configuration` page ("There is a problem with
- * the server configuration") which hides *which* variable is wrong — and
- * next-auth's client `signIn()` bails out to that page before it ever checks a
- * credential, so the login form looks broken for an unrelated reason.
- *
- * The two checks below mirror `@auth/core`'s own `setEnvDefaults`
- * (lib/utils/env.js) and `assertConfig` (lib/utils/assert.js) line for line, so
- * the build / function logs name the offending variable instead. Production
- * only: development and the test tooling run without a usable secret.
- */
-function assertAuthEnvironment(): void {
-  if (process.env.NODE_ENV !== "production") return;
-
-  // env.js:22/28 — an absent OR empty secret ends up as `[]`, i.e. `.length === 0`.
-  const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? "";
-  if (!secret.length) {
-    throw new Error(
-      "[auth] MissingSecret: AUTH_SECRET (or NEXTAUTH_SECRET) is absent or empty. " +
-        "Auth.js cannot sign sessions. Generate one with `openssl rand -hex 32`, " +
-        "set it in Vercel → Settings → Environment Variables for Production AND " +
-        "Preview (check the value is not blank), then redeploy."
-    );
-  }
-
-  // env.js:40-44 — note the `??` chain (NOT `||`): a blank AUTH_URL or
-  // AUTH_TRUST_HOST value short-circuits it and forces trustHost to false, which
-  // Auth.js reports as UntrustedHost behind the same generic error page.
-  const trusted = !!(
-    process.env.AUTH_URL ??
-    process.env.AUTH_TRUST_HOST ??
-    process.env.VERCEL ??
-    process.env.CF_PAGES ??
-    // NODE_ENV is always "production" here; kept for parity with env.js, where
-    // this is what makes a self-hosted production require AUTH_TRUST_HOST=true.
-    (process.env.NODE_ENV !== "production")
-  );
-  if (!trusted) {
-    throw new Error(
-      "[auth] UntrustedHost: trustHost resolved to false because AUTH_URL or " +
-        "AUTH_TRUST_HOST is set to an empty value (see @auth/core setEnvDefaults). " +
-        "Delete the blank variable or give it a real value, then redeploy."
-    );
-  }
-}
-assertAuthEnvironment();
-
 const credentialsSchema = z.object({
   email: z.string().email("Adresse e-mail invalide"),
   password: z.string().min(1, "Mot de passe requis"),
