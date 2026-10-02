@@ -1,16 +1,438 @@
-// E-COM COLAB — PostgreSQL schema
-// Money: Decimal(12,3) always (TND / millimes). Never floats.
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
-// ───────────────────────── Enums ─────────────────────────
+model User {
+  id                  String                 @id @default(cuid())
+  email               String                 @unique
+  passwordHash        String
+  firstName           String
+  lastName            String
+  role                Role                   @default(PARTNER)
+  status              UserStatus             @default(ACTIVE)
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  auditLogs           AuditLog[]
+  createdTransactions FinancialTransaction[]
+  notifications       Notification[]
+  createdOrders       Order[]
+  orderStatusChanges  OrderStatusHistory[]
+  partner             Partner?
+  reviewedWithdrawals Withdrawal[]           @relation("WithdrawalReviewer")
+
+  @@index([role, status])
+}
+
+model Partner {
+  id                     String                 @id @default(cuid())
+  userId                 String                 @unique
+  code                   String                 @unique
+  displayName            String
+  status                 PartnerStatus          @default(ACTIVE)
+  defaultCommissionType  CommissionType         @default(PERCENTAGE)
+  defaultCommissionValue Decimal                @default(60) @db.Decimal(12, 3)
+  notes                  String?
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  /// Optional performance tier. NULL until an Admin assigns one — while NULL the
+  /// existing commission resolution chain stays authoritative, so no historical
+  /// order is ever recalculated by introducing levels.
+  performanceLevelId     String?
+  customers              Customer[]
+  transactions           FinancialTransaction[]
+  orders                 Order[]
+  performanceLevel       PerformanceLevel?      @relation(fields: [performanceLevelId], references: [id])
+  user                   User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignedProducts       PartnerProduct[]
+  socialAccounts         PartnerSocialAccount[]
+  wallet                 Wallet?
+  withdrawals            Withdrawal[]
+
+  @@index([status])
+}
+
+model PartnerSocialAccount {
+  id        String         @id @default(cuid())
+  partnerId String
+  platform  SocialPlatform
+  label     String
+  url       String
+  isActive  Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  partner   Partner        @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@index([partnerId])
+}
+
+model PerformanceLevel {
+  id              String    @id @default(cuid())
+  name            String    @unique
+  description     String?
+  /// Percentage of the profit pool routed to the partner (0–100, validated).
+  sharePercentage Decimal   @db.Decimal(5, 2)
+  /// Free-form criteria document (thresholds, windows, weights). Intentionally
+  /// untyped so the criteria can evolve without a migration.
+  criteria        Json?
+  isActive        Boolean   @default(true)
+  /// Ascending priority: higher sortOrder = higher tier.
+  sortOrder       Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  partners        Partner[]
+
+  @@index([isActive, sortOrder])
+}
+
+model Product {
+  id                  String                  @id @default(cuid())
+  name                String
+  slug                String                  @unique
+  description         String?
+  purchaseCost        Decimal                 @db.Decimal(12, 3)
+  packagingCost       Decimal                 @db.Decimal(12, 3)
+  deliveryCost        Decimal                 @db.Decimal(12, 3)
+  sellingPrice        Decimal                 @db.Decimal(12, 3)
+  stockQuantity       Int                     @default(0)
+  lowStockThreshold   Int                     @default(5)
+  status              ProductStatus           @default(ACTIVE)
+  commissionType      CommissionType?
+  commissionValue     Decimal?                @db.Decimal(12, 3)
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  category            String?
+  ingestedFrom        String?
+  sku                 String?
+  source              ProductSource           @default(ADMIN)
+  supplierRef         String?
+  orderItems          OrderItem[]
+  partnerAssignations PartnerProduct[]
+  marketingAssets     ProductMarketingAsset[]
+  media               ProductMedia[]
+  telegramSessions    TelegramSession[]
+
+  @@index([status])
+}
+
+model ProductMedia {
+  id             String    @id @default(cuid())
+  productId      String
+  type           MediaType
+  sortOrder      Int       @default(0)
+  createdAt      DateTime  @default(now())
+  googleDriveUrl String
+  title          String?
+  product        Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model ProductMarketingAsset {
+  id        String             @id @default(cuid())
+  productId String
+  kind      MarketingAssetKind
+  title     String?
+  content   String?
+  mediaUrl  String?
+  sortOrder Int                @default(0)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  product   Product            @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, kind])
+}
+
+model PartnerProduct {
+  id              String               @id @default(cuid())
+  partnerId       String
+  productId       String
+  status          PartnerProductStatus @default(ACTIVE)
+  commissionType  CommissionType?
+  commissionValue Decimal?             @db.Decimal(12, 3)
+  assignedAt      DateTime             @default(now())
+  deactivatedAt   DateTime?
+  partner         Partner              @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  product         Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([partnerId, productId])
+  @@index([productId, status])
+}
+
+model Customer {
+  id             String   @id @default(cuid())
+  ownerPartnerId String
+  fullName       String
+  phone          String
+  governorate    String
+  city           String
+  address        String
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  ownerPartner   Partner  @relation(fields: [ownerPartnerId], references: [id], onDelete: Cascade)
+  orders         Order[]
+
+  @@unique([ownerPartnerId, phone])
+  @@index([phone])
+}
+
+model Order {
+  id                     String                 @id @default(cuid())
+  orderNumber            Int                    @unique
+  partnerId              String
+  createdById            String
+  customerId             String
+  status                 OrderStatus            @default(CONFIRMED)
+  quantity               Int
+  notes                  String?
+  currency               String                 @default("TND")
+  partnerConfirmedAt     DateTime?
+  unitSellingPrice       Decimal                @db.Decimal(12, 3)
+  productCost            Decimal                @db.Decimal(12, 3)
+  packagingCost          Decimal                @db.Decimal(12, 3)
+  deliveryCost           Decimal                @db.Decimal(12, 3)
+  contribution           Decimal                @db.Decimal(12, 3)
+  commissionType         CommissionType
+  commissionValue        Decimal                @db.Decimal(12, 3)
+  commissionSource       CommissionSource
+  partnerEarning         Decimal                @db.Decimal(12, 3)
+  platformShare          Decimal                @db.Decimal(12, 3)
+  adjustmentsTotal       Decimal                @default(0) @db.Decimal(12, 3)
+  deliveredAt            DateTime?
+  settlementDueAt        DateTime?
+  earningStatus          EarningStatus          @default(NONE)
+  statusBeforeHold       OrderStatus?
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  partnerSharePercentage Decimal?               @db.Decimal(5, 2)
+  performanceLevelName   String?
+  transactions           FinancialTransaction[]
+  createdBy              User                   @relation(fields: [createdById], references: [id])
+  customer               Customer               @relation(fields: [customerId], references: [id])
+  partner                Partner                @relation(fields: [partnerId], references: [id])
+  items                  OrderItem[]
+  statusHistory          OrderStatusHistory[]
+  returnRecord           Return?
+  shipment               Shipment?
+
+  @@index([status, createdAt])
+  @@index([partnerId, createdAt])
+  @@index([customerId])
+  @@index([deliveredAt])
+  @@index([settlementDueAt])
+}
+
+model OrderItem {
+  id          String  @id @default(cuid())
+  orderId     String
+  productId   String
+  quantity    Int
+  unitPrice   Decimal @db.Decimal(12, 3)
+  productName String
+  productSlug String
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product @relation(fields: [productId], references: [id])
+
+  @@index([productId])
+  @@index([orderId])
+}
+
+model OrderStatusHistory {
+  id          String       @id @default(cuid())
+  orderId     String
+  oldStatus   OrderStatus?
+  newStatus   OrderStatus
+  changedById String?
+  reason      String?
+  createdAt   DateTime     @default(now())
+  changedBy   User?        @relation(fields: [changedById], references: [id])
+  order       Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
+}
+
+model Shipment {
+  id             String    @id @default(cuid())
+  orderId        String    @unique
+  carrier        String?
+  trackingNumber String?
+  shippedAt      DateTime?
+  deliveredAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  order          Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model Return {
+  id          String     @id @default(cuid())
+  orderId     String     @unique
+  kind        ReturnKind
+  reason      String?
+  costCharged Decimal    @default(0) @db.Decimal(12, 3)
+  currency    String     @default("TND")
+  resolvedAt  DateTime?
+  createdAt   DateTime   @default(now())
+  order       Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model Wallet {
+  id               String   @id @default(cuid())
+  partnerId        String   @unique
+  availableBalance Decimal  @default(0) @db.Decimal(12, 3)
+  pendingBalance   Decimal  @default(0) @db.Decimal(12, 3)
+  totalEarned      Decimal  @default(0) @db.Decimal(12, 3)
+  totalWithdrawn   Decimal  @default(0) @db.Decimal(12, 3)
+  currency         String   @default("TND")
+  updatedAt        DateTime @updatedAt
+  partner          Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+}
+
+model FinancialTransaction {
+  id             String                     @id @default(cuid())
+  partnerId      String
+  orderId        String?
+  withdrawalId   String?                    @unique
+  type           FinancialTransactionType
+  amount         Decimal                    @db.Decimal(12, 3)
+  currency       String                     @default("TND")
+  status         FinancialTransactionStatus @default(AVAILABLE)
+  availableAt    DateTime?
+  description    String?
+  idempotencyKey String                     @unique
+  createdById    String?
+  createdAt      DateTime                   @default(now())
+  createdBy      User?                      @relation(fields: [createdById], references: [id])
+  order          Order?                     @relation(fields: [orderId], references: [id])
+  partner        Partner                    @relation(fields: [partnerId], references: [id])
+  withdrawal     Withdrawal?                @relation(fields: [withdrawalId], references: [id])
+
+  @@index([partnerId, status])
+  @@index([status, availableAt])
+  @@index([orderId])
+}
+
+model Withdrawal {
+  id                   String                @id @default(cuid())
+  partnerId            String
+  amount               Decimal               @db.Decimal(12, 3)
+  currency             String                @default("TND")
+  paymentMethod        String
+  paymentAccount       String
+  status               WithdrawalStatus      @default(REQUESTED)
+  requestedAt          DateTime              @default(now())
+  reviewedAt           DateTime?
+  paidAt               DateTime?
+  transactionReference String?
+  reviewedById         String?
+  rejectionReason      String?
+  transactions         FinancialTransaction?
+  partner              Partner               @relation(fields: [partnerId], references: [id])
+  reviewedBy           User?                 @relation("WithdrawalReviewer", fields: [reviewedById], references: [id])
+
+  @@index([status])
+  @@index([partnerId, status])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String
+  entityType String
+  entityId   String?
+  before     Json?
+  after      Json?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  actor      User?    @relation(fields: [actorId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([actorId])
+  @@index([createdAt])
+}
+
+model SystemSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       Json
+  category    String
+  description String?
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+}
+
+model TelegramAuthorizedUser {
+  id             String     @id @default(cuid())
+  /// Stable Telegram identity (numeric id). Never the @username.
+  telegramUserId String     @unique
+  displayName    String?
+  status         UserStatus @default(ACTIVE)
+  authorizedAt   DateTime   @default(now())
+  revokedAt      DateTime?
+  /// Who inside E-COM COLAB granted this access.
+  authorizedById String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([status])
+}
+
+model TelegramSession {
+  id             String   @id @default(cuid())
+  telegramUserId String
+  /// Current wizard step, or IDLE once the conversation is finished.
+  step           String   @default("IDLE")
+  /// Partially collected product data; validated on completion.
+  data           Json?
+  status         String   @default("ACTIVE")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  /// Hard expiry: an abandoned conversation must never resurrect.
+  expiresAt      DateTime
+  productId      String?
+  product        Product? @relation(fields: [productId], references: [id])
+
+  @@index([telegramUserId, status])
+  @@index([expiresAt])
+}
+
+/// Processed-update ledger. The unique update_id is what makes the webhook
+/// idempotent: Telegram retries deliveries, and a retry must not create a
+/// second product.
+model TelegramUpdate {
+  id             String   @id @default(cuid())
+  /// Telegram's per-update identifier.
+  updateId       String   @unique
+  telegramUserId String?
+  kind           String
+  processedAt    DateTime @default(now())
+
+  @@index([telegramUserId])
+}
 
 enum Role {
   SUPER_ADMIN
@@ -37,16 +459,14 @@ enum SocialPlatform {
 }
 
 enum ProductStatus {
-  // Draft = created by an ingestion channel (Telegram) and awaiting Admin
-  // review. It is deliberately NOT sellable: it must be reviewed before ACTIVE.
-  DRAFT
   ACTIVE
   INACTIVE
   OUT_OF_STOCK
   ARCHIVED
+  DRAFT
 }
 
-/** Where a product record originated. ADMIN = created in the dashboard. */
+/// * Where a product record originated. ADMIN = created in the dashboard.
 enum ProductSource {
   ADMIN
   TELEGRAM
@@ -142,513 +562,3 @@ enum NotificationType {
   STOCK
   SYSTEM
 }
-
-// ───────────────────────── Identity ─────────────────────────
-
-model User {
-  id           String     @id @default(cuid())
-  email        String     @unique
-  passwordHash String
-  firstName    String
-  lastName     String
-  role         Role       @default(PARTNER)
-  status       UserStatus @default(ACTIVE)
-
-  partner     Partner?
-  auditLogs   AuditLog[]
-  notifications Notification[]
-  reviewedWithdrawals Withdrawal[] @relation("WithdrawalReviewer")
-  createdOrders       Order[]
-  orderStatusChanges  OrderStatusHistory[]
-  createdTransactions FinancialTransaction[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([role, status])
-}
-
-model Partner {
-  id           String        @id @default(cuid())
-  userId       String        @unique
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  code         String        @unique
-  displayName  String
-  status       PartnerStatus @default(ACTIVE)
-  defaultCommissionType  CommissionType @default(PERCENTAGE)
-  defaultCommissionValue Decimal       @default(60) @db.Decimal(12, 3)
-  notes        String?
-
-  /// Optional performance tier. NULL until an Admin assigns one — while NULL the
-  /// existing commission resolution chain stays authoritative, so no historical
-  /// order is ever recalculated by introducing levels.
-  performanceLevelId String?
-  performanceLevel   PerformanceLevel? @relation(fields: [performanceLevelId], references: [id], onDelete: SetNull)
-
-  socialAccounts    PartnerSocialAccount[]
-  assignedProducts  PartnerProduct[]
-  orders            Order[]
-  customers         Customer[]
-  wallet            Wallet?
-  transactions      FinancialTransaction[]
-  withdrawals       Withdrawal[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([status])
-}
-
-model PartnerSocialAccount {
-  id        String         @id @default(cuid())
-  partnerId String
-  partner   Partner        @relation(fields: [partnerId], references: [id], onDelete: Cascade)
-  platform  SocialPlatform
-  label     String
-  url       String
-  isActive  Boolean        @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([partnerId])
-}
-
-// ───────────────────────── Performance levels ─────────────────────────
-//
-// Profit-share architecture. A level carries the share percentage applied to
-// the order's profit pool, plus a free-form `criteria` document so Admin can
-// define progression rules later WITHOUT a code change.
-//
-// Deliberately NOT seeded: the levels and their percentages are a business
-// decision that has not been finalised yet (see docs/phase-5-6-report.md).
-// Until an Admin configures levels, `Partner.performanceLevelId` stays NULL
-// and the existing commission resolution chain remains authoritative.
-
-model PerformanceLevel {
-  id          String  @id @default(cuid())
-  name        String  @unique
-  description String?
-  /// Percentage of the profit pool routed to the partner (0–100, validated).
-  sharePercentage Decimal @db.Decimal(5, 2)
-  /// Free-form criteria document (thresholds, windows, weights). Intentionally
-  /// untyped so the criteria can evolve without a migration.
-  criteria    Json?
-  isActive    Boolean @default(true)
-  /// Ascending priority: higher sortOrder = higher tier.
-  sortOrder   Int     @default(0)
-
-  partners    Partner[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([isActive, sortOrder])
-}
-
-// ───────────────────────── Catalog ─────────────────────────
-
-model Product {
-  id                String        @id @default(cuid())
-  name              String
-  slug              String        @unique
-  description       String?
-  purchaseCost      Decimal       @db.Decimal(12, 3)
-  packagingCost     Decimal       @db.Decimal(12, 3)
-  deliveryCost      Decimal       @db.Decimal(12, 3)
-  sellingPrice      Decimal       @db.Decimal(12, 3)
-  stockQuantity     Int           @default(0)
-  lowStockThreshold Int           @default(5)
-  status            ProductStatus @default(ACTIVE)
-  commissionType    CommissionType?
-  commissionValue   Decimal?      @db.Decimal(12, 3)
-
-  // Ingestion provenance. `source` stays ADMIN for anything created in the
-  // dashboard, so the column is safe to filter on without backfilling.
-  source            ProductSource @default(ADMIN)
-  // Free-text references supplied by a supplier / ingestion channel. Optional
-  // by design: they are matching hints, never a business key.
-  sku               String?
-  category          String?
-  supplierRef       String?
-  // Set when the record came from an ingestion channel, so the audit trail can
-  // point back to the exact conversation that produced it.
-  ingestedFrom      String?
-
-  media           ProductMedia[]
-  marketingAssets ProductMarketingAsset[]
-  partnerAssignations PartnerProduct[]
-  orderItems      OrderItem[]
-  telegramSessions TelegramSession[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([status])
-}
-
-model ProductMedia {
-  id              String    @id @default(cuid())
-  productId       String
-  product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-  type            MediaType
-  googleDriveUrl  String
-  title           String?
-  sortOrder       Int       @default(0)
-
-  createdAt DateTime @default(now())
-
-  @@index([productId])
-}
-
-model ProductMarketingAsset {
-  id        String             @id @default(cuid())
-  productId String
-  product   Product            @relation(fields: [productId], references: [id], onDelete: Cascade)
-  kind      MarketingAssetKind
-  title     String?
-  content   String?
-  mediaUrl  String?
-  sortOrder Int                @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([productId, kind])
-}
-
-model PartnerProduct {
-  id              String                @id @default(cuid())
-  partnerId       String
-  partner         Partner               @relation(fields: [partnerId], references: [id], onDelete: Cascade)
-  productId       String
-  product         Product               @relation(fields: [productId], references: [id], onDelete: Cascade)
-  status          PartnerProductStatus  @default(ACTIVE)
-  commissionType  CommissionType?
-  commissionValue Decimal?              @db.Decimal(12, 3)
-  assignedAt      DateTime              @default(now())
-  deactivatedAt   DateTime?
-
-  @@unique([partnerId, productId])
-  @@index([productId, status])
-}
-
-// ───────────────────────── Customers ─────────────────────────
-
-model Customer {
-  id             String  @id @default(cuid())
-  ownerPartnerId String
-  ownerPartner   Partner @relation(fields: [ownerPartnerId], references: [id], onDelete: Cascade)
-  fullName       String
-  phone          String
-  governorate    String
-  city           String
-  address        String
-  notes          String?
-
-  orders Order[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Phone is the strong dedup signal, scoped per partner (data isolation).
-  @@unique([ownerPartnerId, phone])
-  @@index([phone])
-}
-
-// ───────────────────────── Orders ─────────────────────────
-
-model Order {
-  id          String      @id @default(cuid())
-  orderNumber Int         @unique
-  partnerId   String
-  partner     Partner     @relation(fields: [partnerId], references: [id])
-  createdById String
-  createdBy   User        @relation(fields: [createdById], references: [id])
-  customerId  String
-  customer    Customer    @relation(fields: [customerId], references: [id])
-
-  status   OrderStatus @default(CONFIRMED)
-  quantity Int
-  notes    String?
-  currency String      @default("TND")
-
-  // Partner confirmation of the customer (checkbox) — auditable proof.
-  partnerConfirmedAt DateTime?
-
-  // ── Immutable financial snapshot (frozen at creation) ──
-  unitSellingPrice  Decimal         @db.Decimal(12, 3)
-  productCost       Decimal         @db.Decimal(12, 3)
-  packagingCost     Decimal         @db.Decimal(12, 3)
-  deliveryCost      Decimal         @db.Decimal(12, 3)
-  contribution      Decimal         @db.Decimal(12, 3)
-  commissionType    CommissionType
-  commissionValue   Decimal         @db.Decimal(12, 3)
-  commissionSource  CommissionSource
-  partnerEarning    Decimal         @db.Decimal(12, 3)
-  platformShare     Decimal         @db.Decimal(12, 3)
-  adjustmentsTotal  Decimal         @default(0) @db.Decimal(12, 3)
-
-  // Performance-tier provenance. NULL on every order created before levels
-  // existed — they remain valid, immutable history. When a partner holds a
-  // PerformanceLevel, its name and the share % actually applied are copied
-  // here at snapshot time, so a later tier change can never rewrite the past.
-  performanceLevelName String?
-  partnerSharePercentage Decimal?      @db.Decimal(5, 2)
-
-  // ── Settlement ──
-  deliveredAt     DateTime?
-  settlementDueAt DateTime?
-  earningStatus   EarningStatus    @default(NONE)
-
-  // Set when the order enters ON_HOLD; resume returns here.
-  statusBeforeHold OrderStatus?
-
-  items         OrderItem[]
-  statusHistory OrderStatusHistory[]
-  shipment      Shipment?
-  returnRecord  Return?
-  transactions  FinancialTransaction[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([status, createdAt])
-  @@index([partnerId, createdAt])
-  @@index([customerId])
-  @@index([deliveredAt])
-  @@index([settlementDueAt])
-}
-
-model OrderItem {
-  id        String  @id @default(cuid())
-  orderId   String
-  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId String
-  product   Product @relation(fields: [productId], references: [id])
-
-  quantity    Int
-  unitPrice   Decimal @db.Decimal(12, 3)
-  productName String
-  productSlug String
-
-  @@index([productId])
-  @@index([orderId])
-}
-
-model OrderStatusHistory {
-  id          String      @id @default(cuid())
-  orderId     String
-  order       Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  oldStatus   OrderStatus?
-  newStatus   OrderStatus
-  changedById String?
-  changedBy   User?       @relation(fields: [changedById], references: [id])
-  reason      String?
-
-  createdAt DateTime @default(now())
-
-  @@index([orderId, createdAt])
-}
-
-model Shipment {
-  id             String   @id @default(cuid())
-  orderId        String   @unique
-  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  carrier        String?
-  trackingNumber String?
-  shippedAt      DateTime?
-  deliveredAt    DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Return {
-  id          String     @id @default(cuid())
-  orderId     String     @unique
-  order       Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  kind        ReturnKind
-  reason      String?
-  costCharged Decimal    @default(0) @db.Decimal(12, 3)
-  currency    String     @default("TND")
-  resolvedAt  DateTime?
-
-  createdAt DateTime @default(now())
-}
-
-// ───────────────────────── Finance (immutable ledger) ─────────────────────────
-
-model Wallet {
-  id               String  @id @default(cuid())
-  partnerId        String  @unique
-  partner          Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
-  availableBalance Decimal @default(0) @db.Decimal(12, 3)
-  pendingBalance   Decimal @default(0) @db.Decimal(12, 3)
-  totalEarned      Decimal @default(0) @db.Decimal(12, 3)
-  totalWithdrawn   Decimal @default(0) @db.Decimal(12, 3)
-  currency         String  @default("TND")
-
-  // Cache only — every value is recomputable from FinancialTransaction.
-  updatedAt DateTime @updatedAt
-}
-
-model FinancialTransaction {
-  id             String                     @id @default(cuid())
-  partnerId      String
-  partner        Partner                    @relation(fields: [partnerId], references: [id])
-  orderId        String?
-  order          Order?                     @relation(fields: [orderId], references: [id])
-  withdrawalId   String?                    @unique
-  withdrawal     Withdrawal?                @relation(fields: [withdrawalId], references: [id])
-  type           FinancialTransactionType
-  amount         Decimal                    @db.Decimal(12, 3) // signed: earnings +, costs/withdrawals −
-  currency       String                     @default("TND")
-  status         FinancialTransactionStatus @default(AVAILABLE)
-  availableAt    DateTime?
-  description    String?
-  idempotencyKey String                     @unique
-  createdById    String?
-  createdBy      User?                      @relation(fields: [createdById], references: [id])
-
-  createdAt DateTime @default(now())
-
-  @@index([partnerId, status])
-  @@index([status, availableAt])
-  @@index([orderId])
-}
-
-model Withdrawal {
-  id                   String           @id @default(cuid())
-  partnerId            String
-  partner              Partner          @relation(fields: [partnerId], references: [id])
-  amount               Decimal          @db.Decimal(12, 3)
-  currency             String           @default("TND")
-  paymentMethod        String
-  paymentAccount       String
-  status               WithdrawalStatus @default(REQUESTED)
-  requestedAt          DateTime         @default(now())
-  reviewedAt           DateTime?
-  paidAt               DateTime?
-  transactionReference String?
-  reviewedById         String?
-  reviewedBy           User?            @relation("WithdrawalReviewer", fields: [reviewedById], references: [id])
-  rejectionReason      String?
-
-  transactions FinancialTransaction[]
-
-  @@index([status])
-  @@index([partnerId, status])
-}
-
-// ───────────────────────── System ─────────────────────────
-
-model Notification {
-  id     String           @id @default(cuid())
-  userId String
-  user   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type   NotificationType
-  title  String
-  body   String
-  link   String?
-  readAt DateTime?
-
-  createdAt DateTime @default(now())
-
-  @@index([userId, readAt])
-  @@index([createdAt])
-}
-
-model AuditLog {
-  id         String  @id @default(cuid())
-  actorId    String?
-  actor      User?   @relation(fields: [actorId], references: [id])
-  action     String
-  entityType String
-  entityId   String?
-  before     Json?
-  after      Json?
-  ip         String?
-  userAgent  String?
-
-  createdAt DateTime @default(now())
-
-  @@index([entityType, entityId])
-  @@index([actorId])
-  @@index([createdAt])
-}
-
-model SystemSetting {
-  id          String  @id @default(cuid())
-  key         String  @unique
-  value       Json
-  category    String
-  description String?
-  updatedById String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([category])
-}
-
-// ───────────────────────── Telegram ingestion ─────────────────────────
-//
-// Telegram is an INGESTION CHANNEL, never a second product database: it
-// produces DRAFT products that an Admin must review before they can go ACTIVE.
-//
-// Authorisation is keyed on the stable `telegramUserId`, never on a username
-// (usernames are mutable and can be handed to someone else).
-
-model TelegramAuthorizedUser {
-  id              String    @id @default(cuid())
-  /// Stable Telegram identity (numeric id). Never the @username.
-  telegramUserId  String    @unique
-  displayName     String?
-  status          UserStatus @default(ACTIVE)
-  authorizedAt    DateTime  @default(now())
-  revokedAt       DateTime?
-  /// Who inside E-COM COLAB granted this access.
-  authorizedById  String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([status])
-}
-
-model TelegramSession {
-  id              String  @id @default(cuid())
-  telegramUserId  String
-  /// Current wizard step, or IDLE once the conversation is finished.
-  step            String  @default("IDLE")
-  /// Partially collected product data; validated on completion.
-  data            Json?
-  status          String  @default("ACTIVE")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  /// Hard expiry: an abandoned conversation must never resurrect.
-  expiresAt       DateTime
-
-  productId       String?
-  product         Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
-
-  @@index([telegramUserId, status])
-  @@index([expiresAt])
-}
-
-/// Processed-update ledger. The unique update_id is what makes the webhook
-/// idempotent: Telegram retries deliveries, and a retry must not create a
-/// second product.
-model TelegramUpdate {
-  id          String   @id @default(cuid())
-  /// Telegram's per-update identifier.
-  updateId    String   @unique
-  telegramUserId String?
-  kind        String
-  processedAt DateTime @default(now())
-
-  @@index([telegramUserId])
-}
-
-

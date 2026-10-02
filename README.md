@@ -38,6 +38,20 @@ npm run dev                 # http://localhost:3000
 - Vérifier l'absence de dérive entre le schéma et la base :
   `node scripts/check-drift.mjs` (lit `DATABASE_URL`, ne l'affiche jamais).
 
+> **Neon / base distante** : `DATABASE_URL` = URL *pooled* (`…-pooler…`) utilisée
+> par l'application, `DIRECT_URL` = URL *directe* (même hôte **sans** `-pooler`)
+> utilisée par `prisma migrate`. Les deux sont obligatoires, le schéma déclare
+> `directUrl`. Ne **jamais** ajouter `channel_binding=require` à l'URL : le
+> connecteur Prisma le refuse et **toutes** les connexions échouent en
+> `P1001: Can't reach database server` (y compris `create-admin.ts`, qui affiche
+> désormais la cause réelle au lieu d'un « Échec de la création » générique).
+
+> `prisma.config.ts` remplace la clé `package.json#prisma`, dépréciée en Prisma 6
+> et supprimée en Prisma 7 : il déclare le chemin des migrations et la commande
+> de seed. Quand ce fichier existe, le CLI Prisma ne lit **plus** `.env`
+> automatiquement ; il est chargé explicitement via `process.loadEnvFile()`
+> (natif, Node ≥ 20.12) — aucune dépendance `dotenv` ajoutée.
+
 > `npm run db:seed` est réservé au développement : il crée des comptes de
 > démonstration à mots de passe connus et **refuse** de s'exécuter si la base
 > n'est pas locale ou si `NODE_ENV=production`.

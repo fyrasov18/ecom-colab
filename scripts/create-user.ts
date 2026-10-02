@@ -146,10 +146,27 @@ async function main() {
 
 main()
   .catch((e) => {
-    if (e instanceof Prisma.PrismaClientKnownRequestError) {
-      console.error(`\n[create-user] Erreur base de données (${e.code}).\n`);
+    // Same rationale as create-admin.ts: surface the real cause (unreachable
+    // database vs unapplied schema) instead of a single opaque message.
+    if (e instanceof Prisma.PrismaClientInitializationError) {
+      console.error(
+        "\n[create-user] Connexion à la base impossible.\n" +
+          `        ${e.message}\n` +
+          "        Vérifier DATABASE_URL / DIRECT_URL. Neon : retirer\n" +
+          "        `channel_binding=require`, qui provoque une erreur P1001.\n",
+      );
+    } else if (e instanceof Prisma.PrismaClientKnownRequestError) {
+      console.error(
+        `\n[create-user] Erreur base de données (${e.code}) : ${e.message}\n` +
+          (e.code === "P2021" || e.code === "P2022"
+            ? "        Le schéma n'est pas appliqué : lancer `npx prisma migrate deploy`.\n"
+            : ""),
+      );
     } else {
-      console.error("\n[create-user] Échec de la création.\n");
+      console.error(
+        "\n[create-user] Échec de la création.\n" +
+          `        ${e instanceof Error ? e.message : String(e)}\n`,
+      );
     }
     process.exitCode = 1;
   })

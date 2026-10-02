@@ -13,6 +13,12 @@ export const authConfig = {
     maxAge: 12 * 60 * 60,
     updateAge: 60 * 60,
   },
+  // Auth.js builds its URLs from the request Host header. Vercel enables this
+  // implicitly through the `VERCEL` env var, but keeping it explicit means a
+  // missing `AUTH_TRUST_HOST` can never turn every /api/auth/* call into the
+  // opaque "?error=Configuration" page. Safe here: middleware already reads
+  // `x-forwarded-*` (requestOrigin in src/middleware.ts).
+  trustHost: true,
   pages: { signIn: "/login" },
   // Edge-safe config carries no providers; lib/auth.ts spreads the
   // Credentials provider in for the full server instance.
