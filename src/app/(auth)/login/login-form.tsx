@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { toast } from "sonner";
@@ -25,6 +26,7 @@ export function LoginForm({ devAccounts }: { devAccounts?: DevAccount[] }) {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const pendingNotice = searchParams.get("error") === "pending";
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -66,6 +68,11 @@ export function LoginForm({ devAccounts }: { devAccounts?: DevAccount[] }) {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {pendingNotice && (
+          <p className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+            Compte en attente de validation par l’administrateur.
+          </p>
+        )}
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Adresse e-mail</Label>
@@ -95,6 +102,12 @@ export function LoginForm({ devAccounts }: { devAccounts?: DevAccount[] }) {
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
             Se connecter
           </Button>
+          <p className="text-center text-sm text-muted-foreground">
+            Nouveau partenaire ?{" "}
+            <Link href="/register" className="text-primary underline-offset-4 hover:underline">
+              Create Account
+            </Link>
+          </p>
         </form>
 
         {hasDevAccounts && (

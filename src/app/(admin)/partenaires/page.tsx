@@ -19,15 +19,19 @@ import {
 
 export const metadata: Metadata = { title: "Partenaires" };
 
-const STATUS_BADGE: Record<string, "success" | "warning" | "destructive"> = {
+const STATUS_BADGE: Record<string, "success" | "warning" | "destructive" | "secondary"> = {
   ACTIVE: "success",
+  PENDING: "warning",
   SUSPENDED: "warning",
+  REJECTED: "destructive",
   CLOSED: "destructive",
 };
 
 const STATUS_LABEL: Record<string, string> = {
   ACTIVE: "Actif",
+  PENDING: "En attente",
   SUSPENDED: "Suspendu",
+  REJECTED: "Rejeté",
   CLOSED: "Fermé",
 };
 
@@ -39,7 +43,11 @@ export default async function PartnersPage({
   const sp = await searchParams;
   const search = typeof sp.q === "string" ? sp.q : "";
   const status =
-    sp.status === "ACTIVE" || sp.status === "SUSPENDED" || sp.status === "CLOSED"
+    sp.status === "ACTIVE" ||
+    sp.status === "PENDING" ||
+    sp.status === "SUSPENDED" ||
+    sp.status === "REJECTED" ||
+    sp.status === "CLOSED"
       ? sp.status
       : undefined;
   const page = Math.max(1, Number(sp.page) || 1);
@@ -67,7 +75,9 @@ export default async function PartnersPage({
         <NativeSelect name="status" defaultValue={status ?? ""} className="w-44">
           <option value="">Tous les statuts</option>
           <option value="ACTIVE">Actif</option>
+          <option value="PENDING">En attente</option>
           <option value="SUSPENDED">Suspendu</option>
+          <option value="REJECTED">Rejeté</option>
           <option value="CLOSED">Fermé</option>
         </NativeSelect>
         <Button type="submit" variant="outline" size="sm">

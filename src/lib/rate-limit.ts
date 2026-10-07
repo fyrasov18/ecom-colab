@@ -38,6 +38,8 @@ export const RATE_LIMITS = {
   TELEGRAM_WEBHOOK: { limit: 120, windowSeconds: 60 },
   /** Per partner: withdrawal spam. */
   WITHDRAWAL_REQUEST: { limit: 5, windowSeconds: 3600 },
+  /** Per IP on the public registration form (no account exists yet to key on). */
+  REGISTER: { limit: 5, windowSeconds: 3600 },
   /** Per IP: global search is read-heavy and hits the DB on every keystroke. */
   SEARCH: { limit: 60, windowSeconds: 60 },
 } as const satisfies Record<string, RateLimitRule>;

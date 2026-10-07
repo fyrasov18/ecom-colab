@@ -32,9 +32,11 @@ import { AssignProductForm } from "./assign-product-form";
 
 export const metadata: Metadata = { title: "Partenaire" };
 
-const STATUS_BADGE: Record<string, "success" | "warning" | "destructive"> = {
+const STATUS_BADGE: Record<string, "success" | "warning" | "destructive" | "secondary"> = {
   ACTIVE: "success",
+  PENDING: "warning",
   SUSPENDED: "warning",
+  REJECTED: "destructive",
   CLOSED: "destructive",
 };
 
@@ -91,7 +93,9 @@ export default async function PartnerDetailPage({
             className="flex h-9 rounded-md border border-input bg-card px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <option value="ACTIVE">Actif</option>
+            <option value="PENDING">En attente</option>
             <option value="SUSPENDED">Suspendu</option>
+            <option value="REJECTED">Rejeté</option>
             <option value="CLOSED">Fermé</option>
           </select>
           <ConfirmSubmit
@@ -102,6 +106,38 @@ export default async function PartnerDetailPage({
           </ConfirmSubmit>
         </form>
       </div>
+      {/* Registration */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Inscription</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-2 text-sm sm:grid-cols-3">
+          <div>
+            <div className="text-xs text-muted-foreground">Téléphone</div>
+            <div className="font-medium">{partner.phone ?? "—"}</div>
+          </div>
+          <div>
+            <div className="text-xs text-muted-foreground">Expérience e-commerce</div>
+            <div className="font-medium">
+              {partner.experienceLevel === "DEBUTANT"
+                ? "Débutant"
+                : partner.experienceLevel === "INTERMEDIAIRE"
+                  ? "Intermédiaire"
+                  : partner.experienceLevel === "EXPERT"
+                    ? "Expert"
+                    : "—"}
+            </div>
+          </div>
+          <div>
+            <div className="text-xs text-muted-foreground">Invité par</div>
+            <div className="font-medium">
+              {partner.invitedBy
+                ? `${partner.invitedBy.firstName} ${partner.invitedBy.lastName} (${partner.invitedBy.email})`
+                : "—"}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* KPIs */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

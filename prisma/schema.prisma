@@ -25,6 +25,9 @@ model User {
   orderStatusChanges  OrderStatusHistory[]
   partner             Partner?
   reviewedWithdrawals Withdrawal[]           @relation("WithdrawalReviewer")
+  /// Partners this user invited (registration referral). Set server-side only —
+  /// the "admin" invitation code records the inviting Admin here.
+  invitedPartners      Partner[]                @relation("PartnerInvitedBy")
 
   @@index([role, status])
 }
@@ -44,6 +47,17 @@ model Partner {
   /// existing commission resolution chain stays authoritative, so no historical
   /// order is ever recalculated by introducing levels.
   performanceLevelId     String?
+  /// Self-declared phone at registration (Tunisian, normalized to 8 digits).
+  /// NULL for accounts provisioned before registration existed.
+  phone                  String?
+  /// Self-declared e-commerce experience at registration. NULL for accounts
+  /// provisioned before registration existed.
+  experienceLevel        EcommerceExperience?
+  /// Who invited this partner (registration referral). Resolved server-side:
+  /// the "admin" invitation code records the inviting Admin, never a
+  /// client-supplied id. NULL for accounts provisioned before registration.
+  invitedByUserId        String?
+  invitedBy              User?                  @relation("PartnerInvitedBy", fields: [invitedByUserId], references: [id], onDelete: SetNull)
   customers              Customer[]
   transactions           FinancialTransaction[]
   orders                 Order[]
@@ -447,8 +461,18 @@ enum UserStatus {
 
 enum PartnerStatus {
   ACTIVE
+  PENDING
   SUSPENDED
+  REJECTED
   CLOSED
+}
+
+/// Self-declared e-commerce experience (registration). Stored as ASCII enum
+/// values; the French labels live in `src/modules/registration/schemas.ts`.
+enum EcommerceExperience {
+  DEBUTANT
+  INTERMEDIAIRE
+  EXPERT
 }
 
 enum SocialPlatform {

@@ -61,6 +61,7 @@ export async function getPartnerAdmin(id: string) {
     where: { id },
     include: {
       user: { select: { id: true, email: true, status: true, firstName: true, lastName: true } },
+      invitedBy: { select: { id: true, email: true, firstName: true, lastName: true, role: true } },
       socialAccounts: { orderBy: { createdAt: "asc" } },
       wallet: true,
       performanceLevel: {
