@@ -17,10 +17,8 @@
     "test": "vitest run",
     "test:int": "vitest run --config vitest.integration.config.ts",
     "db:orders-seed": "tsx scripts/seed-orders.ts",
-    "db:finance-seed": "tsx scripts/seed-finance.ts"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "db:finance-seed": "tsx scripts/seed-finance.ts",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

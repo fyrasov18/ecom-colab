@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { d, roundMoney } from "@/lib/money";
 import { getReturnCostRule } from "@/modules/settings/service";
 import { notifyPartnerAccount } from "@/modules/notifications/service";
+import { checkAndQualifyOrder } from "@/modules/referrals/qualification";
 import { deriveWalletBalances, evaluateReturnCostRule } from "./rules";
 
 type Db = PrismaClient | Prisma.TransactionClient;
@@ -177,6 +178,10 @@ export async function settleDueEarnings(opts: { now?: Date; db?: Db } = {}) {
       where: { id: { in: orderIds }, earningStatus: "PENDING" },
       data: { earningStatus: "AVAILABLE" },
     });
+
+    for (const orderId of orderIds) {
+      await checkAndQualifyOrder(orderId, db as Prisma.TransactionClient);
+    }
   }
 
   const partners = Array.from(new Set(due.map((r) => r.partnerId)));

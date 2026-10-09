@@ -1,6 +1,12 @@
 import { z } from "zod";
 
-export const partnerStatusSchema = z.enum(["ACTIVE", "SUSPENDED", "CLOSED"]);
+export const partnerStatusSchema = z.enum([
+  "ACTIVE",
+  "PENDING",
+  "SUSPENDED",
+  "REJECTED",
+  "CLOSED",
+]);
 
 export const socialAccountSchema = z.object({
   platform: z.enum(["FACEBOOK", "INSTAGRAM", "TIKTOK", "OTHER"]),

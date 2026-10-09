@@ -19,6 +19,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   Table,
   TableBody,
@@ -44,39 +45,64 @@ const STATUS_LABELS: Record<string, string> = {
   CANCELLED: "Annulée",
 };
 
+const STATUS_BADGE_VARIANT: Record<
+  string,
+  "success" | "warning" | "destructive" | "info" | "secondary"
+> = {
+  DELIVERED: "success",
+  REFUSED: "destructive",
+  RETURNED: "destructive",
+  ON_HOLD: "warning",
+  CONFIRMED: "info",
+  VALIDATED: "info",
+};
+
 function KpiCard({
   label,
   value,
   icon: Icon,
   href,
   hint,
+  tone = "default",
 }: {
   label: string;
   value: string | number;
   icon: React.ComponentType<{ className?: string }>;
   href?: string;
   hint?: string;
+  tone?: "default" | "warning" | "destructive";
 }) {
+  const iconColors: Record<string, string> = {
+    default: "text-primary",
+    warning: "text-warning",
+    destructive: "text-destructive",
+  };
   const body = (
     <Card className="transition-shadow hover:shadow-md">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           {label}
         </CardTitle>
-        <Icon className="h-4 w-4 text-primary" />
+        <Icon className={`h-4 w-4 ${iconColors[tone]}`} aria-hidden="true" />
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-semibold tracking-tight">{value}</div>
+        <div className="text-kpi font-bold tracking-tight">{value}</div>
         {hint && (
           <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
             {hint}
-            {href && <ArrowRight className="h-3 w-3" />}
+            {href && <ArrowRight className="h-3 w-3" aria-hidden="true" />}
           </div>
         )}
       </CardContent>
     </Card>
   );
-  return href ? <Link href={href}>{body}</Link> : body;
+  return href ? (
+    <Link href={href} aria-label={`${label} : ${value}`}>
+      {body}
+    </Link>
+  ) : (
+    body
+  );
 }
 
 export default async function DashboardPage() {
@@ -114,45 +140,90 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">
-          Vue d&apos;ensemble de l&apos;activité — données en temps réel.
-        </p>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard label="Partenaires actifs" value={data.activePartners} icon={Users} href="/partenaires" />
-        <KpiCard label="Commandes aujourd'hui" value={data.ordersToday} icon={ShoppingCart} href="/commandes" />
-        <KpiCard label="Livrées" value={data.delivered} icon={PackageCheck} href="/commandes?status=DELIVERED" />
-        <KpiCard label="En livraison" value={data.inDelivery} icon={Truck} href="/commandes?status=IN_DELIVERY" />
-        <KpiCard label="Retours / Refus" value={data.refusedOrReturned} icon={AlertTriangle} href="/commandes?status=RETURNED" />
-        <KpiCard label="À valider" value={data.awaitingValidation} icon={ShoppingCart} href="/commandes?status=CONFIRMED" />
-        <KpiCard
-          label="Gains en attente (partenaires)"
-          value={`${formatPrice(data.wallets.pending)} DT`}
-          icon={Wallet}
-          href="/finance"
-        />
-        <KpiCard
-          label="Solde disponible total"
-          value={`${formatPrice(data.wallets.available)} DT`}
-          icon={Percent}
-          href="/finance"
-        />
-      </div>
+      <PageHeader
+        title="Tableau de bord"
+        description="Vue d'ensemble de l'activité — données en temps réel."
+      />
 
+      {/* KPI grid */}
+      <section aria-label="Indicateurs clés">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <KpiCard
+            label="Partenaires actifs"
+            value={data.activePartners}
+            icon={Users}
+            href="/partenaires"
+            hint="Voir les partenaires"
+          />
+          <KpiCard
+            label="Commandes aujourd'hui"
+            value={data.ordersToday}
+            icon={ShoppingCart}
+            href="/commandes"
+            hint="Voir les commandes"
+          />
+          <KpiCard
+            label="Livrées"
+            value={data.delivered}
+            icon={PackageCheck}
+            href="/commandes?status=DELIVERED"
+          />
+          <KpiCard
+            label="En livraison"
+            value={data.inDelivery}
+            icon={Truck}
+            href="/commandes?status=IN_DELIVERY"
+          />
+          <KpiCard
+            label="Retours / Refus"
+            value={data.refusedOrReturned}
+            icon={AlertTriangle}
+            href="/commandes?status=RETURNED"
+            tone={data.refusedOrReturned > 0 ? "warning" : "default"}
+          />
+          <KpiCard
+            label="À valider"
+            value={data.awaitingValidation}
+            icon={ShoppingCart}
+            href="/commandes?status=CONFIRMED"
+            tone={data.awaitingValidation > 0 ? "warning" : "default"}
+          />
+          <KpiCard
+            label="Gains en attente (partenaires)"
+            value={`${formatPrice(data.wallets.pending)} DT`}
+            icon={Wallet}
+            href="/finance"
+          />
+          <KpiCard
+            label="Solde disponible total"
+            value={`${formatPrice(data.wallets.available)} DT`}
+            icon={Percent}
+            href="/finance"
+          />
+        </div>
+      </section>
+
+      {/* Operational alerts */}
       {alerts.length > 0 && (
-        <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/30">
+        <Card
+          className="border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/30"
+          role="region"
+          aria-label="Alertes opérationnelles"
+        >
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base text-amber-900 dark:text-amber-200">
-              <AlertTriangle className="h-4 w-4" />
+              <AlertTriangle className="h-4 w-4" aria-hidden="true" />
               Alertes opérationnelles
             </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
             {alerts.map((a) => (
               <Link key={a.label} href={a.href}>
-                <Badge variant={a.tone === "destructive" ? "destructive" : "warning"}>
+                <Badge
+                  variant={
+                    a.tone === "destructive" ? "destructive" : "warning"
+                  }
+                >
                   {a.label}
                 </Badge>
               </Link>
@@ -160,12 +231,22 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Recent orders */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Commandes récentes</CardTitle>
-          <CardDescription>
-            Dernières commandes créées sur la plateforme.
-          </CardDescription>
+        <CardHeader className="flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle className="text-base">Commandes récentes</CardTitle>
+            <CardDescription className="mt-0.5">
+              Dernières commandes créées sur la plateforme.
+            </CardDescription>
+          </div>
+          <Link
+            href="/commandes"
+            className="text-xs font-medium text-primary underline-offset-2 hover:underline"
+          >
+            Voir tout
+          </Link>
         </CardHeader>
         <CardContent>
           {data.recentOrders.length === 0 ? (
@@ -173,55 +254,56 @@ export default async function DashboardPage() {
               Aucune commande pour le moment.
             </p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>N°</TableHead>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Partenaire</TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead>Créée le</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.recentOrders.map((o) => (
-                  <TableRow key={o.id}>
-                    <TableCell className="font-medium">#{o.orderNumber}</TableCell>
-                    <TableCell>{o.customer.fullName}</TableCell>
-                    <TableCell>{o.partner.displayName}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          o.status === "DELIVERED"
-                            ? "success"
-                            : o.status === "REFUSED" || o.status === "RETURNED"
-                              ? "destructive"
-                              : o.status === "ON_HOLD"
-                                ? "warning"
-                                : "info"
-                        }
-                      >
-                        {STATUS_LABELS[o.status] ?? o.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {o.createdAt.toLocaleDateString("fr-FR", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </TableCell>
+            <div className="overflow-x-auto -mx-6 px-6">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>N°</TableHead>
+                    <TableHead>Client</TableHead>
+                    <TableHead>Partenaire</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead>Créée le</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {data.recentOrders.map((o) => (
+                    <TableRow key={o.id}>
+                      <TableCell className="font-medium">
+                        <Link
+                          href={`/commandes/${o.id}`}
+                          className="hover:underline text-primary"
+                        >
+                          #{o.orderNumber}
+                        </Link>
+                      </TableCell>
+                      <TableCell>{o.customer.fullName}</TableCell>
+                      <TableCell>{o.partner.displayName}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            STATUS_BADGE_VARIANT[o.status] ?? "secondary"
+                          }
+                        >
+                          {STATUS_LABELS[o.status] ?? o.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {o.createdAt.toLocaleDateString("fr-FR", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
     </div>
   );
 }
-
-

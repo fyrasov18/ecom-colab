@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/rbac";
+import { partnerStatusSchema } from "@/modules/partners/schemas";
 import {
   addSocialAccount,
   assignProductToPartner,
@@ -17,8 +18,9 @@ function str(v: FormDataEntryValue | null): string {
 export async function changePartnerStatus(formData: FormData): Promise<void> {
   const user = await requireSession(["SUPER_ADMIN", "ADMIN"]);
   const partnerId = str(formData.get("partnerId"));
-  const status = str(formData.get("status")) as "ACTIVE" | "SUSPENDED" | "CLOSED";
-  await setPartnerStatus(partnerId, status, user.id);
+  const parsed = partnerStatusSchema.safeParse(str(formData.get("status")));
+  if (!parsed.success) return;
+  await setPartnerStatus(partnerId, parsed.data, user.id);
   revalidatePath("/partenaires");
   revalidatePath(`/partenaires/${partnerId}`);
 }

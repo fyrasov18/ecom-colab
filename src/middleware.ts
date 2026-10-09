@@ -38,6 +38,7 @@ export default auth((req) => {
   // MUST stay reachable here or Telegram deliveries get a login redirect.
   const isPublic =
     pathname === "/login" ||
+    pathname === "/register" ||
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/api/cron") ||
     pathname.startsWith("/api/telegram");
@@ -55,8 +56,8 @@ export default auth((req) => {
   if (user) {
     const home = ROLE_HOME[user.role] ?? "/";
 
-    // Authenticated users never see the login page.
-    if (pathname === "/login") return redirectTo(home);
+    // Authenticated users never see the login/register pages.
+    if (pathname === "/login" || pathname === "/register") return redirectTo(home);
 
     // Admin-only areas.
     if (matchPrefix(pathname, ADMIN_PREFIXES) && user.role === "PARTNER") {

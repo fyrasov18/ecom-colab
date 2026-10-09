@@ -82,10 +82,30 @@ async function main() {
 
 main()
   .catch((e) => {
-    if (e instanceof Prisma.PrismaClientKnownRequestError) {
-      console.error(`\n[create-admin] Erreur base de données (${e.code}).\n`);
+    // Report the REAL cause. The previous implementation collapsed every failure
+    // into one opaque line, which is exactly how an unreachable database and a
+    // missing schema both stayed hidden behind "[create-admin] Échec de la
+    // création." Prisma masks credentials in these messages — only host/port is
+    // ever printed, never the password.
+    if (e instanceof Prisma.PrismaClientInitializationError) {
+      console.error(
+        "\n[create-admin] Connexion à la base impossible.\n" +
+          `        ${e.message}\n` +
+          "        Vérifier DATABASE_URL / DIRECT_URL. Neon : retirer\n" +
+          "        `channel_binding=require`, qui provoque une erreur P1001.\n",
+      );
+    } else if (e instanceof Prisma.PrismaClientKnownRequestError) {
+      console.error(
+        `\n[create-admin] Erreur base de données (${e.code}) : ${e.message}\n` +
+          (e.code === "P2021" || e.code === "P2022"
+            ? "        Le schéma n'est pas appliqué : lancer `npx prisma migrate deploy`.\n"
+            : ""),
+      );
     } else {
-      console.error("\n[create-admin] Échec de la création.\n");
+      console.error(
+        "\n[create-admin] Échec de la création.\n" +
+          `        ${e instanceof Error ? e.message : String(e)}\n`,
+      );
     }
     process.exitCode = 1;
   })

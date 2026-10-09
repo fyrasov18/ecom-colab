@@ -10,6 +10,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
+      "next/server": "next/dist/server/web/exports/server.js",
     },
   },
 });
