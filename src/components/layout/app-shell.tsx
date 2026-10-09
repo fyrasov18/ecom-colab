@@ -23,6 +23,7 @@ import {
   Settings,
   ShoppingCart,
   Truck,
+  UserPlus,
   Users,
   Wallet,
   X,
@@ -52,6 +53,9 @@ export type AppShellProps = {
    separately, so it must match exactly or several entries would highlight. */
 function isActive(pathname: string, href: string): boolean {
   if (href === "/parametres") return pathname === "/parametres";
+  if (href === "/partenaires") {
+    if (pathname.startsWith("/partenaires/parrainage")) return false;
+  }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -76,6 +80,7 @@ const ADMIN_NAV: NavGroup[] = [
     label: "Partenaires",
     items: [
       { href: "/partenaires", label: "Partenaires", icon: Users },
+      { href: "/partenaires/parrainage", label: "Parrainage", icon: UserPlus },
       { href: "/performances", label: "Performances", icon: BarChart3 },
     ],
   },
@@ -111,6 +116,7 @@ const PARTNER_NAV: NavGroup[] = [
   {
     label: "Suivi",
     items: [
+      { href: "/parrainage", label: "Parrainage", icon: UserPlus },
       { href: "/mes-performances", label: "Performances", icon: PieChart },
       { href: "/portefeuille", label: "Portefeuille", icon: Wallet },
       { href: "/mes-notifications", label: "Notifications", icon: Bell },
@@ -181,7 +187,18 @@ export function AppShell({
   children,
 }: AppShellProps) {
   const pathname = usePathname();
-  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Derived drawer state: store the pathname at which the drawer was opened.
+  // When the route changes (any navigation), openedAtPathname !== pathname so
+  // drawerOpen evaluates to false automatically — no useEffect needed, no
+  // cascading renders, and the react-hooks/set-state-in-effect rule is satisfied.
+  // This covers in-drawer link taps, partner bottom-nav, and programmatic navigation.
+  const [openedAtPathname, setOpenedAtPathname] = useState<string | null>(null);
+  const drawerOpen = openedAtPathname === pathname;
+
+  function openDrawer() { setOpenedAtPathname(pathname); }
+  function closeDrawer() { setOpenedAtPathname(null); }
+
 
   // Server snapshot = expanded, so SSR and the first client render match, then
   // React applies the saved preference on its own.
@@ -275,13 +292,23 @@ export function AppShell({
         </div>
       </aside>
 
-      {/* Mobile drawer */}
-      <Dialog.Root open={drawerOpen} onOpenChange={setDrawerOpen}>
+      {/* Mobile drawer
+          forceMount keeps the overlay and content nodes in the DOM during the
+          close animation so data-[state=closed]:animate-[shell-drawer-out…]
+          can play before React removes the elements. Without it, Radix unmounts
+          immediately and the exit animation is never rendered. */}
+      <Dialog.Root open={drawerOpen} onOpenChange={(open) => (open ? openDrawer() : closeDrawer())}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-40 bg-ink-950/60 backdrop-blur-sm data-[state=open]:animate-[shell-fade-in_150ms_ease-out] data-[state=closed]:animate-[shell-fade-out_120ms_ease-in]" />
+          <Dialog.Overlay
+            forceMount
+            className="fixed inset-0 z-40 bg-ink-950/60 backdrop-blur-sm data-[state=open]:animate-[shell-fade-in_150ms_ease-out] data-[state=closed]:animate-[shell-fade-out_120ms_ease-in] data-[state=closed]:pointer-events-none"
+          />
           <Dialog.Content
-            className="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col border-r border-sidebar-border bg-sidebar outline-none data-[state=open]:animate-[shell-drawer-in_180ms_ease-out] data-[state=closed]:animate-[shell-drawer-out_160ms_ease-in]"
+            forceMount
+            id="mobile-nav-drawer"
             aria-describedby={undefined}
+            aria-modal="true"
+            className="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col border-r border-sidebar-border bg-sidebar outline-none data-[state=open]:animate-[shell-drawer-in_180ms_ease-out] data-[state=closed]:animate-[shell-drawer-out_160ms_ease-in] data-[state=closed]:pointer-events-none"
           >
             <Dialog.Title className="sr-only">Navigation</Dialog.Title>
             <div className="relative">
@@ -302,7 +329,7 @@ export function AppShell({
                   key={group.label}
                   group={group}
                   pathname={pathname}
-                  onNavigate={() => setDrawerOpen(false)}
+                  onNavigate={closeDrawer}
                 />
               ))}
             </nav>
@@ -318,9 +345,11 @@ export function AppShell({
         <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b bg-card/95 px-4 backdrop-blur lg:px-6">
           <button
             type="button"
-            onClick={() => setDrawerOpen(true)}
+            onClick={() => (drawerOpen ? closeDrawer() : openDrawer())}
             className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground lg:hidden"
-            aria-label="Ouvrir la navigation"
+            aria-label={drawerOpen ? "Fermer la navigation" : "Ouvrir la navigation"}
+            aria-expanded={drawerOpen}
+            aria-controls="mobile-nav-drawer"
           >
             <Menu className="h-5 w-5" aria-hidden="true" />
           </button>

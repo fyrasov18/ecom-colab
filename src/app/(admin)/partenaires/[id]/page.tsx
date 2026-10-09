@@ -1,7 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import {
+  Trash2,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  Ban,
+  Archive,
+  ArrowLeft,
+  Phone,
+  Mail,
+  Calendar,
+} from "lucide-react";
 import { getPartnerAdmin } from "@/modules/partners/service";
 import { listPerformanceLevels } from "@/modules/finance/performance-service";
 import { listProductOptions } from "@/modules/products/service";
@@ -20,7 +31,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmSubmit } from "@/components/ui/confirm-submit";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   addPartnerSocial,
   changePartnerStatus,
@@ -32,12 +46,33 @@ import { AssignProductForm } from "./assign-product-form";
 
 export const metadata: Metadata = { title: "Partenaire" };
 
-const STATUS_BADGE: Record<string, "success" | "warning" | "destructive" | "secondary"> = {
+type PartnerStatus = "ACTIVE" | "PENDING" | "SUSPENDED" | "REJECTED" | "CLOSED";
+
+const STATUS_BADGE: Record<
+  PartnerStatus,
+  "success" | "warning" | "destructive" | "secondary" | "info"
+> = {
   ACTIVE: "success",
   PENDING: "warning",
-  SUSPENDED: "warning",
+  SUSPENDED: "info",
   REJECTED: "destructive",
-  CLOSED: "destructive",
+  CLOSED: "secondary",
+};
+
+const STATUS_LABEL: Record<PartnerStatus, string> = {
+  ACTIVE: "Actif",
+  PENDING: "En attente d'approbation",
+  SUSPENDED: "Suspendu",
+  REJECTED: "Rejeté",
+  CLOSED: "Fermé",
+};
+
+const STATUS_ICON: Record<PartnerStatus, React.ComponentType<{ className?: string }>> = {
+  ACTIVE: CheckCircle2,
+  PENDING: Clock,
+  SUSPENDED: Ban,
+  REJECTED: XCircle,
+  CLOSED: Archive,
 };
 
 const PLATFORM_LABELS: Record<string, string> = {
@@ -46,6 +81,23 @@ const PLATFORM_LABELS: Record<string, string> = {
   TIKTOK: "TikTok",
   OTHER: "Autre",
 };
+
+const EXPERIENCE_MAP: Record<string, string> = {
+  DEBUTANT: "Débutant",
+  INTERMEDIAIRE: "Intermédiaire",
+  EXPERT: "Expert",
+};
+
+function PartnerStatusBadge({ status }: { status: string }) {
+  const s = status as PartnerStatus;
+  const Icon = STATUS_ICON[s];
+  return (
+    <Badge variant={STATUS_BADGE[s] ?? "secondary"} className="gap-1.5 text-sm px-3 py-1">
+      {Icon && <Icon className="h-3.5 w-3.5" aria-hidden="true" />}
+      {STATUS_LABEL[s] ?? status}
+    </Badge>
+  );
+}
 
 export default async function PartnerDetailPage({
   params,
@@ -67,69 +119,155 @@ export default async function PartnerDetailPage({
     .filter((p) => !assignedIds.has(p.id))
     .map((p) => ({ id: p.id, name: p.name }));
 
+  const isPending = partner.status === "PENDING";
+
   return (
     <div className="space-y-6">
+      {/* Back nav */}
+      <Button asChild variant="ghost" size="sm" className="-ml-2">
+        <Link href="/partenaires">
+          <ArrowLeft className="h-4 w-4 mr-1" aria-hidden="true" />
+          Partenaires
+        </Link>
+      </Button>
+
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight">
-              {partner.displayName}
-            </h1>
-            <Badge variant={STATUS_BADGE[partner.status] ?? "secondary"}>
-              {partner.status}
-            </Badge>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {partner.code} · {partner.user.email} · inscrit le{" "}
-            {partner.createdAt.toLocaleDateString("fr-FR")}
-          </p>
-        </div>
-        <form action={changePartnerStatus} className="flex items-center gap-2">
-          <input type="hidden" name="partnerId" value={partner.id} />
-          <select
-            name="status"
-            defaultValue={partner.status}
-            className="flex h-9 rounded-md border border-input bg-card px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <option value="ACTIVE">Actif</option>
-            <option value="PENDING">En attente</option>
-            <option value="SUSPENDED">Suspendu</option>
-            <option value="REJECTED">Rejeté</option>
-            <option value="CLOSED">Fermé</option>
-          </select>
-          <ConfirmSubmit
-            variant="outline"
-            confirmMessage="Changer le statut de ce partenaire ?"
-          >
-            Appliquer
-          </ConfirmSubmit>
-        </form>
-      </div>
-      {/* Registration */}
+      <PageHeader
+        title={partner.displayName}
+        description={
+          <span className="flex flex-wrap items-center gap-2">
+            <PartnerStatusBadge status={partner.status} />
+            <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <span className="font-mono text-xs">{partner.code}</span>
+              <span>·</span>
+              <Mail className="h-3.5 w-3.5" aria-hidden="true" />
+              <a
+                href={`mailto:${partner.user.email}`}
+                className="hover:underline underline-offset-2"
+              >
+                {partner.user.email}
+              </a>
+              <span>·</span>
+              <Calendar className="h-3.5 w-3.5" aria-hidden="true" />
+              <span>
+                Inscrit le {partner.createdAt.toLocaleDateString("fr-FR")}
+              </span>
+            </span>
+          </span>
+        }
+        action={
+          <form action={changePartnerStatus} className="flex items-center gap-2">
+            <input type="hidden" name="partnerId" value={partner.id} />
+            <NativeSelect
+              name="status"
+              defaultValue={partner.status}
+              aria-label="Changer le statut du partenaire"
+              className="w-44"
+            >
+              <option value="ACTIVE">Actif</option>
+              <option value="PENDING">En attente</option>
+              <option value="SUSPENDED">Suspendu</option>
+              <option value="REJECTED">Rejeté</option>
+              <option value="CLOSED">Fermé</option>
+            </NativeSelect>
+            <ConfirmSubmit
+              variant="outline"
+              confirmMessage="Changer le statut de ce partenaire ?"
+            >
+              Appliquer
+            </ConfirmSubmit>
+          </form>
+        }
+      />
+
+      {/* Pending approval banner */}
+      {isPending && (
+        <Card className="border-amber-300 bg-amber-50">
+          <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <Clock
+                className="mt-0.5 h-5 w-5 shrink-0 text-amber-600"
+                aria-hidden="true"
+              />
+              <div>
+                <p className="text-sm font-semibold text-amber-800">
+                  Demande d&apos;accès en attente
+                </p>
+                <p className="text-sm text-amber-700 mt-0.5">
+                  Ce partenaire attend votre approbation pour accéder à la plateforme.
+                </p>
+              </div>
+            </div>
+            <div className="flex shrink-0 gap-2 sm:flex-col xl:flex-row">
+              {/* Quick approve */}
+              <form action={changePartnerStatus}>
+                <input type="hidden" name="partnerId" value={partner.id} />
+                <input type="hidden" name="status" value="ACTIVE" />
+                <ConfirmSubmit
+                  variant="default"
+                  size="sm"
+                  confirmMessage={`Approuver le compte de ${partner.displayName} ?`}
+                  className="w-full"
+                >
+                  <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                  Approuver
+                </ConfirmSubmit>
+              </form>
+              {/* Quick reject */}
+              <form action={changePartnerStatus}>
+                <input type="hidden" name="partnerId" value={partner.id} />
+                <input type="hidden" name="status" value="REJECTED" />
+                <ConfirmSubmit
+                  variant="destructive"
+                  size="sm"
+                  confirmMessage={`Rejeter la demande de ${partner.displayName} ? Cette action est irréversible.`}
+                  className="w-full"
+                >
+                  <XCircle className="h-4 w-4" aria-hidden="true" />
+                  Rejeter
+                </ConfirmSubmit>
+              </form>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Registration info */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Inscription</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-2 text-sm sm:grid-cols-3">
+        <CardContent className="grid gap-4 text-sm sm:grid-cols-3">
           <div>
-            <div className="text-xs text-muted-foreground">Téléphone</div>
-            <div className="font-medium">{partner.phone ?? "—"}</div>
-          </div>
-          <div>
-            <div className="text-xs text-muted-foreground">Expérience e-commerce</div>
+            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+              <Phone className="h-3.5 w-3.5" aria-hidden="true" />
+              Téléphone
+            </div>
             <div className="font-medium">
-              {partner.experienceLevel === "DEBUTANT"
-                ? "Débutant"
-                : partner.experienceLevel === "INTERMEDIAIRE"
-                  ? "Intermédiaire"
-                  : partner.experienceLevel === "EXPERT"
-                    ? "Expert"
-                    : "—"}
+              {partner.phone ? (
+                <a
+                  href={`tel:${partner.phone}`}
+                  className="hover:underline underline-offset-2"
+                >
+                  {partner.phone}
+                </a>
+              ) : (
+                "—"
+              )}
             </div>
           </div>
           <div>
-            <div className="text-xs text-muted-foreground">Invité par</div>
+            <div className="text-xs font-medium text-muted-foreground mb-1">
+              Expérience e-commerce
+            </div>
+            <div className="font-medium">
+              {EXPERIENCE_MAP[partner.experienceLevel ?? ""] ?? "—"}
+            </div>
+          </div>
+          <div>
+            <div className="text-xs font-medium text-muted-foreground mb-1">
+              Invité par
+            </div>
             <div className="font-medium">
               {partner.invitedBy
                 ? `${partner.invitedBy.firstName} ${partner.invitedBy.lastName} (${partner.invitedBy.email})`
@@ -168,7 +306,9 @@ export default async function PartnerDetailPage({
             </CardTitle>
           </CardHeader>
           <CardContent className="text-2xl font-semibold">
-            {partner.wallet ? `${formatPrice(partner.wallet.availableBalance)} DT` : "0 DT"}
+            {partner.wallet
+              ? `${formatPrice(partner.wallet.availableBalance)} DT`
+              : "0 DT"}
           </CardContent>
         </Card>
         <Card>
@@ -178,12 +318,14 @@ export default async function PartnerDetailPage({
             </CardTitle>
           </CardHeader>
           <CardContent className="text-2xl font-semibold">
-            {partner.wallet ? `${formatPrice(partner.wallet.pendingBalance)} DT` : "0 DT"}
+            {partner.wallet
+              ? `${formatPrice(partner.wallet.pendingBalance)} DT`
+              : "0 DT"}
           </CardContent>
         </Card>
       </div>
 
-      {/* Finances (Phase 5) — ledger-derived, no estimates */}
+      {/* Finances */}
       <Card>
         <CardHeader className="flex-row items-center justify-between space-y-0">
           <CardTitle className="text-base">Finances</CardTitle>
@@ -225,11 +367,14 @@ export default async function PartnerDetailPage({
           </div>
 
           {finance.activeRequestCount > 0 ? (
-            <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-              {finance.activeRequestCount} demande(s) de retrait en cours pour{" "}
-              {formatPrice(finance.activeRequestTotal)} DT — à traiter dans le
-              module Finance.
-            </p>
+            <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+              <Clock className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+              <p>
+                {finance.activeRequestCount} demande(s) de retrait en cours pour{" "}
+                {formatPrice(finance.activeRequestTotal)} DT — à traiter dans le
+                module Finance.
+              </p>
+            </div>
           ) : null}
 
           <div className="space-y-2">
@@ -239,7 +384,7 @@ export default async function PartnerDetailPage({
                 Aucun mouvement financier pour ce partenaire.
               </p>
             ) : (
-              <ul className="divide-y rounded-lg border">
+              <ul className="divide-y rounded-lg border" role="list">
                 {finance.transactions.map((t) => {
                   const negative = Number(t.amount) < 0;
                   return (
@@ -286,7 +431,7 @@ export default async function PartnerDetailPage({
               <div className="text-sm font-medium">
                 Dernières demandes de retrait
               </div>
-              <ul className="divide-y rounded-lg border">
+              <ul className="divide-y rounded-lg border" role="list">
                 {finance.withdrawals.map((w) => (
                   <li
                     key={w.id}
@@ -320,11 +465,16 @@ export default async function PartnerDetailPage({
           </CardHeader>
           <CardContent className="space-y-4">
             {partner.socialAccounts.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Aucun compte ajouté.</p>
+              <p className="text-sm text-muted-foreground">
+                Aucun compte ajouté.
+              </p>
             ) : (
-              <ul className="divide-y rounded-lg border">
+              <ul className="divide-y rounded-lg border" role="list">
                 {partner.socialAccounts.map((s) => (
-                  <li key={s.id} className="flex items-center justify-between gap-3 p-3">
+                  <li
+                    key={s.id}
+                    className="flex items-center justify-between gap-3 p-3"
+                  >
                     <div>
                       <div className="text-sm font-medium">
                         {PLATFORM_LABELS[s.platform] ?? s.platform} — {s.label}
@@ -343,10 +493,11 @@ export default async function PartnerDetailPage({
                       <ConfirmSubmit
                         variant="ghost"
                         size="sm"
-                        className="text-destructive"
+                        className="text-destructive hover:text-destructive"
                         confirmMessage="Supprimer ce compte ?"
+                        aria-label="Supprimer ce compte social"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />
                       </ConfirmSubmit>
                     </form>
                   </li>
@@ -357,8 +508,12 @@ export default async function PartnerDetailPage({
             <form action={addPartnerSocial} className="grid gap-3 sm:grid-cols-2">
               <input type="hidden" name="partnerId" value={partner.id} />
               <div className="space-y-1.5">
-                <label className="text-sm font-medium" htmlFor="soc-platform">Plateforme</label>
-                <NativeSelect id="soc-platform" name="platform" defaultValue="FACEBOOK">
+                <Label htmlFor="soc-platform">Plateforme</Label>
+                <NativeSelect
+                  id="soc-platform"
+                  name="platform"
+                  defaultValue="FACEBOOK"
+                >
                   <option value="FACEBOOK">Facebook</option>
                   <option value="INSTAGRAM">Instagram</option>
                   <option value="TIKTOK">TikTok</option>
@@ -366,26 +521,24 @@ export default async function PartnerDetailPage({
                 </NativeSelect>
               </div>
               <div className="space-y-1.5">
-                <label className="text-sm font-medium" htmlFor="soc-label">Libellé</label>
-                <input
+                <Label htmlFor="soc-label">Libellé</Label>
+                <Input
                   id="soc-label"
                   name="label"
                   required
                   maxLength={80}
                   placeholder="Page principale"
-                  className="flex h-9 rounded-md border border-input bg-card px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 />
               </div>
               <div className="space-y-1.5 sm:col-span-2">
-                <label className="text-sm font-medium" htmlFor="soc-url">URL</label>
-                <input
+                <Label htmlFor="soc-url">URL</Label>
+                <Input
                   id="soc-url"
                   name="url"
                   type="url"
                   required
                   maxLength={500}
                   placeholder="https://facebook.com/…"
-                  className="flex h-9 rounded-md border border-input bg-card px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 />
               </div>
               <div className="sm:col-span-2">
@@ -398,64 +551,65 @@ export default async function PartnerDetailPage({
         </Card>
 
         {/* Performance level */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Niveau de performance</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            {partner.performanceLevel ? (
-              <>
-                <Badge variant="info">
-                  {partner.performanceLevel.name}
-                </Badge>
-                <span className="text-sm text-muted-foreground">
-                  Partage du profit :{" "}
-                  <strong className="text-foreground">
-                    {partner.performanceLevel.sharePercentage.toString()} %
-                  </strong>
-                </span>
-              </>
-            ) : (
-              <Badge variant="secondary">Aucun niveau attribué</Badge>
-            )}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Les conditions de progression sont configurables depuis Paramètres.
-            Le niveau s&apos;applique uniquement aux nouvelles commandes : les
-            gains déjà calculés restent inchangés.
-          </p>
-          {user.role === "SUPER_ADMIN" && levels.length > 0 && (
-            <form action={changePartnerLevel} className="flex items-end gap-2">
-              <input type="hidden" name="partnerId" value={partner.id} />
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium" htmlFor="perf-level">
-                  Attribuer un niveau
-                </label>
-                <NativeSelect
-                  id="perf-level"
-                  name="performanceLevelId"
-                  defaultValue={partner.performanceLevelId ?? ""}
-                  className="w-56"
-                >
-                  <option value="">— Aucun —</option>
-                  {levels.map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.name} ({l.sharePercentage.toString()} %)
-                    </option>
-                  ))}
-                </NativeSelect>
-              </div>
-              <Button type="submit" variant="outline" size="sm">
-                Appliquer
-              </Button>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Assigned products */}
         <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Niveau de performance</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              {partner.performanceLevel ? (
+                <>
+                  <Badge variant="info">{partner.performanceLevel.name}</Badge>
+                  <span className="text-sm text-muted-foreground">
+                    Partage du profit :{" "}
+                    <strong className="text-foreground">
+                      {partner.performanceLevel.sharePercentage.toString()} %
+                    </strong>
+                  </span>
+                </>
+              ) : (
+                <Badge variant="secondary">Aucun niveau attribué</Badge>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Les conditions de progression sont configurables depuis Paramètres.
+              Le niveau s&apos;applique uniquement aux nouvelles commandes : les
+              gains déjà calculés restent inchangés.
+            </p>
+            {user.role === "SUPER_ADMIN" && levels.length > 0 && (
+              <form
+                action={changePartnerLevel}
+                className="flex items-end gap-2"
+              >
+                <input type="hidden" name="partnerId" value={partner.id} />
+                <div className="space-y-1.5">
+                  <Label htmlFor="perf-level" className="text-xs">
+                    Attribuer un niveau
+                  </Label>
+                  <NativeSelect
+                    id="perf-level"
+                    name="performanceLevelId"
+                    defaultValue={partner.performanceLevelId ?? ""}
+                    className="w-56"
+                  >
+                    <option value="">— Aucun —</option>
+                    {levels.map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.name} ({l.sharePercentage.toString()} %)
+                      </option>
+                    ))}
+                  </NativeSelect>
+                </div>
+                <Button type="submit" variant="outline" size="sm">
+                  Appliquer
+                </Button>
+              </form>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Assigned products */}
+        <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="text-base">Produits assignés</CardTitle>
           </CardHeader>
@@ -469,9 +623,12 @@ export default async function PartnerDetailPage({
             {partner.assignedProducts.length === 0 ? (
               <EmptyState title="Aucun produit assigné" />
             ) : (
-              <ul className="divide-y rounded-lg border">
+              <ul className="divide-y rounded-lg border" role="list">
                 {partner.assignedProducts.map((a) => (
-                  <li key={a.id} className="flex items-center justify-between gap-3 p-3">
+                  <li
+                    key={a.id}
+                    className="flex items-center justify-between gap-3 p-3"
+                  >
                     <div>
                       <Link
                         href={`/produits/${a.productId}`}
@@ -493,7 +650,7 @@ export default async function PartnerDetailPage({
                       <ConfirmSubmit
                         variant="ghost"
                         size="sm"
-                        className="text-destructive"
+                        className="text-destructive hover:text-destructive"
                         confirmMessage="Désassigner ce produit ?"
                       >
                         Désassigner
@@ -509,4 +666,3 @@ export default async function PartnerDetailPage({
     </div>
   );
 }
-

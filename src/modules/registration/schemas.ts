@@ -21,11 +21,23 @@ export const registrationSchema = z
     phone: z
       .string()
       .trim()
-      .replace(/[\s.\-()]+/g, "")
-      .regex(/^(?:\+216)?[24579]\d{7}$/, "Numéro tunisien invalide (8 chiffres)"),
+      .min(8, "Numéro tunisien invalide (8 chiffres)")
+      .max(20)
+      .regex(
+        /^(?:\+216[\s.\-()]*)?[24579][\s.\-()]*\d[\s.\-()]*\d[\s.\-()]*\d[\s.\-()]*\d[\s.\-()]*\d[\s.\-()]*\d[\s.\-()]*\d$/,
+        "Numéro tunisien invalide (8 chiffres)",
+      ),
     password: z.string().min(8, "8 caractères minimum").max(128),
     confirmPassword: z.string().min(1, "Confirmation requise"),
-    invitationCode: z.string().trim().min(1, "Code d'invitation requis").max(64),
+    invitationCode: z
+      .string()
+      .trim()
+      .min(1, "Code d'invitation requis")
+      .max(64)
+      .regex(
+        /^[a-zA-Z0-9_\-]+$/,
+        "Code d'invitation invalide (caractères alphanumériques uniquement)",
+      ),
     experience: z.enum(EXPERIENCE_VALUES, {
       errorMap: () => ({ message: "Expérience invalide" }),
     }),

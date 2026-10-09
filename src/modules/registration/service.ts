@@ -3,14 +3,19 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/modules/audit/service";
 import { registrationSchema, type RegistrationInput } from "./schemas";
+import {
+  validateReferralCode,
+  validateReferralEligibility,
+} from "@/modules/referrals/service";
 
 export type RegistrationResult =
   | { ok: true; email: string }
   | { ok: false; error: string; fieldErrors?: Record<string, string> };
 
 /** First free P### code (same rule as scripts/create-user.ts). */
-async function nextPartnerCode(): Promise<string> {
-  const existing = await prisma.partner.findMany({
+async function nextPartnerCode(tx?: Prisma.TransactionClient): Promise<string> {
+  const db = tx ?? prisma;
+  const existing = await db.partner.findMany({
     where: { code: { startsWith: "P" } },
     select: { code: true },
   });
@@ -35,7 +40,10 @@ function normalizePhone(phone: string): string {
 
 /**
  * Public partner sign-up. Server-side only — never trust role/status/inviter
- * from the client. Always creates PARTNER + PENDING, inviter resolved here.
+ * from the client. Always creates PARTNER + PENDING.
+ * Supports:
+ * 1. "admin" invitation code (preserves existing admin inviter flow)
+ * 2. Partner referral code (validates code & eligibility, creates ReferralAttribution record inside transaction)
  */
 export async function registerPartner(raw: unknown): Promise<RegistrationResult> {
   const parsed = registrationSchema.safeParse(raw);
@@ -50,22 +58,51 @@ export async function registerPartner(raw: unknown): Promise<RegistrationResult>
   }
   const input: RegistrationInput = parsed.data;
 
-  // Invitation: only "admin" is accepted. It is NOT a role — it resolves to an
-  // existing Admin user recorded as inviter. Case-insensitive, trimmed.
-  if (input.invitationCode.trim().toLowerCase() !== "admin") {
-    return {
-      ok: false,
-      error: "Code d'invitation invalide.",
-      fieldErrors: { invitationCode: "Code d'invitation invalide." },
+  const rawInviteCode = input.invitationCode.trim();
+  const isAdminInvite = rawInviteCode.toLowerCase() === "admin";
+
+  let adminInviterId: string | null = null;
+  let partnerReferrer: { partnerId: string; userId: string } | null = null;
+
+  if (isAdminInvite) {
+    // Case 1: "admin" -> preserves existing admin inviter flow
+    const inviter = await prisma.user.findFirst({
+      where: { role: { in: ["SUPER_ADMIN", "ADMIN"] }, status: "ACTIVE" },
+      orderBy: [{ role: "asc" }, { createdAt: "asc" }],
+      select: { id: true },
+    });
+    if (!inviter) {
+      return { ok: false, error: "Inscription momentanément indisponible. Réessayez plus tard." };
+    }
+    adminInviterId = inviter.id;
+  } else {
+    // Case 2: partner referral code -> validate code & eligibility
+    const codeValidation = await validateReferralCode(rawInviteCode);
+    if (!codeValidation.valid || !codeValidation.referrer) {
+      return {
+        ok: false,
+        error: codeValidation.error ?? "Code d'invitation invalide.",
+        fieldErrors: { invitationCode: codeValidation.error ?? "Code d'invitation invalide." },
+      };
+    }
+
+    const eligibility = await validateReferralEligibility(codeValidation.referrer.partnerId, {
+      email: input.email,
+      phone: input.phone,
+    });
+
+    if (!eligibility.valid) {
+      return {
+        ok: false,
+        error: eligibility.error ?? "Parrainage non éligible.",
+        fieldErrors: { invitationCode: eligibility.error ?? "Parrainage non éligible." },
+      };
+    }
+
+    partnerReferrer = {
+      partnerId: codeValidation.referrer.partnerId,
+      userId: codeValidation.referrer.userId,
     };
-  }
-  const inviter = await prisma.user.findFirst({
-    where: { role: { in: ["SUPER_ADMIN", "ADMIN"] }, status: "ACTIVE" },
-    orderBy: [{ role: "asc" }, { createdAt: "asc" }],
-    select: { id: true },
-  });
-  if (!inviter) {
-    return { ok: false, error: "Inscription momentanément indisponible. Réessayez plus tard." };
   }
 
   const existing = await prisma.user.findUnique({ where: { email: input.email } });
@@ -92,18 +129,35 @@ export async function registerPartner(raw: unknown): Promise<RegistrationResult>
           status: "ACTIVE",
         },
       });
+
+      const invitedByUserId = isAdminInvite ? adminInviterId : partnerReferrer?.userId;
+
       const partner = await tx.partner.create({
         data: {
           userId: user.id,
-          code: await nextPartnerCode(),
+          code: await nextPartnerCode(tx),
           displayName: input.fullName.trim().slice(0, 120),
           status: "PENDING",
           phone: normalizePhone(input.phone),
           experienceLevel: input.experience,
-          invitedByUserId: inviter.id,
+          invitedByUserId,
         },
       });
+
+      // For partner referral, create ReferralAttribution inside the transaction
+      if (!isAdminInvite && partnerReferrer) {
+        await tx.referralAttribution.create({
+          data: {
+            referrerPartnerId: partnerReferrer.partnerId,
+            referredPartnerId: partner.id,
+            type: "PARTNER",
+            status: "PENDING_QUALIFICATION",
+          },
+        });
+      }
+
       await tx.wallet.create({ data: { partnerId: partner.id } });
+
       await recordAudit(tx, {
         actorId: user.id,
         action: "PARTNER_REGISTERED",
@@ -113,12 +167,21 @@ export async function registerPartner(raw: unknown): Promise<RegistrationResult>
           email: user.email,
           status: partner.status,
           experienceLevel: input.experience,
-          invitedByUserId: inviter.id,
+          invitedByUserId,
+          referrerPartnerId: partnerReferrer?.partnerId ?? null,
         },
       });
     });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      const target = (e.meta?.target as string[]) || [];
+      if (Array.isArray(target) && target.includes("referredPartnerId")) {
+        return {
+          ok: false,
+          error: "Ce partenaire est déjà attribué à un parrain.",
+          fieldErrors: { invitationCode: "Ce partenaire est déjà attribué à un parrain." },
+        };
+      }
       return {
         ok: false,
         error: "Un compte existe déjà avec cet e-mail.",

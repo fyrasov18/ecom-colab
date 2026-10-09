@@ -230,9 +230,9 @@
   --color-sidebar-active: var(--sidebar-active);
   --color-sidebar-border: var(--sidebar-border);
 
-  /* Elevation */
-  --shadow-soft: var(--shadow-soft);
-  --shadow-lift: var(--shadow-lift);
+  /* Elevation (renamed to avoid circular @theme self-reference) */
+  --shadow-card: var(--shadow-soft);
+  --shadow-elevated: var(--shadow-lift);
 
   /* Radius */
   --radius-sm: var(--radius-sm);
