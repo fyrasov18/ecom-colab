@@ -17,10 +17,8 @@
     "test": "vitest run",
     "test:int": "vitest run --config vitest.integration.config.ts",
     "db:orders-seed": "tsx scripts/seed-orders.ts",
-    "db:finance-seed": "tsx scripts/seed-finance.ts"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "db:finance-seed": "tsx scripts/seed-finance.ts",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
@@ -35,6 +33,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
     "decimal.js": "^10.6.0",
+    "framer-motion": "^14.7.1",
     "lucide-react": "^1.48.0",
     "next": "^15.5.26",
     "next-auth": "^5.0.0-beta.32",
@@ -60,6 +59,7 @@
   },
   "allowScripts": {
     "prisma@6.19.3": true,
+    "@prisma/client@6.19.3": true,
     "@prisma/engines@6.19.3": true,
     "esbuild@0.28.2": true,
     "unrs-resolver@1.12.2": true

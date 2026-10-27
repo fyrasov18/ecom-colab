@@ -6,6 +6,7 @@ import { formatPrice } from "@/lib/money";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { AnimatedCard, AnimatedKpiValue } from "@/components/ui/animated-card";
 import { PartnerRecentOrders } from "./recent-orders";
 import { PartnerFinancialSummary } from "./summary-card";
 import { Wallet, TrendingUp, RotateCcw, PlusCircle, PackageCheck, ChevronRight } from "lucide-react";
@@ -39,49 +40,70 @@ export default async function PartnerDashboardPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        {/* Card 1 — Solde disponible */}
+        <AnimatedCard delay={0}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Solde disponible</CardTitle>
             <Wallet className="h-4 w-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatPrice(data.wallet.availableBalance)} DT</div>
-            <p className="mt-1 text-xs text-muted-foreground">+ {formatPrice(data.wallet.pendingBalance)} DT en attente</p>
+            <div className="text-2xl font-bold">
+              <AnimatedKpiValue
+                value={parseFloat(String(data.wallet.availableBalance))}
+                suffix=" DT"
+                decimals={3}
+                delay={0}
+              />
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              + {formatPrice(data.wallet.pendingBalance)} DT en attente
+            </p>
           </CardContent>
-        </Card>
+        </AnimatedCard>
 
-        <Card>
+        {/* Card 2 — Taux de livraison */}
+        <AnimatedCard delay={75}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Taux de livraison</CardTitle>
             <TrendingUp className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{data.orders.deliveryRate}%</div>
+            <div className="text-2xl font-bold">
+              <AnimatedKpiValue value={data.orders.deliveryRate} suffix="%" delay={75} />
+            </div>
             <p className="mt-1 text-xs text-muted-foreground">{data.orders.delivered} livrées</p>
           </CardContent>
-        </Card>
+        </AnimatedCard>
 
-        <Card>
+        {/* Card 3 — En acheminement */}
+        <AnimatedCard delay={150}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">En acheminement</CardTitle>
             <PackageCheck className="h-4 w-4 text-amber-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{data.orders.inDelivery}</div>
+            <div className="text-2xl font-bold">
+              <AnimatedKpiValue value={data.orders.inDelivery} delay={150} />
+            </div>
             <p className="mt-1 text-xs text-muted-foreground">{data.orders.preparing} en préparation</p>
           </CardContent>
-        </Card>
+        </AnimatedCard>
 
-        <Card>
+        {/* Card 4 — Taux de retour */}
+        <AnimatedCard delay={225}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Taux de retour</CardTitle>
             <RotateCcw className="h-4 w-4 text-rose-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{data.orders.returnRate}%</div>
-            <p className="mt-1 text-xs text-muted-foreground">{data.orders.returnedOrRefused} retour/refus</p>
+            <div className="text-2xl font-bold">
+              <AnimatedKpiValue value={data.orders.returnRate} suffix="%" delay={225} />
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {data.orders.returnedOrRefused} retour/refus
+            </p>
           </CardContent>
-        </Card>
+        </AnimatedCard>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">

@@ -76,6 +76,10 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://ecomcolab:ecomcolab@localhost:5433/ecomcolab?schema=public
+      # prisma/schema.prisma declares `directUrl = env("DIRECT_URL")`, so the
+      # migration engine needs it too. The container has no pooler, so both
+      # point at the same instance.
+      DIRECT_URL: postgresql://ecomcolab:ecomcolab@localhost:5433/ecomcolab?schema=public
 
     steps:
       - uses: actions/checkout@v7

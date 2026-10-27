@@ -5,9 +5,18 @@ export const SETTING_KEYS = {
   MIN_WITHDRAWAL_AMOUNT: "finance.min_withdrawal_amount",
   RETURN_COST_RULE: "finance.return_cost_rule",
   GLOBAL_COMMISSION: "finance.global_commission",
+  REFERRAL_LEVEL2_THRESHOLD: "referral.level2_threshold",
+  REFERRAL_LEVEL3_THRESHOLD: "referral.level3_threshold",
+  REFERRAL_AUTO_PROMOTION_ENABLED: "referral.auto_promotion_enabled",
 } as const;
 
 export type SettingKey = (typeof SETTING_KEYS)[keyof typeof SETTING_KEYS];
+
+export const REFERRAL_SETTING_KEYS = {
+  LEVEL2_THRESHOLD: SETTING_KEYS.REFERRAL_LEVEL2_THRESHOLD,
+  LEVEL3_THRESHOLD: SETTING_KEYS.REFERRAL_LEVEL3_THRESHOLD,
+  AUTO_PROMOTION_ENABLED: SETTING_KEYS.REFERRAL_AUTO_PROMOTION_ENABLED,
+} as const;
 
 /**
  * Return cost rule (validated business decision):
@@ -27,6 +36,9 @@ export const SETTING_DEFAULTS = {
     commissionType: "PERCENTAGE" as const,
     commissionValue: 60,
   },
+  [SETTING_KEYS.REFERRAL_LEVEL2_THRESHOLD]: 3,
+  [SETTING_KEYS.REFERRAL_LEVEL3_THRESHOLD]: 10,
+  [SETTING_KEYS.REFERRAL_AUTO_PROMOTION_ENABLED]: false,
 } satisfies Record<SettingKey, unknown>;
 
 export const SETTING_CATEGORIES: Record<string, string> = {
@@ -34,6 +46,9 @@ export const SETTING_CATEGORIES: Record<string, string> = {
   [SETTING_KEYS.MIN_WITHDRAWAL_AMOUNT]: "finance",
   [SETTING_KEYS.RETURN_COST_RULE]: "finance",
   [SETTING_KEYS.GLOBAL_COMMISSION]: "finance",
+  [SETTING_KEYS.REFERRAL_LEVEL2_THRESHOLD]: "referral",
+  [SETTING_KEYS.REFERRAL_LEVEL3_THRESHOLD]: "referral",
+  [SETTING_KEYS.REFERRAL_AUTO_PROMOTION_ENABLED]: "referral",
 };
 
 export const SETTING_DESCRIPTIONS: Record<string, string> = {
@@ -45,4 +60,10 @@ export const SETTING_DESCRIPTIONS: Record<string, string> = {
     "Règle de coût pour les retours/refus (REVERSE_PENDING_EARNING par défaut).",
   [SETTING_KEYS.GLOBAL_COMMISSION]:
     "Commission globale par défaut ({ type: PERCENTAGE|FIXED, value }) — fallback quand ni assignment, ni partenaire, ni produit n'en définit une.",
+  [SETTING_KEYS.REFERRAL_LEVEL2_THRESHOLD]:
+    "Seuil de parrainages directs qualifiés pour le Niveau 2 (défaut : 3).",
+  [SETTING_KEYS.REFERRAL_LEVEL3_THRESHOLD]:
+    "Seuil de parrainages directs qualifiés pour le Niveau 3 (défaut : 10).",
+  [SETTING_KEYS.REFERRAL_AUTO_PROMOTION_ENABLED]:
+    "Activer la promotion automatique de niveau de parrainage (défaut : false, requiert confirmation admin).",
 };

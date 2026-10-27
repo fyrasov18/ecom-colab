@@ -38,6 +38,20 @@ npm run dev                 # http://localhost:3000
 - Vérifier l'absence de dérive entre le schéma et la base :
   `node scripts/check-drift.mjs` (lit `DATABASE_URL`, ne l'affiche jamais).
 
+> **Neon / base distante** : `DATABASE_URL` = URL *pooled* (`…-pooler…`) utilisée
+> par l'application, `DIRECT_URL` = URL *directe* (même hôte **sans** `-pooler`)
+> utilisée par `prisma migrate`. Les deux sont obligatoires, le schéma déclare
+> `directUrl`. Ne **jamais** ajouter `channel_binding=require` à l'URL : le
+> connecteur Prisma le refuse et **toutes** les connexions échouent en
+> `P1001: Can't reach database server` (y compris `create-admin.ts`, qui affiche
+> désormais la cause réelle au lieu d'un « Échec de la création » générique).
+
+> `prisma.config.ts` remplace la clé `package.json#prisma`, dépréciée en Prisma 6
+> et supprimée en Prisma 7 : il déclare le chemin des migrations et la commande
+> de seed. Quand ce fichier existe, le CLI Prisma ne lit **plus** `.env`
+> automatiquement ; il est chargé explicitement via `process.loadEnvFile()`
+> (natif, Node ≥ 20.12) — aucune dépendance `dotenv` ajoutée.
+
 > `npm run db:seed` est réservé au développement : il crée des comptes de
 > démonstration à mots de passe connus et **refuse** de s'exécuter si la base
 > n'est pas locale ou si `NODE_ENV=production`.
@@ -58,6 +72,20 @@ npx prisma migrate deploy
 # Premier administrateur (mot de passe via variable d'environnement)
 ADMIN_EMAIL=… ADMIN_PASSWORD='…' npx tsx scripts/create-admin.ts
 ```
+
+Autres comptes (`ADMIN`, `PARTNER`) — même principe, rôle explicite et mot de
+passe toujours fourni par variable d'environnement :
+
+```bash
+USER_EMAIL=… USER_PASSWORD='…' USER_ROLE=ADMIN npx tsx scripts/create-user.ts
+```
+
+> Un compte `PARTNER` crée aussi sa fiche partenaire et son portefeuille : sans
+> elles, le `partnerId` de la session est vide et l'espace partenaire est
+> inutilisable. Sous PowerShell, définir les variables avant la commande :
+> `$env:USER_EMAIL='…'; $env:USER_PASSWORD='…'; $env:USER_ROLE='PARTNER'; npx tsx scripts/create-user.ts`
+> (`PARTNER_NAME` / `PARTNER_CODE` facultatifs — le code `P###` suivant est
+> généré automatiquement).
 
 ### Comptes de développement (seed — jamais en production)
 
@@ -268,8 +296,8 @@ Règles : la logique métier vit dans `src/modules/**/service.ts` (jamais dans l
 ## Tests
 
 ```bash
-npm test                # unitaires (116 tests Vitest)
-npm run test:int        # intégration DB réelle (44 tests Vitest)
+npm test                # unitaires (208 tests Vitest)
+npm run test:int        # intégration DB réelle (45 tests Vitest)
 npm run db:finance-seed # jeu d'essai financier (transactions, retraits, portefeuilles)
 # smoke HTTP (serveur lancé) :
 npx tsx scripts/pick-ids.ts

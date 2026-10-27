@@ -20,7 +20,7 @@ export function LogoutButton() {
       }}
     >
       <LogOut className="h-4 w-4" />
-      Déconnexion
+      <span className="hidden sm:inline">Déconnexion</span>
     </Button>
   );
 }
