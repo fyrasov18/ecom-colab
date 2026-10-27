@@ -288,39 +288,181 @@
    Shell motion (mobile drawer) — dependency-free keyframes.
    ============================================================ */
 @keyframes shell-fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 @keyframes shell-fade-out {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
+  from { opacity: 1; }
+  to   { opacity: 0; }
 }
 @keyframes shell-drawer-in {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(0);
-  }
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(0); }
 }
 @keyframes shell-drawer-out {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-100%);
-  }
+  from { transform: translateX(0); }
+  to   { transform: translateX(-100%); }
 }
+
+/* ============================================================
+   Agency-level animations — zero JavaScript, GPU-only.
+   ============================================================ */
+
+/* Mesh gradient background — Login page */
+@keyframes mesh-drift {
+  0%   { background-position: 0% 0%, 100% 100%, 50% 50%; }
+  33%  { background-position: 100% 0%, 0% 100%, 80% 20%; }
+  66%  { background-position: 100% 100%, 0% 0%, 20% 80%; }
+  100% { background-position: 0% 0%, 100% 100%, 50% 50%; }
+}
+
+/* Shimmer sweep — skeleton loaders */
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position: 200% 0; }
+}
+
+/* Fade + slide-up — page entrance */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Scale pop — card entrance */
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* Subtle pulse glow — active nav indicator */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+  50%       { box-shadow: 0 0 12px 3px rgba(37, 99, 235, 0.22); }
+}
+
+/* Number ticker — KPI cards */
+@keyframes counter-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   Utility classes consumed by components.
+   ============================================================ */
+
+/* Animated mesh gradient background */
+.bg-mesh-animated {
+  background-color: #0f172a;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 20% 10%, rgba(37, 99, 235, 0.28) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 80% at 80% 90%, rgba(30, 58, 138, 0.32) 0%, transparent 60%),
+    radial-gradient(ellipse 100% 50% at 50% 50%, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
+  background-size: 200% 200%;
+  animation: mesh-drift 16s ease-in-out infinite;
+}
+
+/* Glassmorphism card */
+.glass-card {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.36), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Fade-up entrance — stagger with animation-delay on children */
+.animate-fade-up {
+  animation: fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Scale-in entrance */
+.animate-scale-in {
+  animation: scale-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Shimmer skeleton */
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--muted) 25%,
+    color-mix(in srgb, var(--muted) 60%, white) 50%,
+    var(--muted) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+
+/* Glow on hover for KPI cards */
+.hover-glow {
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+.hover-glow:hover {
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.18), 0 8px 24px -6px rgba(37, 99, 235, 0.16);
+  transform: translateY(-1px);
+}
+
+/* Active nav item — glow pulse */
+.nav-active-glow {
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+
+/* Subtle agency dark grid background */
+.bg-grid-agency {
+  background-size: 40px 40px;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+}
+
+/* Agency subtle dots */
+.bg-dots-agency {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Floating animation for hero mockup */
+@keyframes float-subtle {
+  0%, 100% { transform: translateY(0px); }
+  50%      { transform: translateY(-8px); }
+}
+
+.animate-float-subtle {
+  animation: float-subtle 6s ease-in-out infinite;
+}
+
+/* Radiant glow beam border */
+.glow-border-brand {
+  position: relative;
+}
+.glow-border-brand::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.6) 0%, rgba(37, 99, 235, 0.15) 50%, rgba(147, 51, 234, 0.4) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+
+/* ============================================================
+   Reduced-motion safety net — one rule covers everything.
+   ============================================================ */
 @media (prefers-reduced-motion: reduce) {
-  [class*="animate-[shell-"] {
+  [class*="animate-[shell-"],
+  .bg-mesh-animated,
+  .animate-fade-up,
+  .animate-scale-in,
+  .animate-shimmer,
+  .nav-active-glow {
     animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+  }
+  .hover-glow:hover {
+    transform: none;
   }
 }
+

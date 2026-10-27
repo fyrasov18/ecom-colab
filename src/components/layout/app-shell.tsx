@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils";
 import { formatUnreadCount } from "@/modules/notifications/labels";
 import { GlobalSearch } from "./global-search";
 import { LogoutButton } from "./logout-button";
+import { PageTransition } from "@/components/ui/page-transition";
 
 type NavItem = { href: string; label: string; icon: LucideIcon; superAdminOnly?: boolean };
 type NavGroup = { label: string; items: NavItem[] };
@@ -396,7 +397,7 @@ export function AppShell({
             scope === "admin" ? "max-w-7xl" : "max-w-6xl pb-24 lg:pb-6",
           )}
         >
-          {children}
+          <PageTransition>{children}</PageTransition>
         </main>
       </div>
 
@@ -461,17 +462,35 @@ function NavGroupBlock({
               href={item.href}
               onClick={onNavigate}
               aria-current={active ? "page" : undefined}
-              // Native tooltip when collapsed (never clipped by nav overflow).
               title={collapsedMode ? item.label : undefined}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                /* Base */
+                "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium",
+                /* Smooth transitions — transform + colors only (GPU) */
+                "transition-all duration-150 ease-out",
+                /* Collapsed icon-only mode */
                 collapsedMode && "justify-center px-0 py-2.5",
+                /* Active state */
                 active
-                  ? "bg-sidebar-active text-white"
-                  : "text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-foreground",
+                  ? [
+                      "bg-sidebar-active text-white nav-active-glow",
+                      /* Left accent bar */
+                      !collapsedMode &&
+                        "before:absolute before:left-0 before:top-1/2 before:h-4 before:-translate-y-1/2 before:w-0.5 before:rounded-full before:bg-blue-300 before:opacity-70",
+                    ]
+                  : [
+                      "text-sidebar-muted",
+                      "hover:bg-sidebar-hover hover:text-sidebar-foreground hover:translate-x-0.5",
+                    ],
               )}
             >
-              <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <Icon
+                className={cn(
+                  "h-4 w-4 shrink-0 transition-transform duration-150",
+                  active && "scale-110",
+                )}
+                aria-hidden="true"
+              />
               {!collapsedMode && <span className="truncate">{item.label}</span>}
               <span className={collapsedMode ? "sr-only" : "hidden"}>{item.label}</span>
             </Link>
