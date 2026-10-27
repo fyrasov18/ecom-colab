@@ -16,13 +16,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { EXPERIENCE_LABELS, EXPERIENCE_VALUES } from "@/modules/registration/schemas";
 import { registerAction, type RegisterState } from "./actions";
 
@@ -77,33 +70,30 @@ export function RegisterForm() {
   /* ── Success state ──────────────────────────────────────────────────── */
   if (state.ok) {
     return (
-      <Card className="w-full max-w-md border-border/70 shadow-lg">
-        <CardHeader className="space-y-4 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success/20 text-success">
+      <div className="glass-card w-full max-w-lg rounded-2xl p-8 text-white space-y-6">
+        <div className="space-y-4 text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
             <CheckCircle2 className="h-10 w-10" />
           </div>
-          <CardTitle className="text-2xl">Compte créé avec succès</CardTitle>
-          <CardDescription>
+          <h2 className="text-2xl font-bold text-white">Compte créé avec succès</h2>
+          <p className="text-sm text-slate-300">
             {state.message ?? "Votre compte a été enregistré."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-start gap-3 rounded-lg bg-warning-50 p-4 text-warning-700 border border-warning-200">
-            <Clock className="mt-0.5 h-5 w-5 shrink-0" />
-            <div className="text-sm">
-              <p className="font-semibold">Validation en attente</p>
-              <p className="mt-1">
-                Votre demande est maintenant en attente de validation par
-                l&apos;administrateur. Vous recevrez une notification une fois
-                votre compte activé.
-              </p>
-            </div>
+          </p>
+        </div>
+        <div className="flex items-start gap-3 rounded-xl bg-amber-500/10 p-4 text-amber-300 border border-amber-500/20 text-sm">
+          <Clock className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" />
+          <div>
+            <p className="font-semibold text-white">Validation en attente</p>
+            <p className="mt-1 text-slate-300 text-xs leading-relaxed">
+              Votre demande est maintenant en attente de validation par l&apos;administrateur.
+              Vous recevrez une notification dès que votre compte sera activé.
+            </p>
           </div>
-          <Button asChild className="w-full">
-            <Link href="/login">Retour à la connexion</Link>
-          </Button>
-        </CardContent>
-      </Card>
+        </div>
+        <Button asChild className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium">
+          <Link href="/login">Retour à la connexion</Link>
+        </Button>
+      </div>
     );
   }
 
@@ -111,26 +101,33 @@ export function RegisterForm() {
   const fe = state.fieldErrors ?? {};
 
   return (
-    <Card className="w-full max-w-md border-border/70 shadow-lg">
-      <CardHeader className="space-y-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-          <UserPlus className="h-5 w-5" />
+    <div className="glass-card w-full max-w-lg rounded-2xl p-6 sm:p-8 text-white">
+      {/* Brand Header */}
+      <div className="mb-6 space-y-3">
+        <div
+          className="flex h-11 w-11 items-center justify-center rounded-xl text-sm font-bold text-white"
+          style={{
+            background: "linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)",
+            boxShadow: "0 4px 16px rgba(37,99,235,0.45)",
+          }}
+        >
+          E
         </div>
-        <CardTitle className="text-2xl">Créer un compte</CardTitle>
-        <CardDescription>Rejoignez E-com Colab en tant que partenaire.</CardDescription>
-      </CardHeader>
-
-      <CardContent>
-        {/* Approval notice */}
-        <div className="mb-6 flex items-start gap-3 rounded-lg bg-warning-50 p-3 text-warning-700 border border-warning-200">
-          <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />
-          <p className="text-sm leading-tight">
-            <strong>Approbation requise :</strong> Votre compte sera validé par
-            un administrateur avant d&apos;être activé.
-          </p>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-white">Créer un compte partenaire</h1>
+          <p className="text-xs text-slate-300">Rejoignez E-com Colab et accédez au catalogue exclusif.</p>
         </div>
+      </div>
 
-        <form action={formAction} className="space-y-6" noValidate>
+      {/* Approval notice */}
+      <div className="mb-6 flex items-start gap-3 rounded-xl bg-amber-500/10 p-3.5 text-amber-300 border border-amber-500/20 text-xs">
+        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+        <p className="leading-relaxed">
+          <strong className="text-white font-semibold">Validation requise :</strong> Votre compte sera activé par un administrateur après vérification.
+        </p>
+      </div>
+
+      <form action={formAction} className="space-y-6" noValidate>
 
           {/* ── Personal information ─────────────────────────────── */}
           <fieldset className="space-y-4">
@@ -327,24 +324,37 @@ export function RegisterForm() {
             </div>
           )}
 
-          <Button type="submit" className="w-full" disabled={pending}>
+          {/* Submit button */}
+          <button
+            type="submit"
+            disabled={pending}
+            aria-busy={pending}
+            className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-4 py-3 text-sm font-semibold text-white transition-all duration-200 disabled:opacity-60"
+            style={{
+              background: "linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)",
+              boxShadow: "0 4px 20px rgba(37,99,235,0.40)",
+            }}
+          >
+            <span
+              className="pointer-events-none absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-500 group-hover:translate-x-[100%]"
+              aria-hidden="true"
+            />
             {pending && (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
             )}
-            Créer mon compte
-          </Button>
+            {pending ? "Création en cours…" : "Créer mon compte partenaire"}
+          </button>
 
-          <p className="text-center text-sm text-muted-foreground">
+          <p className="text-center text-sm text-slate-400">
             Déjà inscrit ?{" "}
             <Link
               href="/login"
-              className="font-medium text-primary underline-offset-4 hover:underline"
+              className="font-medium text-blue-400 underline-offset-4 hover:underline hover:text-blue-300 transition-colors"
             >
               Se connecter
             </Link>
           </p>
         </form>
-      </CardContent>
-    </Card>
+    </div>
   );
 }
