@@ -45,15 +45,45 @@ export function sessionExpiry(from = new Date()): Date {
 }
 
 /**
+ * Parse the TELEGRAM_ADMIN_IDS environment variable into a Set of numeric ID
+ * strings.  The value is a comma-separated list of integers, e.g. "123,456".
+ * Leading/trailing spaces and empty segments are ignored.
+ *
+ * This is intentionally NOT exported — callers should use `isAuthorized`.
+ */
+function envAdminIds(): ReadonlySet<string> {
+  const raw = process.env.TELEGRAM_ADMIN_IDS ?? "";
+  const ids = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => /^-?\d{1,20}$/.test(s));
+  return new Set(ids);
+}
+
+/**
  * Authorisation is keyed on the stable Telegram id, never a username.
- * Returns false when the user is unknown, disabled, or revoked.
+ *
+ * Resolution order (most-specific wins):
+ *  1. DB row with status = ACTIVE  → authorised
+ *  2. DB row with status = DISABLED → denied  (explicit revocation beats env)
+ *  3. TELEGRAM_ADMIN_IDS env var   → authorised  (bootstrap / DR fallback)
+ *  4. No match                     → denied
+ *
+ * The env-var fallback exists so the very first admin can reach the bot before
+ * anyone has used the admin UI to add themselves.  Production deployments should
+ * still add the ID through the admin panel so revocation works correctly.
  */
 export async function isAuthorized(telegramUserId: string): Promise<boolean> {
   const row = await prisma.telegramAuthorizedUser.findUnique({
     where: { telegramUserId },
     select: { status: true },
   });
-  return row?.status === "ACTIVE";
+
+  // Explicit DB record wins — ACTIVE or DISABLED.
+  if (row !== null) return row.status === "ACTIVE";
+
+  // No DB record yet: allow if the ID is listed in the env-var bootstrap list.
+  return envAdminIds().has(telegramUserId);
 }
 
 export async function listAuthorizedUsers() {

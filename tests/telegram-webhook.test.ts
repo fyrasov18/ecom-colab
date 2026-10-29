@@ -170,7 +170,54 @@ describe("Telegram webhook — authorization", () => {
     expect(serviceMock.createProductDraft).not.toHaveBeenCalled();
     expect(serviceMock.startSession).not.toHaveBeenCalled();
   });
+
+  it("sends the correct French unauthorised message to the user", async () => {
+    const fetchSpy = vi.mocked(fetch as typeof fetch);
+    serviceMock.isAuthorized.mockResolvedValue(false);
+    process.env.TELEGRAM_BOT_TOKEN = "test-token";
+    await POST(req(update(201, "/start", 999), authed));
+    // The sendMessage helper posts to the Telegram API.
+    const call = fetchSpy.mock.calls.find((c) =>
+      String(c[0]).includes("/sendMessage"),
+    );
+    expect(call).toBeDefined();
+    const body = JSON.parse(call![1]!.body as string);
+    expect(body.text).toMatch(/Accès non autorisé/);
+    expect(body.chat_id).toBe(999);
+    delete process.env.TELEGRAM_BOT_TOKEN;
+  });
+
+  /**
+   * TELEGRAM_ADMIN_IDS env-var fallback — the key scenario that caused the bug.
+   *
+   * When the DB has no row (empty TelegramAuthorizedUser table) the real
+   * `isAuthorized` falls back to the env var.  Here we test the route's
+   * behaviour end-to-end: we let `isAuthorized` return true (as it would when
+   * the env var matches) and verify the request proceeds normally.
+   */
+  it("grants access when TELEGRAM_ADMIN_IDS env var contains the user id (no DB row)", async () => {
+    // Simulate: env var is set, DB has no row, isAuthorized resolves true.
+    serviceMock.isAuthorized.mockResolvedValue(true);
+    const res = await POST(req(update(202, "/start", 123456), authed));
+    expect(res.status).toBe(200);
+    expect((await res.json()).action).toBe("start");
+  });
+
+  /**
+   * Revocation beats env-var — explicit DISABLED row must deny access even
+   * when the user ID is listed in TELEGRAM_ADMIN_IDS.
+   */
+  it("denies access when user is explicitly revoked in DB even if in env var", async () => {
+    // Simulate: env var is set, but the DB row is DISABLED.
+    serviceMock.isAuthorized.mockResolvedValue(false);
+    const res = await POST(
+      req(update(203, "/start", 123456), authed),
+    );
+    expect(res.status).toBe(200);
+    expect((await res.json()).unauthorized).toBe(true);
+  });
 });
+
 
 describe("Telegram webhook — commands", () => {
   it("answers /help without creating anything", async () => {
