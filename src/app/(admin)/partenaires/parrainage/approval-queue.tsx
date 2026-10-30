@@ -53,11 +53,17 @@ export type QueueCommissionItem = {
 };
 
 function ApprovalRow({ item }: { item: QueueCommissionItem }) {
-  const [approveState, approveAction, approvePending] = useActionState(
+  const [approveState, approveAction, approvePending] = useActionState<
+    AdminCommissionActionState,
+    FormData
+  >(
     approveCommissionAction,
     initialState,
   );
-  const [rejectState, rejectAction, rejectPending] = useActionState(
+  const [rejectState, rejectAction, rejectPending] = useActionState<
+    AdminCommissionActionState,
+    FormData
+  >(
     rejectCommissionAction,
     initialState,
   );
@@ -168,8 +174,8 @@ function ApprovalRow({ item }: { item: QueueCommissionItem }) {
           {/* Expandable Rejection Form with mandatory reason */}
           {showRejectForm && (
             <form
-              action={async (formData) => {
-                await rejectAction(formData);
+              action={(formData) => {
+                rejectAction(formData);
                 setShowRejectForm(false);
               }}
               className="mt-1 space-y-2 rounded-lg border border-danger/30 bg-danger-50/50 p-2.5"

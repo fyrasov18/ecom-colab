@@ -45,16 +45,16 @@ export function HeroSection() {
         {/* Hero Title & Subtitle */}
         <div className="mx-auto max-w-4xl text-center">
           <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl lg:text-7xl">
-            Développez votre business{" "}
+            Construisez votre business{" "}
             <span className="bg-gradient-to-r from-blue-400 via-sky-300 to-indigo-300 bg-clip-text text-transparent">
-              e-commerce à grande échelle
+              e-commerce avec les bons partenaires
             </span>
           </h1>
 
           <p className="mt-6 text-lg sm:text-xl text-slate-300/90 leading-relaxed max-w-2xl mx-auto">
-            La plateforme B2B collaborative conçue pour les marques et partenaires
-            affiliés : catalogue vérifié, traitement automatisé des commandes,
-            livraison express et commissions garanties.
+            E-com Collaboration facilite la collaboration entre partenaires
+            e-commerce : gestion opérationnelle, suivi des performances et
+            développement de votre activité dans un environnement structuré.
           </p>
 
           {/* Action CTAs */}
@@ -70,7 +70,7 @@ export function HeroSection() {
             >
               <Link href="/register">
                 <Zap className="mr-2 h-4 w-4 text-blue-200" />
-                Devenir Partenaire
+                Rejoindre la plateforme
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
@@ -81,20 +81,23 @@ export function HeroSection() {
               size="lg"
               className="w-full sm:w-auto h-12 px-7 text-base font-medium border-white/15 bg-white/[0.04] text-white hover:bg-white/[0.08] hover:border-white/30 backdrop-blur-md"
             >
-              <a href="#features">Découvrir les fonctionnalités</a>
+              <a href="#features">Découvrir le fonctionnement</a>
             </Button>
           </div>
 
-          {/* Key trust badges */}
+          {/* Key trust signals (verified against actual capabilities) */}
           <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-xs text-slate-400">
             <span className="flex items-center gap-1.5">
-              <ShieldCheck className="h-4 w-4 text-emerald-400" /> Sans investissement en stock
+              <ShieldCheck className="h-4 w-4 text-emerald-400" />
+              Aucun stock à gérer
             </span>
             <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="h-4 w-4 text-emerald-400" /> Paiements hebdomadaires garantis
+              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+              Virements hebdomadaires
             </span>
             <span className="flex items-center gap-1.5">
-              <Sparkles className="h-4 w-4 text-emerald-400" /> Produits testés &amp; certifiés
+              <Sparkles className="h-4 w-4 text-emerald-400" />
+              Catalogue produits vérifiés
             </span>
           </div>
         </div>
@@ -122,7 +125,7 @@ export function HeroSection() {
 
             {/* Dashboard Content Mockup */}
             <div className="p-4 sm:p-6 space-y-6">
-              {/* Mini KPIs */}
+              {/* Mini KPIs — illustrative figures only, not real metrics */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 sm:p-4">
                   <div className="flex items-center justify-between text-xs text-slate-400">
@@ -130,10 +133,10 @@ export function HeroSection() {
                     <Wallet className="h-4 w-4 text-emerald-400" />
                   </div>
                   <div className="mt-2 text-xl sm:text-2xl font-bold text-white">
-                    3,420.500 <span className="text-xs font-normal text-slate-400">DT</span>
+                    --.-- <span className="text-xs font-normal text-slate-400">DT</span>
                   </div>
                   <p className="mt-1 text-[11px] text-emerald-400 font-medium">
-                    +18.5% cette semaine
+                    Dépend de votre activité
                   </p>
                 </div>
 
@@ -143,10 +146,10 @@ export function HeroSection() {
                     <TrendingUp className="h-4 w-4 text-blue-400" />
                   </div>
                   <div className="mt-2 text-xl sm:text-2xl font-bold text-white">
-                    94.8%
+                    --.--%
                   </div>
                   <p className="mt-1 text-[11px] text-blue-400 font-medium">
-                    542 commandes livrées
+                    Selon vos commandes
                   </p>
                 </div>
 
@@ -156,10 +159,10 @@ export function HeroSection() {
                     <Clock className="h-4 w-4 text-amber-400" />
                   </div>
                   <div className="mt-2 text-xl sm:text-2xl font-bold text-white">
-                    38
+                    --
                   </div>
                   <p className="mt-1 text-[11px] text-amber-400 font-medium">
-                    12 en préparation
+                    À suivre en temps réel
                   </p>
                 </div>
 
@@ -169,60 +172,32 @@ export function HeroSection() {
                     <Sparkles className="h-4 w-4 text-purple-400" />
                   </div>
                   <div className="mt-2 text-xl sm:text-2xl font-bold text-white">
-                    890.000 <span className="text-xs font-normal text-slate-400">DT</span>
+                    --.-- <span className="text-xs font-normal text-slate-400">DT</span>
                   </div>
                   <p className="mt-1 text-[11px] text-purple-400 font-medium">
-                    Niveau Tier 2 qualifié
+                    Jusqu&apos;à 4 niveaux
                   </p>
                 </div>
               </div>
 
-              {/* Mini Feed Table */}
+              {/* Mini Feed Table — illustrative example */}
               <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
                 <div className="flex items-center justify-between mb-3 text-xs font-semibold text-slate-300">
-                  <span>Dernières commandes enregistrées</span>
-                  <span className="text-blue-400">Mise à jour il y a 30s</span>
+                  <span>Exemple de suivi commandes</span>
+                  <span className="text-blue-400">Simulation</span>
                 </div>
                 <div className="space-y-2 text-xs">
                   <div className="flex items-center justify-between rounded-lg bg-white/[0.03] px-3 py-2 border border-white/05">
                     <div className="flex items-center gap-3">
-                      <span className="font-mono text-slate-400">#CMD-8932</span>
-                      <span className="text-white font-medium">Pack Smart Watch Ultra</span>
-                      <span className="text-slate-400 hidden sm:inline">Grand Tunis</span>
+                      <span className="font-mono text-slate-400">#CMD-0001</span>
+                      <span className="text-white font-medium">Exemple de produit</span>
+                      <span className="text-slate-400 hidden sm:inline">Tunisie</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="rounded bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400 border border-emerald-500/20">
-                        Livrée &bull; Encaissée
+                        En cours
                       </span>
-                      <span className="font-bold text-white">+45.000 DT</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between rounded-lg bg-white/[0.03] px-3 py-2 border border-white/05">
-                    <div className="flex items-center gap-3">
-                      <span className="font-mono text-slate-400">#CMD-8931</span>
-                      <span className="text-white font-medium">Kit Électro-Beauté Pro</span>
-                      <span className="text-slate-400 hidden sm:inline">Sousse</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="rounded bg-blue-500/10 px-2 py-0.5 text-[10px] font-semibold text-blue-400 border border-blue-500/20">
-                        En cours de livraison
-                      </span>
-                      <span className="font-bold text-white">+38.500 DT</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between rounded-lg bg-white/[0.03] px-3 py-2 border border-white/05">
-                    <div className="flex items-center gap-3">
-                      <span className="font-mono text-slate-400">#CMD-8930</span>
-                      <span className="text-white font-medium">Air Purifier Deluxe</span>
-                      <span className="text-slate-400 hidden sm:inline">Sfax</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="rounded bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400 border border-emerald-500/20">
-                        Livrée &bull; Encaissée
-                      </span>
-                      <span className="font-bold text-white">+62.000 DT</span>
+                      <span className="font-bold text-white">--.-- DT</span>
                     </div>
                   </div>
                 </div>

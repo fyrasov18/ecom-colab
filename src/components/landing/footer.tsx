@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUp, Heart, Shield, Lock, ExternalLink } from "lucide-react";
+import { ArrowUp, Heart, Shield, Lock } from "lucide-react";
 
 export function LandingFooter() {
   function scrollToTop() {
@@ -44,12 +44,6 @@ export function LandingFooter() {
               Nous réunissons les marques et les meilleurs vendeurs en ligne pour générer
               de la croissance rentable et pérenne.
             </p>
-
-            {/* Live platform status badge */}
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[11px] font-medium text-emerald-300">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Système opérationnel &bull; 99.98% uptime</span>
-            </div>
           </div>
 
           {/* Nav links columns */}
@@ -87,23 +81,18 @@ export function LandingFooter() {
             </h4>
             <ul className="mt-4 space-y-2.5 text-xs">
               <li>
-                <a href="mailto:fournisseur@ecomcolab.tn" className="hover:text-white transition-colors">
-                  Déposer son catalogue
-                </a>
-              </li>
-              <li>
                 <a href="#features" className="hover:text-white transition-colors">
-                  Réseau de distribution
+                  Catalogue &amp; Produits
                 </a>
               </li>
               <li>
                 <a href="#pricing" className="hover:text-white transition-colors">
-                  Services d&apos;entreposage
+                  Modèle de collaboration
                 </a>
               </li>
               <li>
-                <a href="mailto:support@ecomcolab.tn" className="hover:text-white transition-colors">
-                  Partenariat logistique
+                <a href="#cta" className="hover:text-white transition-colors">
+                  Rejoindre la plateforme
                 </a>
               </li>
             </ul>
@@ -121,16 +110,6 @@ export function LandingFooter() {
               <li className="flex items-center gap-1.5">
                 <Lock className="h-3.5 w-3.5 text-slate-400" />
                 <span>Transactions chiffrées</span>
-              </li>
-              <li>
-                <span className="hover:text-white transition-colors cursor-pointer">
-                  Conditions Générales
-                </span>
-              </li>
-              <li>
-                <span className="hover:text-white transition-colors cursor-pointer">
-                  Politique de confidentialité
-                </span>
               </li>
             </ul>
           </div>

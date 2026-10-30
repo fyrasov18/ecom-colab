@@ -3,7 +3,9 @@
 import { LandingNavbar } from "./navbar";
 import { HeroSection } from "./hero-section";
 import { FeaturesBento } from "./features-bento";
+import { HowItWorks } from "./how-it-works";
 import { PricingSection } from "./pricing-section";
+import { CTASection } from "./cta-section";
 import { LandingFooter } from "./footer";
 
 export function LandingPage() {
@@ -13,7 +15,9 @@ export function LandingPage() {
       <main id="main-content">
         <HeroSection />
         <FeaturesBento />
+        <HowItWorks />
         <PricingSection />
+        <CTASection />
       </main>
       <LandingFooter />
     </div>

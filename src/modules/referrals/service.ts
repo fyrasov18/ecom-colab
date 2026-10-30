@@ -338,7 +338,8 @@ export async function validateReferralEligibility(
 
       visited.add(currentPartnerId);
 
-      const parentAttribution = await db.referralAttribution.findUnique({
+      const parentAttribution: { referrerPartnerId: string } | null =
+        await db.referralAttribution.findUnique({
         where: { referredPartnerId: currentPartnerId },
         select: { referrerPartnerId: true },
       });

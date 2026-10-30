@@ -10,7 +10,7 @@ import {
 } from "@/app/(admin)/partenaires/parrainage/actions";
 import {
   calculateProfitSharing,
-  REFERRAL_LEVEL_RATES,
+  REFERRAL_RATES,
 } from "@/modules/finance/referral-math";
 import {
   getPartnerReferralLevel,

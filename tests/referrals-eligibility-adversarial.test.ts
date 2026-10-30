@@ -38,7 +38,9 @@ describe("Adversarial Empirical Stress Tests: validateReferralEligibility", () =
       );
 
       expect(res.valid).toBe(false);
-      expect(res.error).toMatch(/Auto-parrainage interdit: même adresse e-mail/i);
+      if (!res.valid) {
+        expect(res.error).toMatch(/Auto-parrainage interdit: même adresse e-mail/i);
+      }
     });
 
     it("rejects self-referral with whitespace and mixed casing in email", async () => {
@@ -57,7 +59,9 @@ describe("Adversarial Empirical Stress Tests: validateReferralEligibility", () =
       );
 
       expect(res.valid).toBe(false);
-      expect(res.error).toMatch(/Auto-parrainage interdit: même adresse e-mail/i);
+      if (!res.valid) {
+        expect(res.error).toMatch(/Auto-parrainage interdit: même adresse e-mail/i);
+      }
     });
 
     it("rejects self-referral with +216 prefix vs local 8 digits", async () => {
@@ -88,7 +92,9 @@ describe("Adversarial Empirical Stress Tests: validateReferralEligibility", () =
         );
 
         expect(res.valid).toBe(false);
-        expect(res.error).toMatch(/Auto-parrainage interdit: même numéro de téléphone/i);
+        if (!res.valid) {
+          expect(res.error).toMatch(/Auto-parrainage interdit: même numéro de téléphone/i);
+        }
       }
     });
 
@@ -106,7 +112,9 @@ describe("Adversarial Empirical Stress Tests: validateReferralEligibility", () =
       );
 
       expect(res.valid).toBe(false);
-      expect(res.error).toMatch(/Auto-parrainage interdit: même numéro de téléphone/i);
+      if (!res.valid) {
+        expect(res.error).toMatch(/Auto-parrainage interdit: même numéro de téléphone/i);
+      }
     });
 
     it("rejects self-referral when candidate ID is resolved from email matching referrer user", async () => {
@@ -134,7 +142,9 @@ describe("Adversarial Empirical Stress Tests: validateReferralEligibility", () =
       );
 
       expect(res.valid).toBe(false);
-      expect(res.error).toMatch(/Auto-parrainage interdit/i);
+      if (!res.valid) {
+        expect(res.error).toMatch(/Auto-parrainage interdit/i);
+      }
     });
 
     it("allows distinct valid candidate with different email and different phone", async () => {
@@ -208,7 +218,9 @@ describe("Adversarial Empirical Stress Tests: validateReferralEligibility", () =
       );
 
       expect(res.valid).toBe(false);
-      expect(res.error).toMatch(/Cycle de parrainage détecté: le candidat a déjà parrainé ce partenaire/i);
+      if (!res.valid) {
+        expect(res.error).toMatch(/Cycle de parrainage détecté: le candidat a déjà parrainé ce partenaire/i);
+      }
     });
 
     it("rejects direct cycle when candidate A ID is resolved via candidate email", async () => {
@@ -249,7 +261,9 @@ describe("Adversarial Empirical Stress Tests: validateReferralEligibility", () =
       );
 
       expect(res.valid).toBe(false);
-      expect(res.error).toMatch(/Cycle de parrainage détecté: le candidat a déjà parrainé ce partenaire/i);
+      if (!res.valid) {
+        expect(res.error).toMatch(/Cycle de parrainage détecté: le candidat a déjà parrainé ce partenaire/i);
+      }
     });
   });
 
@@ -299,7 +313,9 @@ describe("Adversarial Empirical Stress Tests: validateReferralEligibility", () =
       );
 
       expect(res.valid).toBe(false);
-      expect(res.error).toMatch(/Cycle de parrainage détecté dans la chaîne de parrainage/i);
+      if (!res.valid) {
+        expect(res.error).toMatch(/Cycle de parrainage détecté dans la chaîne de parrainage/i);
+      }
     });
 
     it("rejects intermediate cycle in 4-hop chain: D attempts to refer B (A -> B -> C -> D -> B)", async () => {
@@ -339,7 +355,9 @@ describe("Adversarial Empirical Stress Tests: validateReferralEligibility", () =
 
       expect(res.valid).toBe(false);
       // B already has an attribution, so duplicate attribution check rejects B
-      expect(res.error).toMatch(/déjà attribué à un parrain/i);
+      if (!res.valid) {
+        expect(res.error).toMatch(/déjà attribué à un parrain/i);
+      }
     });
 
     it("rejects deep 10-hop cycle (A_0 -> A_1 -> ... -> A_9 -> A_0)", async () => {
@@ -376,7 +394,9 @@ describe("Adversarial Empirical Stress Tests: validateReferralEligibility", () =
       );
 
       expect(res.valid).toBe(false);
-      expect(res.error).toMatch(/Cycle de parrainage détecté dans la chaîne de parrainage/i);
+      if (!res.valid) {
+        expect(res.error).toMatch(/Cycle de parrainage détecté dans la chaîne de parrainage/i);
+      }
     });
 
     it("allows valid referral across disjoint branches (Tree A: Root -> B -> C; Tree D: D refers candidate X)", async () => {
@@ -488,7 +508,9 @@ describe("Adversarial Empirical Stress Tests: validateReferralEligibility", () =
       );
 
       expect(res.valid).toBe(false);
-      expect(res.error).toMatch(/Ce partenaire est déjà attribué à un parrain/i);
+      if (!res.valid) {
+        expect(res.error).toMatch(/Ce partenaire est déjà attribué à un parrain/i);
+      }
     });
 
     it("rejects referral when same referrer attempts to attribute the same candidate again", async () => {
@@ -514,7 +536,9 @@ describe("Adversarial Empirical Stress Tests: validateReferralEligibility", () =
       );
 
       expect(res.valid).toBe(false);
-      expect(res.error).toMatch(/Ce partenaire est déjà attribué à un parrain/i);
+      if (!res.valid) {
+        expect(res.error).toMatch(/Ce partenaire est déjà attribué à un parrain/i);
+      }
     });
 
     it("recordPartnerReferral throws when duplicate attribution is attempted in transaction", async () => {
@@ -560,7 +584,9 @@ describe("Adversarial Empirical Stress Tests: validateReferralEligibility", () =
       );
 
       expect(res.valid).toBe(false);
-      expect(res.error).toMatch(/Partenaire parrain introuvable/i);
+      if (!res.valid) {
+        expect(res.error).toMatch(/Partenaire parrain introuvable/i);
+      }
     });
 
     it("rejects when referrer has status SUSPENDED", async () => {
@@ -577,7 +603,9 @@ describe("Adversarial Empirical Stress Tests: validateReferralEligibility", () =
       );
 
       expect(res.valid).toBe(false);
-      expect(res.error).toMatch(/Le parrain n'est pas actif \(statut: SUSPENDED\)/i);
+      if (!res.valid) {
+        expect(res.error).toMatch(/Le parrain n'est pas actif \(statut: SUSPENDED\)/i);
+      }
     });
 
     it("rejects when referrer has status PENDING", async () => {
@@ -594,7 +622,9 @@ describe("Adversarial Empirical Stress Tests: validateReferralEligibility", () =
       );
 
       expect(res.valid).toBe(false);
-      expect(res.error).toMatch(/Le parrain n'est pas actif \(statut: PENDING\)/i);
+      if (!res.valid) {
+        expect(res.error).toMatch(/Le parrain n'est pas actif \(statut: PENDING\)/i);
+      }
     });
 
     it("normalizes phone numbers robustly under extreme input variations", () => {

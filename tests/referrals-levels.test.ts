@@ -115,7 +115,9 @@ describe("Milestone 3: Qualification & Partner Levels", () => {
       const result = await checkAndQualifyOrder("order-shipped", mockDb);
 
       expect(result.qualified).toBe(false);
-      expect(result.reason).toBe("ORDER_NOT_DELIVERED");
+      if (!result.qualified) {
+        expect(result.reason).toBe("ORDER_NOT_DELIVERED");
+      }
       expect(mockDb.referralAttribution.updateMany).not.toHaveBeenCalled();
     });
 
@@ -140,7 +142,9 @@ describe("Milestone 3: Qualification & Partner Levels", () => {
       const result = await checkAndQualifyOrder("order-pending-earning", mockDb);
 
       expect(result.qualified).toBe(false);
-      expect(result.reason).toBe("EARNING_NOT_AVAILABLE");
+      if (!result.qualified) {
+        expect(result.reason).toBe("EARNING_NOT_AVAILABLE");
+      }
       expect(mockDb.referralAttribution.updateMany).not.toHaveBeenCalled();
     });
 
@@ -161,7 +165,9 @@ describe("Milestone 3: Qualification & Partner Levels", () => {
       const result = await checkAndQualifyOrder("order-confirmed", mockDb);
 
       expect(result.qualified).toBe(false);
-      expect(result.reason).toBe("ORDER_NOT_DELIVERED");
+      if (!result.qualified) {
+        expect(result.reason).toBe("ORDER_NOT_DELIVERED");
+      }
     });
 
     it("registration or approval alone does NOT qualify", async () => {
@@ -225,7 +231,9 @@ describe("Milestone 3: Qualification & Partner Levels", () => {
       const result = await checkAndQualifyOrder("order-2", mockDb);
 
       expect(result.qualified).toBe(false);
-      expect(result.reason).toBe("ALREADY_QUALIFIED");
+      if (!result.qualified) {
+        expect(result.reason).toBe("ALREADY_QUALIFIED");
+      }
       // Must not modify the existing attribution
       expect(mockDb.referralAttribution.updateMany).not.toHaveBeenCalled();
     });
@@ -257,7 +265,9 @@ describe("Milestone 3: Qualification & Partner Levels", () => {
 
       const retryResult = await checkAndQualifyOrder("order-1", mockDb);
       expect(retryResult.qualified).toBe(false);
-      expect(retryResult.reason).toBe("ALREADY_QUALIFIED");
+      if (!retryResult.qualified) {
+        expect(retryResult.reason).toBe("ALREADY_QUALIFIED");
+      }
     });
 
     it("returns NO_ATTRIBUTION if order has no associated referral attribution", async () => {
@@ -279,7 +289,9 @@ describe("Milestone 3: Qualification & Partner Levels", () => {
 
       const result = await checkAndQualifyOrder("order-organic", mockDb);
       expect(result.qualified).toBe(false);
-      expect(result.reason).toBe("NO_ATTRIBUTION");
+      if (!result.qualified) {
+        expect(result.reason).toBe("NO_ATTRIBUTION");
+      }
     });
 
     it("supports checkAndQualifyReferral alias with matching PROJECT.md signature", async () => {

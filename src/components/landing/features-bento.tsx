@@ -5,7 +5,6 @@ import {
   Wallet,
   Users2,
   PackageCheck,
-  ShieldCheck,
   CheckCircle2,
   ArrowUpRight,
   Sparkles,
@@ -52,7 +51,7 @@ export function FeaturesBento() {
                 <Truck className="h-6 w-6" />
               </div>
               <span className="flex items-center text-xs font-medium text-blue-400">
-                Temps réel <ArrowUpRight className="ml-1 h-3.5 w-3.5" />
+                Suivi logistique <ArrowUpRight className="ml-1 h-3.5 w-3.5" />
               </span>
             </div>
 
@@ -61,8 +60,9 @@ export function FeaturesBento() {
                 Dispatching &amp; Suivi Logistique Automatisé
               </h3>
               <p className="mt-2 text-sm text-slate-400 leading-relaxed max-w-xl">
-                Connexion directe avec les transporteurs sur l&apos;ensemble du territoire tunisien.
-                Mise à jour automatique des statuts, gestion proactive des retours et notifications Telegram instantanées.
+                Suivi des commandes et des statuts de livraison, gestion des
+                retours et notifications pour tenir vos clients informés à
+                chaque étape.
               </p>
             </div>
 
@@ -72,21 +72,21 @@ export function FeaturesBento() {
                 <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400">
                   <CheckCircle2 className="h-3.5 w-3.5" /> 1. Prise en charge
                 </div>
-                <p className="mt-1 text-[11px] text-slate-400">Confirmation sous 2h ouvrées</p>
+                <p className="mt-1 text-[11px] text-slate-400">Confirmation de commande</p>
               </div>
 
               <div className="rounded-lg bg-white/[0.03] p-3 border border-white/05">
                 <div className="flex items-center gap-2 text-xs font-semibold text-blue-400">
-                  <Truck className="h-3.5 w-3.5" /> 2. Expédition express
+                  <Truck className="h-3.5 w-3.5" /> 2. Expédition
                 </div>
-                <p className="mt-1 text-[11px] text-slate-400">Livraison en 24h à 48h max</p>
+                <p className="mt-1 text-[11px] text-slate-400">Suivi du transport</p>
               </div>
 
               <div className="rounded-lg bg-white/[0.03] p-3 border border-white/05">
                 <div className="flex items-center gap-2 text-xs font-semibold text-purple-400">
                   <Wallet className="h-3.5 w-3.5" /> 3. Encaissement
                 </div>
-                <p className="mt-1 text-[11px] text-slate-400">Commission créditée aussitôt</p>
+                <p className="mt-1 text-[11px] text-slate-400">Commission créditée</p>
               </div>
             </div>
           </div>
@@ -101,14 +101,10 @@ export function FeaturesBento() {
               Portefeuille &amp; Retraits Sécurisés
             </h3>
             <p className="mt-2 text-sm text-slate-400 leading-relaxed">
-              Consultez votre solde en temps réel, suivez les commissions en attente et déclenchez vos virements bancaires chaque semaine sans surprise.
+              Consultez votre solde, suivez vos commissions en attente et
+              demandez vos virements bancaires directement depuis votre
+              espace partenaire.
             </p>
-
-            <div className="mt-6 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-center">
-              <span className="text-xs text-emerald-300 font-semibold">
-                ✓ 0% de frais de retrait cachés
-              </span>
-            </div>
           </div>
 
           {/* Bento Card 3: Multi-tier Referrals */}
@@ -121,15 +117,10 @@ export function FeaturesBento() {
               Programme de Parrainage Multi-Niveaux
             </h3>
             <p className="mt-2 text-sm text-slate-400 leading-relaxed">
-              Multipliez vos sources de revenus en bâtissant votre propre équipe d&apos;affiliés.
-              Bénéficiez de commissions sur 4 niveaux avec attribution vérifiée et protection anti-fraude.
+              Multipliez vos sources de revenus en parrainant d&apos;autres
+              partenaires. Gagnez des commissions sur plusieurs niveaux avec
+              un système d&apos;attribution vérifié.
             </p>
-
-            <div className="mt-6 flex items-center justify-between text-xs text-slate-400 font-mono border-t border-white/05 pt-4">
-              <span>Tier 1 : 5%</span>
-              <span>Tier 2 : 3%</span>
-              <span>Tier 3 : 1.5%</span>
-            </div>
           </div>
 
           {/* Bento Card 4: Wide Catalogue */}
@@ -139,7 +130,7 @@ export function FeaturesBento() {
                 <PackageCheck className="h-6 w-6" />
               </div>
               <span className="rounded-full bg-blue-500/10 px-2.5 py-1 text-[11px] font-semibold text-blue-400 border border-blue-500/20">
-                100% Produits Validés
+                Produits vérifiés
               </span>
             </div>
 
@@ -156,19 +147,19 @@ export function FeaturesBento() {
             <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center text-xs">
               <div className="rounded-lg bg-white/[0.03] p-2.5 border border-white/05">
                 <span className="font-bold text-white block">Électronique</span>
-                <span className="text-[10px] text-slate-400">+120 refs</span>
+                <span className="text-[10px] text-slate-400">Disponible</span>
               </div>
               <div className="rounded-lg bg-white/[0.03] p-2.5 border border-white/05">
                 <span className="font-bold text-white block">Beauté &amp; Soins</span>
-                <span className="text-[10px] text-slate-400">+85 refs</span>
+                <span className="text-[10px] text-slate-400">Disponible</span>
               </div>
               <div className="rounded-lg bg-white/[0.03] p-2.5 border border-white/05">
                 <span className="font-bold text-white block">Maison &amp; Déco</span>
-                <span className="text-[10px] text-slate-400">+90 refs</span>
+                <span className="text-[10px] text-slate-400">Disponible</span>
               </div>
               <div className="rounded-lg bg-white/[0.03] p-2.5 border border-white/05">
                 <span className="font-bold text-white block">Fitness</span>
-                <span className="text-[10px] text-slate-400">+60 refs</span>
+                <span className="text-[10px] text-slate-400">Disponible</span>
               </div>
             </div>
           </div>

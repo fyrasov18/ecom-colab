@@ -249,7 +249,9 @@ describe("Milestone 2: Referral Permissions, Code Generation, Attribution & Regi
 
       const res = await validateReferralCode("P001_DISABLED", mockDb);
       expect(res.valid).toBe(false);
-      expect(res.error).toMatch(/lien de parrainage est désactivé/i);
+      if (!res.valid) {
+        expect(res.error).toMatch(/lien de parrainage est désactivé/i);
+      }
     });
 
     it("REJECTS referral code if owning partner is not ACTIVE (e.g. PENDING)", async () => {
@@ -272,7 +274,9 @@ describe("Milestone 2: Referral Permissions, Code Generation, Attribution & Regi
 
       const res = await validateReferralCode("P_PENDING", mockDb);
       expect(res.valid).toBe(false);
-      expect(res.error).toMatch(/Le parrain n'est pas actif/i);
+      if (!res.valid) {
+        expect(res.error).toMatch(/Le parrain n'est pas actif/i);
+      }
     });
 
     it("REJECTS invalid / non-existent referral code", async () => {
@@ -287,13 +291,17 @@ describe("Milestone 2: Referral Permissions, Code Generation, Attribution & Regi
 
       const res = await validateReferralCode("NONEXISTENT", mockDb);
       expect(res.valid).toBe(false);
-      expect(res.error).toMatch(/invalide ou inexistant/i);
+      if (!res.valid) {
+        expect(res.error).toMatch(/invalide ou inexistant/i);
+      }
     });
 
     it("REJECTS empty or blank referral code", async () => {
       const res = await validateReferralCode("   ");
       expect(res.valid).toBe(false);
-      expect(res.error).toMatch(/manquant/i);
+      if (!res.valid) {
+        expect(res.error).toMatch(/manquant/i);
+      }
     });
   });
 
@@ -341,7 +349,9 @@ describe("Milestone 2: Referral Permissions, Code Generation, Attribution & Regi
         mockDb,
       );
       expect(res.valid).toBe(false);
-      expect(res.error).toMatch(/Auto-parrainage interdit: identifiant partenaire identique/i);
+      if (!res.valid) {
+        expect(res.error).toMatch(/Auto-parrainage interdit: identifiant partenaire identique/i);
+      }
     });
 
     it("REJECTS self-referral by matching email address (case-insensitive)", async () => {
@@ -357,7 +367,9 @@ describe("Milestone 2: Referral Permissions, Code Generation, Attribution & Regi
         mockDb,
       );
       expect(res.valid).toBe(false);
-      expect(res.error).toMatch(/Auto-parrainage interdit: même adresse e-mail/i);
+      if (!res.valid) {
+        expect(res.error).toMatch(/Auto-parrainage interdit: même adresse e-mail/i);
+      }
     });
 
     it("REJECTS self-referral by matching normalized phone number (+216 prefix vs local)", async () => {
@@ -374,7 +386,9 @@ describe("Milestone 2: Referral Permissions, Code Generation, Attribution & Regi
         mockDb,
       );
       expect(res.valid).toBe(false);
-      expect(res.error).toMatch(/Auto-parrainage interdit: même numéro de téléphone/i);
+      if (!res.valid) {
+        expect(res.error).toMatch(/Auto-parrainage interdit: même numéro de téléphone/i);
+      }
     });
 
     it("REJECTS duplicate attribution if candidate is already attributed", async () => {
@@ -399,7 +413,9 @@ describe("Milestone 2: Referral Permissions, Code Generation, Attribution & Regi
         mockDb,
       );
       expect(res.valid).toBe(false);
-      expect(res.error).toMatch(/déjà attribué à un parrain/i);
+      if (!res.valid) {
+        expect(res.error).toMatch(/déjà attribué à un parrain/i);
+      }
     });
 
     it("REJECTS direct referral cycle (A refers B, B cannot refer A)", async () => {
@@ -425,7 +441,9 @@ describe("Milestone 2: Referral Permissions, Code Generation, Attribution & Regi
         mockDb,
       );
       expect(res.valid).toBe(false);
-      expect(res.error).toMatch(/Cycle de parrainage détecté: le candidat a déjà parrainé ce partenaire/i);
+      if (!res.valid) {
+        expect(res.error).toMatch(/Cycle de parrainage détecté: le candidat a déjà parrainé ce partenaire/i);
+      }
     });
 
     it("REJECTS multi-hop referral cycle (A -> B -> C -> A)", async () => {
@@ -470,7 +488,9 @@ describe("Milestone 2: Referral Permissions, Code Generation, Attribution & Regi
         mockDb,
       );
       expect(res.valid).toBe(false);
-      expect(res.error).toMatch(/Cycle de parrainage détecté dans la chaîne de parrainage/i);
+      if (!res.valid) {
+        expect(res.error).toMatch(/Cycle de parrainage détecté dans la chaîne de parrainage/i);
+      }
     });
 
     it("REJECTS when referrer is not ACTIVE", async () => {
@@ -489,7 +509,9 @@ describe("Milestone 2: Referral Permissions, Code Generation, Attribution & Regi
         mockDb,
       );
       expect(res.valid).toBe(false);
-      expect(res.error).toMatch(/Le parrain n'est pas actif/i);
+      if (!res.valid) {
+        expect(res.error).toMatch(/Le parrain n'est pas actif/i);
+      }
     });
   });
 

@@ -36,7 +36,9 @@ describe("Adversarial Empirical Challenger: checkAndQualifyOrder Invariants", ()
       const result = await checkAndQualifyOrder("ord-delivered-pending-earning", mockDb);
 
       expect(result.qualified).toBe(false);
-      expect(result.reason).toBe("EARNING_NOT_AVAILABLE");
+      if (!result.qualified) {
+        expect(result.reason).toBe("EARNING_NOT_AVAILABLE");
+      }
       // Attribution must not be looked up or updated
       expect(mockDb.referralAttribution.findUnique).not.toHaveBeenCalled();
       expect(mockDb.referralAttribution.updateMany).not.toHaveBeenCalled();
@@ -61,7 +63,9 @@ describe("Adversarial Empirical Challenger: checkAndQualifyOrder Invariants", ()
         const result = await checkAndQualifyOrder(mockOrder.id, mockDb);
 
         expect(result.qualified).toBe(false);
+        if (!result.qualified) {
         expect(result.reason).toBe("EARNING_NOT_AVAILABLE");
+      }
         expect(mockDb.referralAttribution.updateMany).not.toHaveBeenCalled();
         expect(mockDb.auditLog.create).not.toHaveBeenCalled();
       }
@@ -87,7 +91,9 @@ describe("Adversarial Empirical Challenger: checkAndQualifyOrder Invariants", ()
       const result = await checkAndQualifyOrder("ord-shipped-available", mockDb);
 
       expect(result.qualified).toBe(false);
-      expect(result.reason).toBe("ORDER_NOT_DELIVERED");
+      if (!result.qualified) {
+        expect(result.reason).toBe("ORDER_NOT_DELIVERED");
+      }
       expect(mockDb.referralAttribution.findUnique).not.toHaveBeenCalled();
       expect(mockDb.referralAttribution.updateMany).not.toHaveBeenCalled();
       expect(mockDb.auditLog.create).not.toHaveBeenCalled();
@@ -123,7 +129,9 @@ describe("Adversarial Empirical Challenger: checkAndQualifyOrder Invariants", ()
         const result = await checkAndQualifyOrder(mockOrder.id, mockDb);
 
         expect(result.qualified).toBe(false);
+        if (!result.qualified) {
         expect(result.reason).toBe("ORDER_NOT_DELIVERED");
+      }
         expect(mockDb.referralAttribution.updateMany).not.toHaveBeenCalled();
       }
     });
@@ -153,7 +161,9 @@ describe("Adversarial Empirical Challenger: checkAndQualifyOrder Invariants", ()
       const result = await checkAndQualifyOrder("ord-organic-partner", mockDb);
 
       expect(result.qualified).toBe(false);
-      expect(result.reason).toBe("NO_ATTRIBUTION");
+      if (!result.qualified) {
+        expect(result.reason).toBe("NO_ATTRIBUTION");
+      }
       expect(mockDb.referralAttribution.updateMany).not.toHaveBeenCalled();
       expect(mockDb.auditLog.create).not.toHaveBeenCalled();
     });
@@ -167,7 +177,9 @@ describe("Adversarial Empirical Challenger: checkAndQualifyOrder Invariants", ()
       const result = await checkAndQualifyOrder("non-existent-order", mockDb);
 
       expect(result.qualified).toBe(false);
-      expect(result.reason).toBe("ORDER_NOT_FOUND");
+      if (!result.qualified) {
+        expect(result.reason).toBe("ORDER_NOT_FOUND");
+      }
       expect(mockDb.referralAttribution.updateMany).not.toHaveBeenCalled();
     });
 
@@ -187,7 +199,9 @@ describe("Adversarial Empirical Challenger: checkAndQualifyOrder Invariants", ()
       const result = await checkAndQualifyOrder("ord-no-partner", mockDb);
 
       expect(result.qualified).toBe(false);
-      expect(result.reason).toBe("ORDER_HAS_NO_PARTNER");
+      if (!result.qualified) {
+        expect(result.reason).toBe("ORDER_HAS_NO_PARTNER");
+      }
       expect(mockDb.referralAttribution.updateMany).not.toHaveBeenCalled();
     });
   });
@@ -226,7 +240,9 @@ describe("Adversarial Empirical Challenger: checkAndQualifyOrder Invariants", ()
       const result = await checkAndQualifyOrder("ord-second", mockDb);
 
       expect(result.qualified).toBe(false);
-      expect(result.reason).toBe("ALREADY_QUALIFIED");
+      if (!result.qualified) {
+        expect(result.reason).toBe("ALREADY_QUALIFIED");
+      }
       expect(result.referrerPartnerId).toBe("referrer-mentor-1");
       expect(result.attributionId).toBe("attr-p1");
 
@@ -264,7 +280,9 @@ describe("Adversarial Empirical Challenger: checkAndQualifyOrder Invariants", ()
       const retryResult = await checkAndQualifyOrder("ord-first", mockDb);
 
       expect(retryResult.qualified).toBe(false);
-      expect(retryResult.reason).toBe("ALREADY_QUALIFIED");
+      if (!retryResult.qualified) {
+        expect(retryResult.reason).toBe("ALREADY_QUALIFIED");
+      }
       expect(retryResult.referrerPartnerId).toBe("referrer-mentor-1");
       expect(mockDb.referralAttribution.updateMany).not.toHaveBeenCalled();
     });
@@ -300,7 +318,9 @@ describe("Adversarial Empirical Challenger: checkAndQualifyOrder Invariants", ()
       const result = await checkAndQualifyOrder("ord-race-loser", mockDb);
 
       expect(result.qualified).toBe(false);
-      expect(result.reason).toBe("ALREADY_QUALIFIED");
+      if (!result.qualified) {
+        expect(result.reason).toBe("ALREADY_QUALIFIED");
+      }
       expect(result.referrerPartnerId).toBe("referrer-race");
       expect(result.attributionId).toBe("attr-race");
       // Must NOT record audit log for the loser of the race
@@ -333,7 +353,9 @@ describe("Adversarial Empirical Challenger: checkAndQualifyOrder Invariants", ()
       const result = await checkAndQualifyOrder("ord-rejected-attr", mockDb);
 
       expect(result.qualified).toBe(false);
-      expect(result.reason).toBe("ATTRIBUTION_REJECTED");
+      if (!result.qualified) {
+        expect(result.reason).toBe("ATTRIBUTION_REJECTED");
+      }
       expect(result.referrerPartnerId).toBe("referrer-1");
       expect(result.attributionId).toBe("attr-rejected");
       expect(mockDb.referralAttribution.updateMany).not.toHaveBeenCalled();
@@ -572,23 +594,31 @@ describe("Adversarial Empirical Challenger: checkAndQualifyOrder Invariants", ()
       // Execute order 2 (same partner A)
       const res2 = await checkAndQualifyOrder("ord-2", mockDb);
       expect(res2.qualified).toBe(false);
-      expect(res2.reason).toBe("ALREADY_QUALIFIED");
+      if (!res2.qualified) {
+        expect(res2.reason).toBe("ALREADY_QUALIFIED");
+      }
 
       // Execute order 3 (organic partner B)
       const res3 = await checkAndQualifyOrder("ord-3", mockDb);
       expect(res3.qualified).toBe(false);
-      expect(res3.reason).toBe("NO_ATTRIBUTION");
+      if (!res3.qualified) {
+        expect(res3.reason).toBe("NO_ATTRIBUTION");
+      }
 
       // Execute order 4 (shipped partner C)
       const res4 = await checkAndQualifyOrder("ord-4", mockDb);
       expect(res4.qualified).toBe(false);
-      expect(res4.reason).toBe("ORDER_NOT_DELIVERED");
+      if (!res4.qualified) {
+        expect(res4.reason).toBe("ORDER_NOT_DELIVERED");
+      }
       expect(dbAttributions["partner-C"].status).toBe("PENDING_QUALIFICATION");
 
       // Execute order 5 (pending earning partner D)
       const res5 = await checkAndQualifyOrder("ord-5", mockDb);
       expect(res5.qualified).toBe(false);
-      expect(res5.reason).toBe("EARNING_NOT_AVAILABLE");
+      if (!res5.qualified) {
+        expect(res5.reason).toBe("EARNING_NOT_AVAILABLE");
+      }
       expect(dbAttributions["partner-D"].status).toBe("PENDING_QUALIFICATION");
 
       // Crucial invariant: Exactly 1 attribution qualified across the entire batch

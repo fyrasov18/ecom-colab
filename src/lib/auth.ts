@@ -31,7 +31,7 @@ async function auditAuthEvent(entry: AuditEntry): Promise<void> {
 
 export async function authorizeCredentials(
   credentials: unknown,
-  request?: { headers?: Headers | { get(name: string): string | null } },
+  request?: Request | { headers?: Headers },
 ) {
   const parsed = credentialsSchema.safeParse(credentials);
   if (!parsed.success) return null;
@@ -43,6 +43,7 @@ export async function authorizeCredentials(
   // and one targeted account are each throttled. The IP is read from the
   // request, never from the submitted credentials.
   const ip = clientIpFrom(request?.headers);
+  const userAgent = request?.headers?.get("user-agent") ?? null;
   const [ipLimit, accountLimit] = await Promise.all([
     checkRateLimit("LOGIN", ip ?? "unknown"),
     checkRateLimit("LOGIN_ACCOUNT", `${ip ?? "unknown"}:${normalizedEmail}`),
@@ -55,7 +56,7 @@ export async function authorizeCredentials(
       entityId: null,
       after: { email: normalizedEmail, reason: "RATE_LIMITED" },
       ip,
-      userAgent: request?.headers.get("user-agent") ?? null,
+      userAgent,
     });
     return null;
   }
@@ -65,7 +66,7 @@ export async function authorizeCredentials(
     include: { partner: true },
   });
 
-  const userAgent = request?.headers.get("user-agent") ?? null;
+
 
   if (!user || user.status !== "ACTIVE") {
     await auditAuthEvent({
