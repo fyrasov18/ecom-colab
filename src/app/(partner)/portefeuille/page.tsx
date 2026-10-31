@@ -5,7 +5,7 @@ import { requireSession } from "@/lib/rbac";
 import { formatPrice } from "@/lib/money";
 import {
   listLedgerTransactions,
-  settleDueEarnings,
+
 } from "@/modules/finance/ledger";
 import { listPendingEarnings, listWithdrawals } from "@/modules/finance/queries";
 import { getWithdrawableSummary } from "@/modules/finance/withdrawals";
@@ -72,9 +72,9 @@ export default async function PortefeuillePage({
   const partnerId = user.partnerId!;
   const page = Math.max(1, Number(sp.page) || 1);
 
-  // Lazy settlement trigger: releases every pending gain whose frozen
-  // settlement date has passed (idempotent, safe on every read).
-  await settleDueEarnings();
+
+
+
 
   const [summary, pending, withdrawals, ledger] = await Promise.all([
     getWithdrawableSummary(partnerId),

@@ -142,8 +142,7 @@ export async function payWithdrawalRequest(
 }
 
 /**
- * Manual settlement run (same engine as GET /api/cron/settle). Idempotent, so
- * pressing it twice is harmless.
+ * Manual settlement run for matured earnings (availableAt <= now).
  */
 export async function runSettlement(
   _prev: FinanceActionState,
@@ -162,5 +161,55 @@ export async function runSettlement(
     };
   } catch {
     return { ok: false, error: "Settlement impossible." };
+  }
+}
+
+/**
+ * Force manual release of all pending earnings immediately (without waiting for holding date).
+ */
+export async function runSettlementAll(
+  _prev: FinanceActionState,
+  _formData: FormData,
+): Promise<FinanceActionState> {
+  await requireSession(["SUPER_ADMIN", "ADMIN"]);
+  try {
+    const result = await settleDueEarnings({ forceAll: true });
+    revalidateFinance();
+    if (result.settled === 0) {
+      return { ok: true, message: "Aucun gain en attente à débloquer." };
+    }
+    return {
+      ok: true,
+      message: `${result.settled} gain(s) débloqué(s) manuellement pour ${result.partners.length} partenaire(s).`,
+    };
+  } catch {
+    return { ok: false, error: "Déblocage manuel impossible." };
+  }
+}
+
+/**
+ * Manually release a single pending transaction.
+ */
+export async function runSettleSingle(
+  _prev: FinanceActionState,
+  formData: FormData,
+): Promise<FinanceActionState> {
+  await requireSession(["SUPER_ADMIN", "ADMIN"]);
+  const transactionId = str(formData.get("transactionId"));
+  if (!transactionId) {
+    return { ok: false, error: "Identifiant de transaction manquant." };
+  }
+  try {
+    const result = await settleDueEarnings({ transactionId, forceAll: true });
+    revalidateFinance();
+    if (result.settled === 0) {
+      return { ok: true, message: "Cette transaction n'est plus en attente." };
+    }
+    return {
+      ok: true,
+      message: "Gain débloqué avec succès pour le partenaire.",
+    };
+  } catch {
+    return { ok: false, error: "Déblocage impossible." };
   }
 }

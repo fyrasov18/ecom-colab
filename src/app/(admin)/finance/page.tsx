@@ -5,7 +5,6 @@ import { formatPrice } from "@/lib/money";
 import {
   getFinanceOverview,
   listLedgerTransactions,
-  settleDueEarnings,
 } from "@/modules/finance/ledger";
 import {
   getSettlementQueueStats,
@@ -32,7 +31,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { SettleNowButton } from "./settle-button";
+import {
+  SettleNowButton,
+  SettleSingleTransactionButton,
+} from "./settle-button";
 import { WithdrawalActions } from "./withdrawal-actions";
 
 export const metadata: Metadata = { title: "Finance" };
@@ -77,10 +79,6 @@ export default async function FinancePage({
   await requireSession(["SUPER_ADMIN", "ADMIN"]);
   const page = Math.max(1, Number(sp.page) || 1);
 
-  // Lazy settlement trigger before reading the aggregates, so the figures
-  // shown are the true post-settlement state (the cron does the same thing).
-  await settleDueEarnings();
-
   const [overview, summary, queue, wallets, activeRequests, ledger] =
     await Promise.all([
       getFinanceOverview(),
@@ -101,8 +99,11 @@ export default async function FinancePage({
             chaque chiffre est calculé depuis les transactions.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <SettleNowButton dueNowCount={queue.dueNowCount} />
+        <div className="flex flex-wrap items-center gap-2">
+          <SettleNowButton
+            dueNowCount={queue.dueNowCount}
+            scheduledCount={queue.scheduledCount}
+          />
           <Link
             href="/parametres"
             className="inline-flex h-8 items-center rounded-md border border-input bg-card px-3 text-xs font-medium shadow-sm hover:bg-accent"
@@ -112,14 +113,16 @@ export default async function FinancePage({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-        <span>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50/70 p-4 text-sm text-blue-900">
+        <div>
           <strong>{queue.dueNowCount}</strong> gain(s) dû(s) maintenant (
           {formatPrice(queue.dueNowTotal)} DT) ·{" "}
           <strong>{queue.scheduledCount}</strong> programmé(s) (
-          {formatPrice(queue.scheduledTotal)} DT) · prochain déblocage automatique
-          via <code className="rounded bg-white/70 px-1">/api/cron/settle</code>.
-        </span>
+          {formatPrice(queue.scheduledTotal)} DT).
+          <div className="text-xs text-blue-700 mt-0.5">
+            Gestion manuelle : utilisez les boutons ci-dessus ou le bouton « Débloquer » sur chaque ligne du journal.
+          </div>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -152,6 +155,7 @@ export default async function FinancePage({
           hint={`${formatPrice(summary.activeTotal)} DT — à traiter ci-dessous`}
         />
       </div>
+
       {/* ── Demandes de retrait à traiter ── */}
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">
@@ -287,6 +291,7 @@ export default async function FinancePage({
                   <TableHead>Commande</TableHead>
                   <TableHead>Montant</TableHead>
                   <TableHead>Statut</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -309,7 +314,7 @@ export default async function FinancePage({
                       <TableCell
                         className={
                           negative
-                            ? "font-medium text-destructive"
+                             ? "font-medium text-destructive"
                             : "font-medium text-emerald-700"
                         }
                       >
@@ -320,6 +325,13 @@ export default async function FinancePage({
                         <Badge variant={LEDGER_STATUS_VARIANTS[t.status]}>
                           {LEDGER_STATUS_LABELS[t.status]}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {t.status === "PENDING" ? (
+                          <SettleSingleTransactionButton transactionId={t.id} />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   );
@@ -335,10 +347,6 @@ export default async function FinancePage({
           searchParams={sp}
         />
       </section>
-
-
-
     </div>
   );
 }
-

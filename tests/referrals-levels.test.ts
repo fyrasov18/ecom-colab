@@ -329,8 +329,15 @@ describe("Milestone 3: Qualification & Partner Levels", () => {
     it("invokes checkAndQualifyOrder when transitioning orders to AVAILABLE", async () => {
       const pastDate = new Date("2026-01-01T00:00:00Z");
       const mockTransactions = [
-        { id: "tx-1", partnerId: "referred-p1", orderId: "order-settled-1" },
-      ];
+  {
+    id: "tx-1",
+    partnerId: "referred-p1",
+    orderId: "order-settled-1",
+    type: "PARTNER_EARNING",
+    status: "AVAILABLE",
+    amount: "100.000",
+  },
+];
 
       const mockOrder = {
         id: "order-settled-1",

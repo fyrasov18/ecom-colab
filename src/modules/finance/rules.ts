@@ -76,7 +76,7 @@ export function deriveWalletBalances(
   let totalWithdrawn = d(0);
 
   for (const row of rows) {
-    const amount = d(row.amount);
+    const amount = d(row.amount ?? 0);
     if (row.status === "AVAILABLE") available = available.plus(amount);
     else pending = pending.plus(amount);
 

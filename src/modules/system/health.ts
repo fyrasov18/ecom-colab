@@ -111,7 +111,7 @@ async function checkSettlement(): Promise<HealthCheck> {
         key: "settlement",
         label: "Règlement des gains",
         status: "warning",
-        detail: `${due} gain(s) échus non traités — lancez le cron /api/cron/settle.`,
+        detail: `${due} gain(s) échus en attente — utilisez le bouton de déblocage sur la page Finance.`,
       };
     }
     return {

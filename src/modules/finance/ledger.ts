@@ -154,48 +154,92 @@ const NEG = (amount: ReturnType<typeof d>) => amount.negated();
  * date has passed. Idempotent by construction (WHERE status = PENDING), so it
  * is safe to call from a cron, a page read, or a script.
  */
-export async function settleDueEarnings(opts: { now?: Date; db?: Db } = {}) {
-  const db = opts.db ?? prisma;
-  const now = opts.now ?? new Date();
-
+async function settleDueEarningsInTransaction(
+  db: Prisma.TransactionClient,
+  now: Date,
+  options: { forceAll?: boolean; transactionId?: string } = {},
+) {
   const due = await db.financialTransaction.findMany({
-    where: { status: "PENDING", availableAt: { lte: now } },
-    select: { id: true, partnerId: true, orderId: true },
-    take: 5_000,
+    where: {
+      status: "PENDING",
+      ...(options.transactionId
+        ? { id: options.transactionId }
+        : options.forceAll
+          ? {}
+          : { availableAt: { lte: now } }),
+    },
+    select: {
+      id: true,
+      partnerId: true,
+      orderId: true,
+    },
+    orderBy: [
+      { availableAt: "asc" },
+      { id: "asc" },
+    ],
+    take: 5000,
   });
-  if (due.length === 0) return { settled: 0, partners: [] as string[] };
 
-  await db.financialTransaction.updateMany({
-    where: { id: { in: due.map((r) => r.id) }, status: "PENDING" },
+  if (due.length === 0) {
+    return { settled: 0, partners: [] as string[] };
+  }
+
+  const updateResult = await db.financialTransaction.updateMany({
+    where: {
+      id: { in: due.map((row) => row.id) },
+      status: "PENDING",
+    },
     data: { status: "AVAILABLE" },
   });
 
-  const orderIds = due
-    .map((r) => r.orderId)
-    .filter((id): id is string => Boolean(id));
+  // Abort the transaction if not every selected entry was claimed.
+  // This prevents processing rows that another operation already changed.
+  if (updateResult.count !== due.length) {
+    throw new Error("Settlement conflict: not all entries were claimed.");
+  }
+
+  const orderIds = [
+    ...new Set(
+      due
+        .map((row) => row.orderId)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+
   if (orderIds.length > 0) {
     await db.order.updateMany({
-      where: { id: { in: orderIds }, earningStatus: "PENDING" },
+      where: {
+        id: { in: orderIds },
+        earningStatus: "PENDING",
+      },
       data: { earningStatus: "AVAILABLE" },
     });
 
     for (const orderId of orderIds) {
-      await checkAndQualifyOrder(orderId, db as Prisma.TransactionClient);
+      await checkAndQualifyOrder(
+        orderId,
+        db as Prisma.TransactionClient,
+      );
     }
   }
 
-  const partners = Array.from(new Set(due.map((r) => r.partnerId)));
-  for (const partnerId of partners) await recomputeWallet(db, partnerId);
+  const partners = [
+    ...new Set(due.map((row) => row.partnerId)),
+  ];
 
-  // Phase 7: tell each partner their pending balance just became withdrawable.
-  // Grouped per partner so a partner with 5 released orders gets 1 notification.
+  for (const partnerId of partners) {
+    await recomputeWallet(db, partnerId);
+  }
+
   const releasedByPartner = new Map<string, number>();
+
   for (const row of due) {
     releasedByPartner.set(
       row.partnerId,
       (releasedByPartner.get(row.partnerId) ?? 0) + 1,
     );
   }
+
   for (const [partnerId, count] of releasedByPartner) {
     await notifyPartnerAccount(db, partnerId, {
       type: "SETTLEMENT",
@@ -208,9 +252,41 @@ export async function settleDueEarnings(opts: { now?: Date; db?: Db } = {}) {
     });
   }
 
-  return { settled: due.length, partners };
+  return {
+    settled: due.length,
+    partners,
+  };
 }
 
+export async function settleDueEarnings(
+  opts: { now?: Date; forceAll?: boolean; transactionId?: string; db?: Db } = {},
+) {
+  const now = opts.now ?? new Date();
+
+  // Preserve compatibility with existing tests using a mock DB.
+  if (opts.db) {
+    return settleDueEarningsInTransaction(
+      opts.db as Prisma.TransactionClient,
+      now,
+      { forceAll: opts.forceAll, transactionId: opts.transactionId },
+    );
+  }
+
+  // Production: serialize settlement executions and make all changes atomic.
+  return prisma.$transaction(
+    async (tx) => {
+      await tx.$queryRaw`
+        SELECT pg_advisory_xact_lock(741852963)
+      `;
+
+      return settleDueEarningsInTransaction(tx, now, {
+        forceAll: opts.forceAll,
+        transactionId: opts.transactionId,
+      });
+    },
+    { timeout: 30000 },
+  );
+}
 /**
  * REFUSED / RETURNED → applies the configured return-cost rule to the ledger.
  * `Return.costCharged` stores the total charged to the partner (positive).
