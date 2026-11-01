@@ -18,27 +18,27 @@ describe("Tier 3: Cross-Feature Combinations & Pairwise Interactions", () => {
   // COMBINATION 1: PARTNER PROMOTION + SETTLED ORDER SETTLEMENT
   // ==========================================================================
   it("T3.I1: Partner promotion updates subsequent commissions without mutating historical ones", async () => {
-    // Partner Alice starts at Level 1 with 2 qualified referrals
+    // Partner Alice starts at Level 1 with 9 qualified referrals
     let aliceLevel: ReferrerLevel = 1;
-    let aliceQualifiedCount = 2;
+    let aliceQualifiedCount = 9;
 
     // Order 2 settled previously at Level 1 (revenue 1000, expenses 400 => P=600, B=180)
     const commOrder2 = await runProfitSharing({ revenue: 1000, expenses: 400, referrerLevel: aliceLevel });
-    expect(commOrder2.referralCommission.toFixed(3)).toBe("9.000"); // 5% of 180
+    expect(commOrder2.referralCommission.toFixed(3)).toBe("5.400"); // 3% of 180 = 5.400
 
-    // Referred Partner 3 order settles -> qualifies -> triggers level check
+    // Referred Partner 10 order settles -> qualifies -> triggers level check
     aliceQualifiedCount++;
     const levelEval = evaluatePartnerLevelOracle(aliceQualifiedCount);
     expect(levelEval.level).toBe(2);
-    aliceLevel = levelEval.level; // Promoted to Level 2 (10%)
+    aliceLevel = levelEval.level; // Promoted to Level 2 (7%)
 
     // Order 4 settles after promotion at Level 2 (revenue 1000, expenses 400 => P=600, B=180)
     const commOrder4 = await runProfitSharing({ revenue: 1000, expenses: 400, referrerLevel: aliceLevel });
-    expect(commOrder4.referralCommission.toFixed(3)).toBe("18.000"); // 10% of 180
+    expect(commOrder4.referralCommission.toFixed(3)).toBe("12.600"); // 7% of 180 = 12.600
 
-    // Invariance: Historical commission for Order 2 remains 9.000 TND (never retroactively recalculated)
-    expect(commOrder2.referralCommission.toFixed(3)).toBe("9.000");
-    expect(commOrder4.referralCommission.toFixed(3)).toBe("18.000");
+    // Invariance: Historical commission for Order 2 remains 5.400 TND (never retroactively recalculated)
+    expect(commOrder2.referralCommission.toFixed(3)).toBe("5.400");
+    expect(commOrder4.referralCommission.toFixed(3)).toBe("12.600");
   });
 
   // ==========================================================================
@@ -54,7 +54,7 @@ describe("Tier 3: Cross-Feature Combinations & Pairwise Interactions", () => {
     const expressCourierSurcharge = new Decimal("74.500");
     const totalExpenses = marketingAds.plus(specialPackaging).plus(expressCourierSurcharge); // 650.000 TND
 
-    // Compute profit sharing at Level 2 (10% rate)
+    // Compute profit sharing at Level 2 (7% rate)
     const res = await runProfitSharing({
       revenue,
       expenses: totalExpenses,
@@ -64,8 +64,8 @@ describe("Tier 3: Cross-Feature Combinations & Pairwise Interactions", () => {
     expect(res.profit.toFixed(3)).toBe("3850.000"); // 4500 - 650 = 3850
     expect(res.adminShare.toFixed(3)).toBe("2695.000"); // 70% of 3850
     expect(res.remainingPool.toFixed(3)).toBe("1155.000"); // 30% of 3850
-    expect(res.referralCommission.toFixed(3)).toBe("115.500"); // 10% of 1155
-    expect(res.balanceAfterCommission.toFixed(3)).toBe("1039.500"); // 1155 - 115.5
+    expect(res.referralCommission.toFixed(3)).toBe("80.850"); // 7% of 1155
+    expect(res.balanceAfterCommission.toFixed(3)).toBe("1074.150"); // 1155 - 80.850
 
     // Mathematical Invariance Check: Admin Share + Referral Commission + Balance == Total Profit
     const totalDistributed = res.adminShare.plus(res.referralCommission).plus(res.balanceAfterCommission);
@@ -137,28 +137,28 @@ describe("Tier 3: Cross-Feature Combinations & Pairwise Interactions", () => {
   // ==========================================================================
   it("T3.I5: Updating promotion thresholds in settings dynamically changes qualification tier", () => {
     let settings: SystemReferralSettings = {
-      level2Threshold: 3,
-      level3Threshold: 10,
+      level2Threshold: 10,
+      level3Threshold: 100,
       autoPromotionConfirmed: true,
     };
 
-    // Partner has 3 qualified referrals -> Level 2 under initial settings
-    let status = evaluatePartnerLevelOracle(3, settings);
+    // Partner has 10 qualified referrals -> Level 2 under initial settings
+    let status = evaluatePartnerLevelOracle(10, settings);
     expect(status.level).toBe(2);
 
-    // Admin modifies business settings: Level 2 now requires 5 referrals
+    // Admin modifies business settings: Level 2 now requires 15 referrals
     settings = {
       ...settings,
-      level2Threshold: 5,
+      level2Threshold: 15,
     };
 
-    // Re-evaluating under new settings: 3 referrals is now Level 1
-    status = evaluatePartnerLevelOracle(3, settings);
+    // Re-evaluating under new settings: 10 referrals is now Level 1
+    status = evaluatePartnerLevelOracle(10, settings);
     expect(status.level).toBe(1);
-    expect(status.nextThreshold).toBe(5);
+    expect(status.nextThreshold).toBe(15);
 
-    // When partner earns 2 more (reaching 5), advances to Level 2
-    status = evaluatePartnerLevelOracle(5, settings);
+    // When partner earns 5 more (reaching 15), advances to Level 2
+    status = evaluatePartnerLevelOracle(15, settings);
     expect(status.level).toBe(2);
   });
 

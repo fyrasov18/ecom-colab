@@ -510,11 +510,11 @@ describe("Milestone 4: Expenses Management, Commission Lifecycle & Payout Safety
     // -> Level 1 (5%): C = 30 TND, Balance = 570 TND
     // -> Level 2 (10%): C = 60 TND, Balance = 540 TND
     // -> Level 3 (15%): C = 90 TND, Balance = 510 TND
-    it("satisfies the exact numerical spec: 5000 - 3000 = 2000 -> A = 1400, B = 600, C1 = 30, C2 = 60, C3 = 90 TND", async () => {
+    it("satisfies the exact numerical spec: 5000 - 3000 = 2000 -> A = 1400, B = 600, C1 = 18, C2 = 42, C3 = 90 TND", async () => {
       const revenue = 5000;
       const expenses = 3000;
 
-      // Level 1: 5%
+      // Level 1: 3%
       const commL1 = await createReferralCommission({
         attributionId: "attr-qualified-1",
         revenue,
@@ -522,15 +522,15 @@ describe("Milestone 4: Expenses Management, Commission Lifecycle & Payout Safety
         referrerLevel: 1,
         idempotencyKey: "spec-l1",
       }, db);
-      expect(commL1.amount.toFixed(3)).toBe("30.000");
+      expect(commL1.amount.toFixed(3)).toBe("18.000");
       const detailsL1 = commL1.calculationDetails as any;
       expect(detailsL1.profit).toBe("2000.000");
       expect(detailsL1.adminShare).toBe("1400.000");
       expect(detailsL1.remainingPool).toBe("600.000");
-      expect(detailsL1.referralCommission).toBe("30.000");
-      expect(detailsL1.balanceAfterCommission).toBe("570.000");
+      expect(detailsL1.referralCommission).toBe("18.000");
+      expect(detailsL1.balanceAfterCommission).toBe("582.000");
 
-      // Level 2: 10%
+      // Level 2: 7%
       const commL2 = await createReferralCommission({
         attributionId: "attr-qualified-1",
         revenue,
@@ -538,10 +538,10 @@ describe("Milestone 4: Expenses Management, Commission Lifecycle & Payout Safety
         referrerLevel: 2,
         idempotencyKey: "spec-l2",
       }, db);
-      expect(commL2.amount.toFixed(3)).toBe("60.000");
+      expect(commL2.amount.toFixed(3)).toBe("42.000");
       const detailsL2 = commL2.calculationDetails as any;
-      expect(detailsL2.referralCommission).toBe("60.000");
-      expect(detailsL2.balanceAfterCommission).toBe("540.000");
+      expect(detailsL2.referralCommission).toBe("42.000");
+      expect(detailsL2.balanceAfterCommission).toBe("558.000");
 
       // Level 3: 15%
       const commL3 = await createReferralCommission({
@@ -612,7 +612,7 @@ describe("Milestone 4: Expenses Management, Commission Lifecycle & Payout Safety
         idempotencyKey: "comm-period-lookup",
       }, db);
 
-      expect(comm.amount.toFixed(3)).toBe("30.000");
+      expect(comm.amount.toFixed(3)).toBe("18.000");
       const details = comm.calculationDetails as any;
       expect(details.revenue).toBe("5000.000");
       expect(details.expenses).toBe("3000.000");
@@ -635,7 +635,7 @@ describe("Milestone 4: Expenses Management, Commission Lifecycle & Payout Safety
         idempotencyKey: "comm-order-lookup",
       }, db);
 
-      expect(comm.amount.toFixed(3)).toBe("60.000");
+      expect(comm.amount.toFixed(3)).toBe("42.000");
       const details = comm.calculationDetails as any;
       expect(details.revenue).toBe("5000.000");
       expect(details.expenses).toBe("3000.000");
@@ -724,11 +724,11 @@ describe("Milestone 4: Expenses Management, Commission Lifecycle & Payout Safety
       const txs = await db.financialTransaction.findMany({ where: { partnerId: "partner-alice" } });
       expect(txs.length).toBe(1);
       expect(txs[0]!.type).toBe("PARTNER_EARNING");
-      expect(txs[0]!.amount.toFixed(3)).toBe("15.000");
+      expect(txs[0]!.amount.toFixed(3)).toBe("9.000");
 
       const wallet = await db.wallet.findUnique({ where: { partnerId: "partner-alice" } });
       expect(wallet).not.toBeNull();
-      expect(wallet!.availableBalance.toFixed(3)).toBe("15.000");
+      expect(wallet!.availableBalance.toFixed(3)).toBe("9.000");
     });
 
     it("verifies that APPROVED_FOR_PAYMENT strictly does NOT mark as PAID", async () => {
@@ -892,7 +892,7 @@ describe("Milestone 4: Expenses Management, Commission Lifecycle & Payout Safety
       const comm = await createReferralCommission({
         attributionId: "attr-qualified-1",
         revenue: 5000,
-        expenses: 3000, // P=2000, B=600, r=5% -> C=30 TND
+        expenses: 3000, // P=2000, B=600, r=3% -> C=18 TND
         referrerLevel: 1,
         idempotencyKey: "comm-paid-to-reverse",
         status: "ELIGIBLE",
@@ -901,9 +901,9 @@ describe("Milestone 4: Expenses Management, Commission Lifecycle & Payout Safety
       await approveReferralCommission(comm.id, "admin-1", undefined, db);
       await payReferralCommission(comm.id, "finance-1", "VIR-REVERSE-001", { db });
 
-      // Alice's wallet has available balance 30.000 TND
+      // Alice's wallet has available balance 18.000 TND
       let wallet = await db.wallet.findUnique({ where: { partnerId: "partner-alice" } });
-      expect(wallet!.availableBalance.toFixed(3)).toBe("30.000");
+      expect(wallet!.availableBalance.toFixed(3)).toBe("18.000");
 
       // 2. Reverse commission due to post-settlement order return
       const reversed = await reverseReferralCommission(
@@ -918,12 +918,12 @@ describe("Milestone 4: Expenses Management, Commission Lifecycle & Payout Safety
       expect(details.accountingPolicy).toBe("COMPENSATING_ADJUSTMENT_POSTED_TO_LEDGER");
       expect(details.reversalReason).toBe("Colis retourné et remboursé après settlement");
 
-      // 3. Verify compensating ledger adjustment (-30.000 TND)
+      // 3. Verify compensating ledger adjustment (-18.000 TND)
       const txs = await db.financialTransaction.findMany({ where: { partnerId: "partner-alice" } });
       expect(txs.length).toBe(2); // 1 PARTNER_EARNING + 1 ADJUSTMENT
       const adjustment = txs.find((t) => t.type === "ADJUSTMENT");
       expect(adjustment).toBeDefined();
-      expect(adjustment!.amount.toFixed(3)).toBe("-30.000");
+      expect(adjustment!.amount.toFixed(3)).toBe("-18.000");
 
       // 4. Verify wallet recomputed accurately: 30 - 30 = 0
       wallet = await db.wallet.findUnique({ where: { partnerId: "partner-alice" } });

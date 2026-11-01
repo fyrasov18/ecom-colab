@@ -21,9 +21,12 @@ export type QualifyOrderResult =
         | "NO_ATTRIBUTION"
         | "ALREADY_QUALIFIED"
         | "ATTRIBUTION_REJECTED"
+        | "INSUFFICIENT_ORDERS"
         | string;
       referrerPartnerId?: string;
       attributionId?: string;
+      ordersCount?: number;
+      requiredOrders?: number;
     };
 
 /**
@@ -100,7 +103,38 @@ export async function checkAndQualifyOrder(
     };
   }
 
-  // 5. Atomically update attribution to QUALIFIED
+  // 5. Check whether the referred partner has reached the required distinct delivered/available orders
+  const reqRow =
+    typeof db.systemSetting?.findUnique === "function"
+      ? await db.systemSetting.findUnique({
+          where: { key: "referral.required_orders_to_qualify" },
+        })
+      : null;
+  const requiredOrders = typeof reqRow?.value === "number" ? reqRow.value : 3;
+
+  const qualifiedOrdersCount =
+    typeof db.order?.count === "function"
+      ? await db.order.count({
+          where: {
+            partnerId: order.partnerId,
+            status: "DELIVERED",
+            earningStatus: "AVAILABLE",
+          },
+        })
+      : requiredOrders;
+
+  if (qualifiedOrdersCount < requiredOrders) {
+    return {
+      qualified: false,
+      reason: "INSUFFICIENT_ORDERS",
+      referrerPartnerId: attribution.referrerPartnerId,
+      attributionId: attribution.id,
+      ordersCount: qualifiedOrdersCount,
+      requiredOrders,
+    };
+  }
+
+  // 6. Atomically update attribution to QUALIFIED (triggered by the qualifying order)
   const qualifiedAt = new Date();
   const updateResult = await db.referralAttribution.updateMany({
     where: {
@@ -124,7 +158,7 @@ export async function checkAndQualifyOrder(
     };
   }
 
-  // 6. Record audit log
+  // 7. Record audit log
   await recordAudit(db, {
     action: "REFERRAL_QUALIFIED",
     entityType: "ReferralAttribution",
@@ -139,7 +173,7 @@ export async function checkAndQualifyOrder(
     },
   });
 
-  // 7. If auto-promotion is enabled, triggers level check for referrerPartnerId
+  // 8. Triggers level and promotion evaluation for referrerPartnerId
   const autoPromotion = await isAutoPromotionEnabled(db);
   if (autoPromotion) {
     await getPartnerReferralLevel(attribution.referrerPartnerId, db);

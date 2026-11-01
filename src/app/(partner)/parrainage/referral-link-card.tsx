@@ -17,11 +17,19 @@ export function ReferralLinkCard({
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
 
-  // Fallback if url is relative
-  const fullUrl =
-    typeof window !== "undefined" && url.startsWith("/")
-      ? `${window.location.origin}${url}`
-      : url;
+  // Production-safe base URL resolution without trailing slashes
+  const fallbackBaseUrl =
+    process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/+$/, "") ||
+    "https://ecom-colab.vercel.app";
+
+  // Build full referral URL: eliminates localhost and duplicate slashes
+  const fullUrl = (() => {
+    const cleanCode = encodeURIComponent((code ?? "").trim());
+    if (url && !url.includes("localhost") && !url.includes("127.0.0.1") && !url.startsWith("/")) {
+      return url.replace(/([^:])\/\//g, "$1/");
+    }
+    return `${fallbackBaseUrl}/register?ref=${cleanCode}`;
+  })();
 
   const handleCopyLink = async () => {
     try {

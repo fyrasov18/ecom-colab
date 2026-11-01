@@ -2,15 +2,25 @@ import { defineConfig } from "vitest/config";
 import path from "node:path";
 
 export default defineConfig({
+  oxc: {
+    jsx: {
+      runtime: "automatic",
+    },
+  },
   test: {
     include: ["tests/**/*.test.ts"],
     exclude: ["tests/integration/**", "node_modules/**"],
     environment: "node",
+    server: {
+      deps: {
+        inline: ["next-auth"],
+      },
+    },
   },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
-      "next/server": "next/dist/server/web/exports/server.js",
+      "next/server": path.resolve(__dirname, "node_modules/next/server.js"),
     },
   },
 });

@@ -17,6 +17,8 @@ import {
   evaluateTargetLevel,
   DEFAULT_LEVEL2_THRESHOLD,
   DEFAULT_LEVEL3_THRESHOLD,
+  DEFAULT_LEVEL4_THRESHOLD,
+  DEFAULT_LEVEL5_THRESHOLD,
 } from "@/modules/referrals/levels";
 import { formatMoney, roundMoney, d } from "@/lib/money";
 
@@ -456,9 +458,9 @@ describe("Milestone 5: Admin & Partner Dashboards UI & Actions", () => {
       expect(resL1.profit.toString()).toBe("2000");
       expect(resL1.adminShare.toString()).toBe("1400"); // 70% of 2000
       expect(resL1.remainingPool.toString()).toBe("600"); // 30% of 2000
-      expect(resL1.commissionRate.toString()).toBe("0.05"); // 5%
-      expect(resL1.referralCommission.toString()).toBe("30"); // 600 * 5% = 30 DT
-      expect(resL1.balanceAfterCommission.toString()).toBe("570"); // 600 - 30 = 570 DT
+      expect(resL1.commissionRate.toString()).toBe("0.03"); // 3%
+      expect(resL1.referralCommission.toString()).toBe("18"); // 600 * 3% = 18 DT
+      expect(resL1.balanceAfterCommission.toString()).toBe("582"); // 600 - 18 = 582 DT
 
       // Level 2: r = 10%
       const resL2 = calculateProfitSharing({
@@ -466,8 +468,8 @@ describe("Milestone 5: Admin & Partner Dashboards UI & Actions", () => {
         expenses: E,
         referrerLevel: 2,
       });
-      expect(resL2.referralCommission.toString()).toBe("60"); // 600 * 10% = 60 DT
-      expect(resL2.balanceAfterCommission.toString()).toBe("540"); // 600 - 60 = 540 DT
+      expect(resL2.referralCommission.toString()).toBe("42"); // 600 * 7% = 42 DT
+      expect(resL2.balanceAfterCommission.toString()).toBe("558"); // 600 - 42 = 558 DT
 
       // Level 3: r = 15%
       const resL3 = calculateProfitSharing({
@@ -477,6 +479,24 @@ describe("Milestone 5: Admin & Partner Dashboards UI & Actions", () => {
       });
       expect(resL3.referralCommission.toString()).toBe("90"); // 600 * 15% = 90 DT
       expect(resL3.balanceAfterCommission.toString()).toBe("510"); // 600 - 90 = 510 DT
+
+      // Level 4: r = 20%
+      const resL4 = calculateProfitSharing({
+        revenue: R,
+        expenses: E,
+        referrerLevel: 4,
+      });
+      expect(resL4.referralCommission.toString()).toBe("120"); // 600 * 20% = 120 DT
+      expect(resL4.balanceAfterCommission.toString()).toBe("480"); // 600 - 120 = 480 DT
+
+      // Level 5: r = 30%
+      const resL5 = calculateProfitSharing({
+        revenue: R,
+        expenses: E,
+        referrerLevel: 5,
+      });
+      expect(resL5.referralCommission.toString()).toBe("180"); // 600 * 30% = 180 DT
+      expect(resL5.balanceAfterCommission.toString()).toBe("420"); // 600 - 180 = 420 DT
     });
 
     it("ensures zero commission and zero admin share when profit P <= 0", () => {
@@ -510,18 +530,24 @@ describe("Milestone 5: Admin & Partner Dashboards UI & Actions", () => {
       expect(formatMoney("0", { currency: "DT" })).toBe("0.000 DT");
     });
 
-    it("evaluates promotion target levels according to thresholds (3 for L2, 10 for L3)", () => {
+    it("evaluates promotion target levels according to thresholds (10 for L2, 100 for L3, 300 for L4, 900 for L5)", () => {
       const thresholds = {
-        level2Threshold: DEFAULT_LEVEL2_THRESHOLD, // 3
-        level3Threshold: DEFAULT_LEVEL3_THRESHOLD, // 10
+        level2Threshold: DEFAULT_LEVEL2_THRESHOLD, // 10
+        level3Threshold: DEFAULT_LEVEL3_THRESHOLD, // 100
+        level4Threshold: DEFAULT_LEVEL4_THRESHOLD, // 300
+        level5Threshold: DEFAULT_LEVEL5_THRESHOLD, // 900
       };
 
       expect(evaluateTargetLevel(0, thresholds)).toBe(1);
-      expect(evaluateTargetLevel(2, thresholds)).toBe(1);
-      expect(evaluateTargetLevel(3, thresholds)).toBe(2);
-      expect(evaluateTargetLevel(7, thresholds)).toBe(2);
-      expect(evaluateTargetLevel(10, thresholds)).toBe(3);
-      expect(evaluateTargetLevel(25, thresholds)).toBe(3);
+      expect(evaluateTargetLevel(9, thresholds)).toBe(1);
+      expect(evaluateTargetLevel(10, thresholds)).toBe(2);
+      expect(evaluateTargetLevel(99, thresholds)).toBe(2);
+      expect(evaluateTargetLevel(100, thresholds)).toBe(3);
+      expect(evaluateTargetLevel(299, thresholds)).toBe(3);
+      expect(evaluateTargetLevel(300, thresholds)).toBe(4);
+      expect(evaluateTargetLevel(899, thresholds)).toBe(4);
+      expect(evaluateTargetLevel(900, thresholds)).toBe(5);
+      expect(evaluateTargetLevel(1500, thresholds)).toBe(5);
     });
 
     it("correctly parses stored calculationDetails object or string", () => {

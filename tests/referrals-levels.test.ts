@@ -407,20 +407,22 @@ describe("Milestone 3: Qualification & Partner Levels", () => {
   // 3. Dynamic Thresholds and Partner Levels
   // ==========================================================================
   describe("dynamic thresholds evaluation", () => {
-    it("respects default thresholds: Level 1 (<3), Level 2 (>=3), Level 3 (>=10)", () => {
+    it("respects default thresholds: Level 1 (<10), Level 2 (>=10), Level 3 (>=100), Level 4 (>=300), Level 5 (>=900)", () => {
       const thresholds = {
-        level2Threshold: DEFAULT_LEVEL2_THRESHOLD, // 3
-        level3Threshold: DEFAULT_LEVEL3_THRESHOLD, // 10
+        level2Threshold: DEFAULT_LEVEL2_THRESHOLD, // 10
+        level3Threshold: DEFAULT_LEVEL3_THRESHOLD, // 100
+        level4Threshold: 300,
+        level5Threshold: 900,
       };
 
       expect(evaluateTargetLevel(0, thresholds)).toBe(1);
       expect(evaluateTargetLevel(1, thresholds)).toBe(1);
-      expect(evaluateTargetLevel(2, thresholds)).toBe(1);
-      expect(evaluateTargetLevel(3, thresholds)).toBe(2);
-      expect(evaluateTargetLevel(5, thresholds)).toBe(2);
-      expect(evaluateTargetLevel(9, thresholds)).toBe(2);
-      expect(evaluateTargetLevel(10, thresholds)).toBe(3);
-      expect(evaluateTargetLevel(25, thresholds)).toBe(3);
+      expect(evaluateTargetLevel(9, thresholds)).toBe(1);
+      expect(evaluateTargetLevel(10, thresholds)).toBe(2);
+      expect(evaluateTargetLevel(99, thresholds)).toBe(2);
+      expect(evaluateTargetLevel(100, thresholds)).toBe(3);
+      expect(evaluateTargetLevel(300, thresholds)).toBe(4);
+      expect(evaluateTargetLevel(900, thresholds)).toBe(5);
     });
 
     it("respects custom configurable thresholds in system settings (e.g. 5 and 15)", async () => {
@@ -473,7 +475,7 @@ describe("Milestone 3: Qualification & Partner Levels", () => {
           findUnique: vi.fn().mockResolvedValue({ id: "p-manual", createdAt: new Date("2026-01-01") }),
         },
         referralAttribution: {
-          count: vi.fn().mockResolvedValue(3), // 3 qualified referrals (eligible for Level 2)
+          count: vi.fn().mockResolvedValue(10), // 10 qualified referrals (eligible for Level 2)
         },
         systemSetting: {
           findUnique: vi.fn().mockImplementation(({ where: { key } }) => {
@@ -499,8 +501,8 @@ describe("Milestone 3: Qualification & Partner Levels", () => {
 
       // Stays at Level 1!
       expect(result.level).toBe(1);
-      expect(result.rate.toString()).toBe("0.05");
-      expect(result.qualifiedCount).toBe(3);
+      expect(result.rate.toString()).toBe("0.03");
+      expect(result.qualifiedCount).toBe(10);
       expect(result.targetLevel).toBe(2);
       expect(result.isEligibleForPromotion).toBe(true);
       expect(result.promotionPendingConfirmation).toBe(true);
@@ -518,16 +520,16 @@ describe("Milestone 3: Qualification & Partner Levels", () => {
       const confirmed = await confirmPartnerPromotion("p-manual", 2, "admin-user-1", mockDb);
 
       expect(confirmed.level).toBe(2);
-      expect(confirmed.rate.toString()).toBe("0.1");
+      expect(confirmed.rate.toString()).toBe("0.07");
       expect(confirmed.promotionPendingConfirmation).toBe(false);
 
       // Subsequent read preserves Level 2
       const afterConfirmation = await getPartnerReferralLevel("p-manual", mockDb);
       expect(afterConfirmation.level).toBe(2);
-      expect(afterConfirmation.rate.toString()).toBe("0.1");
+      expect(afterConfirmation.rate.toString()).toBe("0.07");
     });
 
-    it("when auto-promotion is enabled, automatically promotes to Level 2 (at 3) and Level 3 (at 10)", async () => {
+    it("when auto-promotion is enabled, automatically promotes to Level 2 (at 10) and Level 3 (at 100)", async () => {
       let savedState: any = null;
 
       const mockDb = {
@@ -535,7 +537,7 @@ describe("Milestone 3: Qualification & Partner Levels", () => {
           findUnique: vi.fn().mockResolvedValue({ id: "p-auto", createdAt: new Date("2026-01-01") }),
         },
         referralAttribution: {
-          count: vi.fn().mockResolvedValue(3), // 3 qualified referrals
+          count: vi.fn().mockResolvedValue(10), // 10 qualified referrals
         },
         systemSetting: {
           findUnique: vi.fn().mockImplementation(({ where: { key } }) => {
@@ -560,7 +562,7 @@ describe("Milestone 3: Qualification & Partner Levels", () => {
       // At 3 qualified referrals -> Level 2
       const resultLevel2 = await getPartnerReferralLevel("p-auto", mockDb);
       expect(resultLevel2.level).toBe(2);
-      expect(resultLevel2.rate.toString()).toBe("0.1");
+      expect(resultLevel2.rate.toString()).toBe("0.07");
       expect(resultLevel2.promotionPendingConfirmation).toBe(false);
 
       expect(mockDb.auditLog.create).toHaveBeenCalledWith({
@@ -571,12 +573,12 @@ describe("Milestone 3: Qualification & Partner Levels", () => {
       });
 
       // Partner reaches 10 qualified referrals
-      (mockDb.referralAttribution.count as any).mockResolvedValue(10);
+      (mockDb.referralAttribution.count as any).mockResolvedValue(100);
 
       const resultLevel3 = await getPartnerReferralLevel("p-auto", mockDb);
       expect(resultLevel3.level).toBe(3);
       expect(resultLevel3.rate.toString()).toBe("0.15");
-      expect(resultLevel3.qualifiedCount).toBe(10);
+      expect(resultLevel3.qualifiedCount).toBe(100);
     });
   });
 
@@ -684,7 +686,7 @@ describe("Milestone 3: Qualification & Partner Levels", () => {
 
       // Still at Level 2! Never demoted!
       expect(result.level).toBe(2);
-      expect(result.rate.toString()).toBe("0.1");
+      expect(result.rate.toString()).toBe("0.07");
       expect(result.highestLevelReached).toBe(2);
     });
   });
@@ -721,7 +723,7 @@ describe("Milestone 3: Qualification & Partner Levels", () => {
         mockDb,
       );
       expect(rateAtMarch.level).toBe(1);
-      expect(rateAtMarch.rate.toString()).toBe("0.05");
+      expect(rateAtMarch.rate.toString()).toBe("0.03");
 
       // On 2026-06-01 (after Level 2 effective date), rate is Level 2 (10%)
       const rateAtJune = await getPartnerReferralLevelAtDate(
@@ -730,7 +732,7 @@ describe("Milestone 3: Qualification & Partner Levels", () => {
         mockDb,
       );
       expect(rateAtJune.level).toBe(2);
-      expect(rateAtJune.rate.toString()).toBe("0.1");
+      expect(rateAtJune.rate.toString()).toBe("0.07");
     });
 
     it("finalized historical commissions are NEVER retroactively altered when level changes", () => {
@@ -745,13 +747,13 @@ describe("Milestone 3: Qualification & Partner Levels", () => {
       expect(historicalResult.profit.toFixed(3)).toBe("2000.000");
       expect(historicalResult.adminShare.toFixed(3)).toBe("1400.000");
       expect(historicalResult.remainingPool.toFixed(3)).toBe("600.000");
-      expect(historicalResult.referralCommission.toFixed(3)).toBe("30.000"); // 5% of 600 = 30 TND
+      expect(historicalResult.referralCommission.toFixed(3)).toBe("18.000"); // 3% of 600 = 18 TND
 
       // Simulated persisted historical commission record in DB
       const persistedHistoricalCommission = {
         id: "comm-hist-1",
         amount: historicalResult.referralCommission,
-        rateApplied: new Decimal("0.05"),
+        rateApplied: new Decimal("0.03"),
         status: "APPROVED_FOR_PAYMENT",
         calculatedAt: new Date("2026-03-01T00:00:00Z"),
       };
@@ -763,11 +765,11 @@ describe("Milestone 3: Qualification & Partner Levels", () => {
         referrerLevel: 2, // New level
       });
 
-      expect(newOrderResult.referralCommission.toFixed(3)).toBe("60.000"); // 10% of 600 = 60 TND
+      expect(newOrderResult.referralCommission.toFixed(3)).toBe("42.000"); // 7% of 600 = 42 TND
 
       // Crucial verification: historical commission record remains completely unchanged
-      expect(persistedHistoricalCommission.amount.toFixed(3)).toBe("30.000");
-      expect(persistedHistoricalCommission.rateApplied.toString()).toBe("0.05");
+      expect(persistedHistoricalCommission.amount.toFixed(3)).toBe("18.000");
+      expect(persistedHistoricalCommission.rateApplied.toString()).toBe("0.03");
     });
   });
 
@@ -775,21 +777,23 @@ describe("Milestone 3: Qualification & Partner Levels", () => {
   // 8. Level Constants & Exact Rate Values
   // ==========================================================================
   describe("level constants and rate decimals", () => {
-    it("Level 1 is 5%, Level 2 is 10%, Level 3 is 15%", () => {
-      expect(REFERRAL_LEVEL_RATES[1].toString()).toBe("0.05");
-      expect(REFERRAL_LEVEL_RATES[2].toString()).toBe("0.1");
+    it("Level 1 is 3%, Level 2 is 7%, Level 3 is 15%, Level 4 is 20%, Level 5 is 30%", () => {
+      expect(REFERRAL_LEVEL_RATES[1].toString()).toBe("0.03");
+      expect(REFERRAL_LEVEL_RATES[2].toString()).toBe("0.07");
       expect(REFERRAL_LEVEL_RATES[3].toString()).toBe("0.15");
+      expect(REFERRAL_LEVEL_RATES[4].toString()).toBe("0.2");
+      expect(REFERRAL_LEVEL_RATES[5].toString()).toBe("0.3");
     });
 
     it("matches exact financial profit sharing specification from R4 example", () => {
       // 5,000 TND revenue, 3,000 TND expenses -> P = 2,000, A = 1,400, B = 600
-      // Level 1: 30 TND, Level 2: 60 TND, Level 3: 90 TND
+      // Level 1: 18 TND, Level 2: 42 TND, Level 3: 90 TND
       const l1 = calculateProfitSharing({ revenue: 5000, expenses: 3000, referrerLevel: 1 });
       const l2 = calculateProfitSharing({ revenue: 5000, expenses: 3000, referrerLevel: 2 });
       const l3 = calculateProfitSharing({ revenue: 5000, expenses: 3000, referrerLevel: 3 });
 
-      expect(l1.referralCommission.toFixed(3)).toBe("30.000");
-      expect(l2.referralCommission.toFixed(3)).toBe("60.000");
+      expect(l1.referralCommission.toFixed(3)).toBe("18.000");
+      expect(l2.referralCommission.toFixed(3)).toBe("42.000");
       expect(l3.referralCommission.toFixed(3)).toBe("90.000");
     });
   });

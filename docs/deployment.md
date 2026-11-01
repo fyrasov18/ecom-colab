@@ -46,6 +46,7 @@ GitHub (main) → Vercel (build) → PostgreSQL managé
 | `DIRECT_URL` | oui | URL **directe** (non poolée), utilisée par `prisma migrate` |
 | `AUTH_SECRET` | oui | `openssl rand -hex 32` |
 | `NEXTAUTH_URL` | oui | origine de production (ex. `https://app.vercel.app`) |
+| `NEXT_PUBLIC_APP_URL` | oui | URL publique du site pour liens de parrainage et partages (ex. `https://ecom-colab.vercel.app`) |
 | `AUTH_TRUST_HOST` | oui | `true` |
 | `CRON_SECRET` | oui | protège `/api/cron/settle` |
 | `TELEGRAM_BOT_TOKEN` | non | ingestion Telegram |

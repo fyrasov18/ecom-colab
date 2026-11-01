@@ -120,23 +120,25 @@ export default async function PartnerReferralDashboardPage() {
   const ratePercentage = `${(levelData.rate.toNumber() * 100).toFixed(0)}%`;
 
   let nextTargetThreshold = thresholdSettings.level2Threshold;
-  let nextLevelName = "Niveau 2 (10%)";
+  let nextLevelName = "Niveau 2 (7%)";
   let progressPercent = 0;
 
   if (currentLevel === 1) {
     nextTargetThreshold = thresholdSettings.level2Threshold;
-    nextLevelName = "Niveau 2 (10%)";
-    progressPercent = Math.min(
-      100,
-      Math.round((qualifiedCount / thresholdSettings.level2Threshold) * 100),
-    );
+    nextLevelName = "Niveau 2 (7%)";
+    progressPercent = Math.min(100, Math.round((qualifiedCount / thresholdSettings.level2Threshold) * 100));
   } else if (currentLevel === 2) {
     nextTargetThreshold = thresholdSettings.level3Threshold;
     nextLevelName = "Niveau 3 (15%)";
-    progressPercent = Math.min(
-      100,
-      Math.round((qualifiedCount / thresholdSettings.level3Threshold) * 100),
-    );
+    progressPercent = Math.min(100, Math.round((qualifiedCount / thresholdSettings.level3Threshold) * 100));
+  } else if (currentLevel === 3) {
+    nextTargetThreshold = thresholdSettings.level4Threshold;
+    nextLevelName = "Niveau 4 (20%)";
+    progressPercent = Math.min(100, Math.round((qualifiedCount / thresholdSettings.level4Threshold) * 100));
+  } else if (currentLevel === 4) {
+    nextTargetThreshold = thresholdSettings.level5Threshold;
+    nextLevelName = "Niveau 5 (30%)";
+    progressPercent = Math.min(100, Math.round((qualifiedCount / thresholdSettings.level5Threshold) * 100));
   } else {
     progressPercent = 100;
   }
@@ -145,7 +147,7 @@ export default async function PartnerReferralDashboardPage() {
     <div className="space-y-8">
       <PageHeader
         title="Parrainage & Réseau"
-        description="Gagnez jusqu'à 15% de commission sur les commandes qualifiées de vos filleuls."
+        description="Gagnez jusqu'à 30% de commission sur les commandes qualifiées de vos filleuls."
       />
 
       {/* Top Section: Link Card & Referral Level Card */}
@@ -170,51 +172,81 @@ export default async function PartnerReferralDashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
-            {/* Rates tier ladder */}
-            <div className="grid grid-cols-3 gap-2 text-center text-xs">
+            {/* 5-Levels Rates tier ladder */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center text-xs">
               <div
-                className={`rounded-lg p-2.5 border transition-all ${
+                className={`rounded-lg p-2 border transition-all ${
                   currentLevel === 1
                     ? "border-primary bg-primary/10 font-bold text-primary shadow-xs"
                     : "bg-muted/40 text-muted-foreground"
                 }`}
               >
-                <div className="text-[11px] uppercase tracking-wider">Niveau 1</div>
-                <div className="text-base font-extrabold mt-0.5">5%</div>
+                <div className="text-[10px] uppercase tracking-wider">Niveau 1</div>
+                <div className="text-base font-extrabold mt-0.5">3%</div>
                 <div className="text-[10px] text-muted-foreground">Départ</div>
               </div>
 
               <div
-                className={`rounded-lg p-2.5 border transition-all ${
+                className={`rounded-lg p-2 border transition-all ${
                   currentLevel === 2
                     ? "border-primary bg-primary/10 font-bold text-primary shadow-xs"
                     : "bg-muted/40 text-muted-foreground"
                 }`}
               >
-                <div className="text-[11px] uppercase tracking-wider">Niveau 2</div>
-                <div className="text-base font-extrabold mt-0.5">10%</div>
-                <div className="text-[10px] text-muted-foreground">
-                  ≥ {thresholdSettings.level2Threshold} qualifiés
-                </div>
+                <div className="text-[10px] uppercase tracking-wider">Niveau 2</div>
+                <div className="text-base font-extrabold mt-0.5">7%</div>
+                <div className="text-[10px] text-muted-foreground">≥ {thresholdSettings.level2Threshold}</div>
               </div>
 
               <div
-                className={`rounded-lg p-2.5 border transition-all ${
+                className={`rounded-lg p-2 border transition-all ${
                   currentLevel === 3
                     ? "border-primary bg-primary/10 font-bold text-primary shadow-xs"
                     : "bg-muted/40 text-muted-foreground"
                 }`}
               >
-                <div className="text-[11px] uppercase tracking-wider">Niveau 3</div>
+                <div className="text-[10px] uppercase tracking-wider">Niveau 3</div>
                 <div className="text-base font-extrabold mt-0.5">15%</div>
-                <div className="text-[10px] text-muted-foreground">
-                  ≥ {thresholdSettings.level3Threshold} qualifiés
-                </div>
+                <div className="text-[10px] text-muted-foreground">≥ {thresholdSettings.level3Threshold}</div>
+              </div>
+
+              <div
+                className={`rounded-lg p-2 border transition-all ${
+                  currentLevel === 4
+                    ? "border-primary bg-primary/10 font-bold text-primary shadow-xs"
+                    : "bg-muted/40 text-muted-foreground"
+                }`}
+              >
+                <div className="text-[10px] uppercase tracking-wider">Niveau 4</div>
+                <div className="text-base font-extrabold mt-0.5">20%</div>
+                <div className="text-[10px] text-muted-foreground">≥ {thresholdSettings.level4Threshold}</div>
+              </div>
+
+              <div
+                className={`rounded-lg p-2 border transition-all ${
+                  currentLevel === 5
+                    ? "border-primary bg-primary/10 font-bold text-primary shadow-xs"
+                    : "bg-muted/40 text-muted-foreground"
+                }`}
+              >
+                <div className="text-[10px] uppercase tracking-wider">Niveau 5</div>
+                <div className="text-base font-extrabold mt-0.5">30%</div>
+                <div className="text-[10px] text-muted-foreground">≥ {thresholdSettings.level5Threshold}</div>
               </div>
             </div>
 
+            {/* Promotion Pending Notice */}
+            {levelData.promotionPendingConfirmation && (
+              <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 text-xs text-amber-800 flex items-center gap-2">
+                <Clock className="h-4 w-4 text-amber-600 shrink-0" />
+                <span>
+                  Demande de promotion éligible vers le <strong>Niveau {levelData.eligibleLevel}</strong> en cours de validation par l'administrateur.
+                </span>
+              </div>
+            )}
+
             {/* Progression toward next level */}
-            {currentLevel < 3 ? (
+            {currentLevel < 5 ? (
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs font-medium">
                   <span className="text-muted-foreground">
@@ -231,14 +263,14 @@ export default async function PartnerReferralDashboardPage() {
                   />
                 </div>
                 <p className="text-[11px] text-muted-foreground">
-                  Il vous reste {Math.max(0, nextTargetThreshold - qualifiedCount)} filleul(s) qualifié(s) pour débloquer le palier supérieur.
+                  Il vous reste {Math.max(0, nextTargetThreshold - qualifiedCount)} filleul(s) qualifié(s) (≥ 3 commandes livrées) pour débloquer le palier supérieur.
                 </p>
               </div>
             ) : (
               <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-xs text-emerald-800 flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
                 <span>
-                  Félicitations ! Vous avez atteint le Niveau 3 maximal ({ratePercentage} de commission).
+                  Félicitations ! Vous avez atteint le Niveau 5 maximal ({ratePercentage} de commission).
                 </span>
               </div>
             )}

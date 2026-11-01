@@ -2,6 +2,7 @@
 
 import { useActionState, useRef } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Loader2,
   UserPlus,
@@ -65,6 +66,8 @@ function PasswordToggle({ fieldId }: { fieldId: string }) {
 }
 
 export function RegisterForm() {
+  const searchParams = useSearchParams();
+  const refCode = (searchParams.get("ref") || searchParams.get("code") || "").trim();
   const [state, formAction, pending] = useActionState(registerAction, initialState);
 
   /* ── Success state ──────────────────────────────────────────────────── */
@@ -259,6 +262,7 @@ export function RegisterForm() {
                 required
                 aria-required="true"
                 aria-invalid={!!fe.invitationCode}
+                defaultValue={refCode}
                 placeholder="Code fourni par votre contact"
               />
               <FieldError message={fe.invitationCode} />

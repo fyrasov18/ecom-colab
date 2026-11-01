@@ -109,17 +109,47 @@ export async function getOrCreateReferralCode(
     }
   }
 
-  const baseUrl =
-    process.env.NEXTAUTH_URL ||
-    process.env.AUTH_URL ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    "";
-
-  const url = baseUrl
-    ? `${baseUrl.replace(/\/+$/, "")}/register?ref=${link.code}`
-    : `/register?ref=${link.code}`;
+  const url = buildReferralUrl(link.code);
 
   return { code: link.code, url };
+}
+
+/**
+ * Resolves the public base URL for referral links in a production-safe manner.
+ * Prioritizes NEXT_PUBLIC_APP_URL, then Vercel production variables,
+ * falling back to the canonical production domain https://ecom-colab.vercel.app.
+ */
+export function getReferralBaseUrl(): string {
+  const publicAppUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (publicAppUrl) {
+    return publicAppUrl.replace(/\/+$/, "");
+  }
+
+  const vercelProdUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
+  if (vercelProdUrl) {
+    return `https://${vercelProdUrl.replace(/\/+$/, "")}`;
+  }
+
+  const vercelUrl = process.env.VERCEL_URL?.trim();
+  if (vercelUrl) {
+    return `https://${vercelUrl.replace(/\/+$/, "")}`;
+  }
+
+  const nextAuthUrl = (process.env.NEXTAUTH_URL || process.env.AUTH_URL)?.trim();
+  if (nextAuthUrl && !nextAuthUrl.includes("localhost") && !nextAuthUrl.includes("127.0.0.1")) {
+    return nextAuthUrl.replace(/\/+$/, "");
+  }
+
+  return "https://ecom-colab.vercel.app";
+}
+
+/**
+ * Builds a canonical referral registration URL without duplicate slashes.
+ */
+export function buildReferralUrl(code: string): string {
+  const baseUrl = getReferralBaseUrl();
+  const cleanCode = encodeURIComponent((code ?? "").trim());
+  return `${baseUrl}/register?ref=${cleanCode}`;
 }
 
 /**

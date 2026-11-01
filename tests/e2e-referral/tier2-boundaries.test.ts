@@ -106,45 +106,73 @@ describe("Tier 2: Boundary & Corner Cases", () => {
   // REFERRAL COUNT & PROMOTION THRESHOLD BOUNDARIES (0, 2, 3, 9, 10, 100+)
   // ==========================================================================
   describe("Referral Count and Promotion Threshold Boundaries", () => {
-    it("T2.B8: Count = 0 (exact bottom boundary): Level 1, 5% rate", () => {
+    it("T2.B8: Count = 0 (exact bottom boundary): Level 1, 3% rate", () => {
       const state = evaluatePartnerLevelOracle(0);
       expect(state.level).toBe(1);
-      expect(state.rate.toFixed(2)).toBe("0.05");
-      expect(state.nextThreshold).toBe(3);
-    });
-
-    it("T2.B9: Count = 2 (off-by-one below Level 2 threshold of 3): strictly Level 1, 5% rate", () => {
-      const state = evaluatePartnerLevelOracle(2);
-      expect(state.level).toBe(1);
-      expect(state.rate.toFixed(2)).toBe("0.05");
-      expect(state.nextThreshold).toBe(3);
-    });
-
-    it("T2.B10: Count = 3 (exact Level 2 threshold boundary): promotes to Level 2, 10% rate", () => {
-      const state = evaluatePartnerLevelOracle(3);
-      expect(state.level).toBe(2);
-      expect(state.rate.toFixed(2)).toBe("0.10");
+      expect(state.rate.toFixed(2)).toBe("0.03");
       expect(state.nextThreshold).toBe(10);
     });
 
-    it("T2.B11: Count = 9 (off-by-one below Level 3 threshold of 10): strictly Level 2, 10% rate", () => {
+    it("T2.B9: Count = 9 (off-by-one below Level 2 threshold of 10): strictly Level 1, 3% rate", () => {
       const state = evaluatePartnerLevelOracle(9);
-      expect(state.level).toBe(2);
-      expect(state.rate.toFixed(2)).toBe("0.10");
+      expect(state.level).toBe(1);
+      expect(state.rate.toFixed(2)).toBe("0.03");
       expect(state.nextThreshold).toBe(10);
     });
 
-    it("T2.B12: Count = 10 (exact Level 3 threshold boundary): promotes to Level 3, 15% rate", () => {
+    it("T2.B10: Count = 10 (exact Level 2 threshold boundary): promotes to Level 2, 7% rate", () => {
       const state = evaluatePartnerLevelOracle(10);
+      expect(state.level).toBe(2);
+      expect(state.rate.toFixed(2)).toBe("0.07");
+      expect(state.nextThreshold).toBe(100);
+    });
+
+    it("T2.B11: Count = 99 (off-by-one below Level 3 threshold of 100): strictly Level 2, 7% rate", () => {
+      const state = evaluatePartnerLevelOracle(99);
+      expect(state.level).toBe(2);
+      expect(state.rate.toFixed(2)).toBe("0.07");
+      expect(state.nextThreshold).toBe(100);
+    });
+
+    it("T2.B12: Count = 100 (exact Level 3 threshold boundary): promotes to Level 3, 15% rate", () => {
+      const state = evaluatePartnerLevelOracle(100);
       expect(state.level).toBe(3);
       expect(state.rate.toFixed(2)).toBe("0.15");
+      expect(state.nextThreshold).toBe(300);
+    });
+
+    it("T2.B12b: Count = 299 (off-by-one below Level 4 threshold of 300): strictly Level 3, 15% rate", () => {
+      const state = evaluatePartnerLevelOracle(299);
+      expect(state.level).toBe(3);
+      expect(state.rate.toFixed(2)).toBe("0.15");
+      expect(state.nextThreshold).toBe(300);
+    });
+
+    it("T2.B12c: Count = 300 (exact Level 4 threshold boundary): promotes to Level 4, 20% rate", () => {
+      const state = evaluatePartnerLevelOracle(300);
+      expect(state.level).toBe(4);
+      expect(state.rate.toFixed(2)).toBe("0.20");
+      expect(state.nextThreshold).toBe(900);
+    });
+
+    it("T2.B12d: Count = 899 (off-by-one below Level 5 threshold of 900): strictly Level 4, 20% rate", () => {
+      const state = evaluatePartnerLevelOracle(899);
+      expect(state.level).toBe(4);
+      expect(state.rate.toFixed(2)).toBe("0.20");
+      expect(state.nextThreshold).toBe(900);
+    });
+
+    it("T2.B12e: Count = 900 (exact Level 5 threshold boundary): promotes to Level 5, 30% rate", () => {
+      const state = evaluatePartnerLevelOracle(900);
+      expect(state.level).toBe(5);
+      expect(state.rate.toFixed(2)).toBe("0.30");
       expect(state.nextThreshold).toBeNull();
     });
 
-    it("T2.B13: Count = 100+ (far above Level 3 threshold): capped at Level 3, 15% rate", () => {
-      const state = evaluatePartnerLevelOracle(150);
-      expect(state.level).toBe(3);
-      expect(state.rate.toFixed(2)).toBe("0.15");
+    it("T2.B13: Count = 1000+ (far above Level 5 threshold): capped at Level 5, 30% rate", () => {
+      const state = evaluatePartnerLevelOracle(1500);
+      expect(state.level).toBe(5);
+      expect(state.rate.toFixed(2)).toBe("0.30");
       expect(state.nextThreshold).toBeNull();
     });
   });

@@ -22,7 +22,7 @@ import { d, roundMoney } from "@/lib/money";
  *     The sum of commissions drawing from Pool B cannot exceed Pool B.
  */
 
-export type ReferralLevel = 1 | 2 | 3;
+export type ReferralLevel = 1 | 2 | 3 | 4 | 5;
 
 /** Share rates as exact decimals */
 export const ADMIN_PROFIT_SHARE_RATE = new Decimal("0.70"); // 70%
@@ -30,16 +30,18 @@ export const REMAINING_POOL_RATE = new Decimal("0.30"); // 30%
 
 /** Commission rates per referral tier (percentage of Pool B) */
 export const REFERRAL_RATES: Record<ReferralLevel, Decimal> = {
-  1: new Decimal("0.05"), // 5%
-  2: new Decimal("0.10"), // 10%
+  1: new Decimal("0.03"), // 3%
+  2: new Decimal("0.07"), // 7%
   3: new Decimal("0.15"), // 15%
+  4: new Decimal("0.20"), // 20%
+  5: new Decimal("0.30"), // 30%
 };
 
 /** Get the commission rate Decimal for a given partner level */
 export function getReferralCommissionRate(level: ReferralLevel): Decimal {
   const rate = REFERRAL_RATES[level];
   if (!rate) {
-    throw new Error(`Invalid referral level: ${level}. Must be 1, 2, or 3.`);
+    throw new Error(`Invalid referral level: ${level}. Must be between 1 and 5.`);
   }
   return rate;
 }
@@ -49,7 +51,7 @@ export interface ProfitSharingInput {
   revenue: Decimal | number | string;
   /** Approved attributable business expenses E */
   expenses: Decimal | number | string;
-  /** Direct referrer tier level (1, 2, or 3) */
+  /** Direct referrer tier level (1, 2, 3, 4, or 5) */
   referrerLevel?: ReferralLevel;
   /** Custom commission rate override if applicable */
   commissionRate?: Decimal | number | string;

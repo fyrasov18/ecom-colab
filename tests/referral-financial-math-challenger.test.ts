@@ -303,22 +303,22 @@ describe("Empirical Challenger 2: Financial Math & Reversals Suite", () => {
     const R = 5000;
     const E = 3000;
 
-    it("verifies pure math engine produces P=2000, A=1400, B=600, C1=30, C2=60, C3=90 TND", () => {
-      // Level 1: 5%
+    it("verifies pure math engine produces P=2000, A=1400, B=600, C1=18, C2=42, C3=90 TND", () => {
+      // Level 1: 3%
       const m1 = calculateProfitSharing({ revenue: R, expenses: E, referrerLevel: 1 });
       expect(m1.profit.toFixed(3)).toBe("2000.000");
       expect(m1.adminShare.toFixed(3)).toBe("1400.000");
       expect(m1.remainingPool.toFixed(3)).toBe("600.000");
-      expect(m1.referralCommission.toFixed(3)).toBe("30.000");
-      expect(m1.balanceAfterCommission.toFixed(3)).toBe("570.000");
+      expect(m1.referralCommission.toFixed(3)).toBe("18.000");
+      expect(m1.balanceAfterCommission.toFixed(3)).toBe("582.000");
 
-      // Level 2: 10%
+      // Level 2: 7%
       const m2 = calculateProfitSharing({ revenue: R, expenses: E, referrerLevel: 2 });
       expect(m2.profit.toFixed(3)).toBe("2000.000");
       expect(m2.adminShare.toFixed(3)).toBe("1400.000");
       expect(m2.remainingPool.toFixed(3)).toBe("600.000");
-      expect(m2.referralCommission.toFixed(3)).toBe("60.000");
-      expect(m2.balanceAfterCommission.toFixed(3)).toBe("540.000");
+      expect(m2.referralCommission.toFixed(3)).toBe("42.000");
+      expect(m2.balanceAfterCommission.toFixed(3)).toBe("558.000");
 
       // Level 3: 15%
       const m3 = calculateProfitSharing({ revenue: R, expenses: E, referrerLevel: 3 });
@@ -343,15 +343,15 @@ describe("Empirical Challenger 2: Financial Math & Reversals Suite", () => {
         referrerLevel: 1,
         idempotencyKey: "spec-comm-l1",
       }, db);
-      expect(comm1.amount.toFixed(3)).toBe("30.000");
+      expect(comm1.amount.toFixed(3)).toBe("18.000");
       const det1 = comm1.calculationDetails as any;
       expect(det1.revenue).toBe("5000.000");
       expect(det1.expenses).toBe("3000.000");
       expect(det1.profit).toBe("2000.000");
       expect(det1.adminShare).toBe("1400.000");
       expect(det1.remainingPool).toBe("600.000");
-      expect(det1.referralCommission).toBe("30.000");
-      expect(det1.balanceAfterCommission).toBe("570.000");
+      expect(det1.referralCommission).toBe("18.000");
+      expect(det1.balanceAfterCommission).toBe("582.000");
 
       const comm2 = await createReferralCommission({
         attributionId: "attr-qualified",
@@ -360,7 +360,7 @@ describe("Empirical Challenger 2: Financial Math & Reversals Suite", () => {
         referrerLevel: 2,
         idempotencyKey: "spec-comm-l2",
       }, db);
-      expect(comm2.amount.toFixed(3)).toBe("60.000");
+      expect(comm2.amount.toFixed(3)).toBe("42.000");
 
       const comm3 = await createReferralCommission({
         attributionId: "attr-qualified",
@@ -577,7 +577,7 @@ describe("Empirical Challenger 2: Financial Math & Reversals Suite", () => {
   // ==========================================================================
   describe("4. Commission Reversal Accounting & Wallet Ledger Integrity", () => {
     it("reversal of a PAID commission posts compensating negative ADJUSTMENT and recomputes wallet to 0", async () => {
-      // 1. Create commission: P=2000, B=600 -> C=30 TND
+      // 1. Create commission: P=2000, B=600 -> C=18 TND
       const comm = await createReferralCommission({
         attributionId: "attr-qualified",
         revenue: 5000,
@@ -590,9 +590,9 @@ describe("Empirical Challenger 2: Financial Math & Reversals Suite", () => {
       // 2. Pay commission
       await payReferralCommission(comm.id, "finance-1", "PAY-REF-REV-01", { db });
 
-      // Alice's wallet has availableBalance = 30.000 TND
+      // Alice's wallet has availableBalance = 18.000 TND
       let wallet = await db.wallet.findUnique({ where: { partnerId: "partner-alice" } });
-      expect(wallet!.availableBalance.toFixed(3)).toBe("30.000");
+      expect(wallet!.availableBalance.toFixed(3)).toBe("18.000");
 
       // 3. Reverse commission
       const reversed = await reverseReferralCommission(
@@ -612,10 +612,10 @@ describe("Empirical Challenger 2: Financial Math & Reversals Suite", () => {
       expect(txs.length).toBe(2);
 
       const earning = txs.find((t) => t.type === "PARTNER_EARNING");
-      expect(earning!.amount.toFixed(3)).toBe("30.000");
+      expect(earning!.amount.toFixed(3)).toBe("18.000");
 
       const adjustment = txs.find((t) => t.type === "ADJUSTMENT");
-      expect(adjustment!.amount.toFixed(3)).toBe("-30.000");
+      expect(adjustment!.amount.toFixed(3)).toBe("-18.000");
       expect(adjustment!.idempotencyKey).toBe(`reversal:commission:${comm.id}`);
 
       // 5. Wallet ledger parity: 30.000 - 30.000 = 0.000
@@ -706,26 +706,26 @@ describe("Empirical Challenger 2: Financial Math & Reversals Suite", () => {
       await payReferralCommission(comm1.id, "finance-1", "PAY-WITHDRAW-TEST", { db });
 
       let wallet = await db.wallet.findUnique({ where: { partnerId: "partner-alice" } });
-      expect(wallet!.availableBalance.toFixed(3)).toBe("60.000");
+      expect(wallet!.availableBalance.toFixed(3)).toBe("42.000");
 
-      // 2. Partner withdraws full 60 TND
+      // 2. Partner withdraws full 42 TND
       await createWithdrawalPayment(db, {
         withdrawalId: "w-001",
         partnerId: "partner-alice",
-        amount: "60.000",
+        amount: "42.000",
         actorId: "finance-1",
       });
 
       wallet = await db.wallet.findUnique({ where: { partnerId: "partner-alice" } });
       expect(wallet!.availableBalance.toFixed(3)).toBe("0.000");
-      expect(wallet!.totalWithdrawn.toFixed(3)).toBe("60.000");
+      expect(wallet!.totalWithdrawn.toFixed(3)).toBe("42.000");
 
       // 3. Customer returns order -> commission 1 is reversed
       await reverseReferralCommission(comm1.id, "admin-1", "Customer return post-withdrawal", { db });
 
-      // Wallet available balance is now -60.000 TND (authorized debt)
+      // Wallet available balance is now -42.000 TND (authorized debt)
       wallet = await db.wallet.findUnique({ where: { partnerId: "partner-alice" } });
-      expect(wallet!.availableBalance.toFixed(3)).toBe("-60.000");
+      expect(wallet!.availableBalance.toFixed(3)).toBe("-42.000");
 
       // 4. Partner earns new commission of 90 TND (Level 3)
       const comm2 = await createReferralCommission({
@@ -738,9 +738,9 @@ describe("Empirical Challenger 2: Financial Math & Reversals Suite", () => {
       }, db);
       await payReferralCommission(comm2.id, "finance-1", "PAY-RECOVERY", { db });
 
-      // Wallet available balance recovers: -60 + 90 = +30.000 TND
+      // Wallet available balance recovers: -42 + 90 = +48.000 TND
       wallet = await db.wallet.findUnique({ where: { partnerId: "partner-alice" } });
-      expect(wallet!.availableBalance.toFixed(3)).toBe("30.000");
+      expect(wallet!.availableBalance.toFixed(3)).toBe("48.000");
     });
   });
 

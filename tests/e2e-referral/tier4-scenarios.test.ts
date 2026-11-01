@@ -88,7 +88,7 @@ describe("Tier 4: Real-World Application Scenarios", () => {
     expect(finance.profit.toFixed(3)).toBe("2000.000");
     expect(finance.adminShare.toFixed(3)).toBe("1400.000");
     expect(finance.remainingPool.toFixed(3)).toBe("600.000");
-    expect(finance.referralCommission.toFixed(3)).toBe("30.000");
+    expect(finance.referralCommission.toFixed(3)).toBe("18.000");
 
     // 8. Commission record created in PENDING_VERIFICATION
     const commission: CommissionRecord = {
@@ -148,37 +148,51 @@ describe("Tier 4: Real-World Application Scenarios", () => {
       qualifiedReferralsCount: 0,
     };
 
-    // Progression stage 1: 0 to 2 referrals (remains Level 1, 5%)
+    // Progression stage 1: 0 to 9 referrals (remains Level 1, 3%)
     expect(evaluatePartnerLevelOracle(0).level).toBe(1);
-    expect(evaluatePartnerLevelOracle(2).level).toBe(1);
+    expect(evaluatePartnerLevelOracle(9).level).toBe(1);
 
-    // Progression stage 2: 3 referrals (promoted to Level 2, 10%)
-    partner.qualifiedReferralsCount = 3;
+    // Progression stage 2: 10 referrals (promoted to Level 2, 7%)
+    partner.qualifiedReferralsCount = 10;
     const l2State = evaluatePartnerLevelOracle(partner.qualifiedReferralsCount);
     expect(l2State.level).toBe(2);
-    expect(l2State.rate.toFixed(2)).toBe("0.10");
+    expect(l2State.rate.toFixed(2)).toBe("0.07");
     partner.level = l2State.level;
 
-    // Progression stage 3: 4 to 9 referrals (remains Level 2, 10%)
-    expect(evaluatePartnerLevelOracle(9).level).toBe(2);
+    // Progression stage 3: 11 to 99 referrals (remains Level 2, 7%)
+    expect(evaluatePartnerLevelOracle(99).level).toBe(2);
 
-    // Progression stage 4: 10 referrals (promoted to Level 3, 15%)
-    partner.qualifiedReferralsCount = 10;
+    // Progression stage 4: 100 referrals (promoted to Level 3, 15%)
+    partner.qualifiedReferralsCount = 100;
     const l3State = evaluatePartnerLevelOracle(partner.qualifiedReferralsCount);
     expect(l3State.level).toBe(3);
     expect(l3State.rate.toFixed(2)).toBe("0.15");
     partner.level = l3State.level;
 
-    // Subsequent order under Level 3 (revenue 2000, expenses 1000 => profit 1000, pool 300)
-    const financeL3 = await runProfitSharing({
+    // Progression stage 5: 300 referrals (promoted to Level 4, 20%)
+    partner.qualifiedReferralsCount = 300;
+    const l4State = evaluatePartnerLevelOracle(partner.qualifiedReferralsCount);
+    expect(l4State.level).toBe(4);
+    expect(l4State.rate.toFixed(2)).toBe("0.20");
+    partner.level = l4State.level;
+
+    // Progression stage 6: 900 referrals (promoted to Level 5, 30%)
+    partner.qualifiedReferralsCount = 900;
+    const l5State = evaluatePartnerLevelOracle(partner.qualifiedReferralsCount);
+    expect(l5State.level).toBe(5);
+    expect(l5State.rate.toFixed(2)).toBe("0.30");
+    partner.level = l5State.level;
+
+    // Subsequent order under Level 5 (revenue 2000, expenses 1000 => profit 1000, pool 300)
+    const financeL5 = await runProfitSharing({
       revenue: 2000,
       expenses: 1000,
       referrerLevel: partner.level,
     });
-    expect(financeL3.remainingPool.toFixed(3)).toBe("300.000");
-    expect(financeL3.commissionRate.toFixed(2)).toBe("0.15");
-    expect(financeL3.referralCommission.toFixed(3)).toBe("45.000"); // 15% of 300
-    expect(financeL3.balanceAfterCommission.toFixed(3)).toBe("255.000");
+    expect(financeL5.remainingPool.toFixed(3)).toBe("300.000");
+    expect(financeL5.commissionRate.toFixed(2)).toBe("0.30");
+    expect(financeL5.referralCommission.toFixed(3)).toBe("90.000"); // 30% of 300
+    expect(financeL5.balanceAfterCommission.toFixed(3)).toBe("210.000");
   });
 
   // ==========================================================================
@@ -288,16 +302,16 @@ describe("Tier 4: Real-World Application Scenarios", () => {
       revenue: batchRevenue,
       expenses: batchExpenses,
       commissions: [
-        { referrerId: "partner-l2", level: 2 }, // 10% of 1500 = 150
-        { referrerId: "partner-l1", level: 1 }, // 5% of 1500 = 75
+        { referrerId: "partner-l2", level: 2 }, // 7% of 1500 = 105
+        { referrerId: "partner-l1", level: 1 }, // 3% of 1500 = 45
       ],
     });
 
     expect(allocation.profit.toFixed(3)).toBe("5000.000");
     expect(allocation.adminShare.toFixed(3)).toBe("3500.000");
     expect(allocation.remainingPool.toFixed(3)).toBe("1500.000");
-    expect(allocation.totalCommissionPaid.toFixed(3)).toBe("225.000"); // 150 + 75
-    expect(allocation.balanceAfterCommissions.toFixed(3)).toBe("1275.000"); // 1500 - 225
+    expect(allocation.totalCommissionPaid.toFixed(3)).toBe("150.000"); // 105 + 45
+    expect(allocation.balanceAfterCommissions.toFixed(3)).toBe("1350.000"); // 1500 - 150
 
     // Exact Invariance: Admin Share + Commissions Paid + Remaining Balance == Total Profit
     const totalAccounted = allocation.adminShare

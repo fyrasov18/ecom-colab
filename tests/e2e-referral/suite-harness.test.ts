@@ -7,7 +7,7 @@ import { d, roundMoney } from "@/lib/money";
  */
 Decimal.set({ precision: 28, rounding: Decimal.ROUND_HALF_UP });
 
-export type ReferrerLevel = 1 | 2 | 3;
+export type ReferrerLevel = 1 | 2 | 3 | 4 | 5;
 
 export interface ProfitSharingParams {
   revenue: Decimal | number | string;
@@ -88,12 +88,16 @@ export interface PartnerRecord {
 export interface SystemReferralSettings {
   level2Threshold: number;
   level3Threshold: number;
+  level4Threshold?: number;
+  level5Threshold?: number;
   autoPromotionConfirmed: boolean;
 }
 
 export const DEFAULT_REFERRAL_SETTINGS: SystemReferralSettings = {
-  level2Threshold: 3,
-  level3Threshold: 10,
+  level2Threshold: 10,
+  level3Threshold: 100,
+  level4Threshold: 300,
+  level5Threshold: 900,
   autoPromotionConfirmed: true,
 };
 
@@ -113,11 +117,13 @@ export function calculateProfitSharingOracle(params: ProfitSharingParams): Profi
   const profit = rev.minus(exp);
 
   const rateMap: Record<ReferrerLevel, Decimal> = {
-    1: new Decimal("0.05"),
-    2: new Decimal("0.10"),
+    1: new Decimal("0.03"),
+    2: new Decimal("0.07"),
     3: new Decimal("0.15"),
+    4: new Decimal("0.20"),
+    5: new Decimal("0.30"),
   };
-  const commissionRate = rateMap[params.referrerLevel] ?? new Decimal("0.05");
+  const commissionRate = rateMap[params.referrerLevel] ?? new Decimal("0.03");
 
   if (profit.lte(0)) {
     return {
@@ -134,7 +140,7 @@ export function calculateProfitSharingOracle(params: ProfitSharingParams): Profi
 
   // Exact 70% admin share and 30% remaining pool B
   const adminShare = roundMoney(profit.times(new Decimal("0.70")));
-  const remainingPool = roundMoney(profit.times(new Decimal("0.30")));
+  const remainingPool = roundMoney(profit.minus(adminShare));
   const referralCommission = roundMoney(remainingPool.times(commissionRate));
   const balanceAfterCommission = remainingPool.minus(referralCommission);
 
@@ -180,9 +186,11 @@ export function allocateMultiCommissionsOracle(
   const remainingPool = roundMoney(profit.times(new Decimal("0.30")));
 
   const rateMap: Record<ReferrerLevel, Decimal> = {
-    1: new Decimal("0.05"),
-    2: new Decimal("0.10"),
+    1: new Decimal("0.03"),
+    2: new Decimal("0.07"),
     3: new Decimal("0.15"),
+    4: new Decimal("0.20"),
+    5: new Decimal("0.30"),
   };
 
   let poolAvailable = new Decimal(remainingPool);
@@ -221,13 +229,24 @@ export function evaluatePartnerLevelOracle(
   qualifiedCount: number,
   settings: SystemReferralSettings = DEFAULT_REFERRAL_SETTINGS
 ): { level: ReferrerLevel; rate: Decimal; nextThreshold: number | null } {
-  if (qualifiedCount >= settings.level3Threshold) {
-    return { level: 3, rate: new Decimal("0.15"), nextThreshold: null };
+  const l5 = settings.level5Threshold ?? 900;
+  const l4 = settings.level4Threshold ?? 300;
+  const l3 = settings.level3Threshold ?? 100;
+  const l2 = settings.level2Threshold ?? 10;
+
+  if (qualifiedCount >= l5) {
+    return { level: 5, rate: new Decimal("0.30"), nextThreshold: null };
   }
-  if (qualifiedCount >= settings.level2Threshold) {
-    return { level: 2, rate: new Decimal("0.10"), nextThreshold: settings.level3Threshold };
+  if (qualifiedCount >= l4) {
+    return { level: 4, rate: new Decimal("0.20"), nextThreshold: l5 };
   }
-  return { level: 1, rate: new Decimal("0.05"), nextThreshold: settings.level2Threshold };
+  if (qualifiedCount >= l3) {
+    return { level: 3, rate: new Decimal("0.15"), nextThreshold: l4 };
+  }
+  if (qualifiedCount >= l2) {
+    return { level: 2, rate: new Decimal("0.07"), nextThreshold: l3 };
+  }
+  return { level: 1, rate: new Decimal("0.03"), nextThreshold: l2 };
 }
 
 /**
@@ -377,22 +396,30 @@ export async function runProfitSharing(params: ProfitSharingParams): Promise<Pro
 // ============================================================================
 
 describe("Referral E2E Test Suite — Core Harness & Authoritative Oracles", () => {
-  it("computes exact specification benchmark: 5,000 - 3,000 = 2,000 => A=1400, B=600, C1=30, C2=60, C3=90", async () => {
+  it("computes exact specification benchmark: 5,000 - 3,000 = 2,000 => A=1400, B=600, C1=18, C2=42, C3=90, C4=120, C5=180", async () => {
     const resL1 = await runProfitSharing({ revenue: 5000, expenses: 3000, referrerLevel: 1 });
     expect(resL1.profit.toFixed(3)).toBe("2000.000");
     expect(resL1.adminShare.toFixed(3)).toBe("1400.000");
     expect(resL1.remainingPool.toFixed(3)).toBe("600.000");
-    expect(resL1.commissionRate.toFixed(2)).toBe("0.05");
-    expect(resL1.referralCommission.toFixed(3)).toBe("30.000");
-    expect(resL1.balanceAfterCommission.toFixed(3)).toBe("570.000");
+    expect(resL1.commissionRate.toFixed(2)).toBe("0.03");
+    expect(resL1.referralCommission.toFixed(3)).toBe("18.000");
+    expect(resL1.balanceAfterCommission.toFixed(3)).toBe("582.000");
 
     const resL2 = await runProfitSharing({ revenue: 5000, expenses: 3000, referrerLevel: 2 });
-    expect(resL2.referralCommission.toFixed(3)).toBe("60.000");
-    expect(resL2.balanceAfterCommission.toFixed(3)).toBe("540.000");
+    expect(resL2.referralCommission.toFixed(3)).toBe("42.000");
+    expect(resL2.balanceAfterCommission.toFixed(3)).toBe("558.000");
 
     const resL3 = await runProfitSharing({ revenue: 5000, expenses: 3000, referrerLevel: 3 });
     expect(resL3.referralCommission.toFixed(3)).toBe("90.000");
     expect(resL3.balanceAfterCommission.toFixed(3)).toBe("510.000");
+
+    const resL4 = await runProfitSharing({ revenue: 5000, expenses: 3000, referrerLevel: 4 });
+    expect(resL4.referralCommission.toFixed(3)).toBe("120.000");
+    expect(resL4.balanceAfterCommission.toFixed(3)).toBe("480.000");
+
+    const resL5 = await runProfitSharing({ revenue: 5000, expenses: 3000, referrerLevel: 5 });
+    expect(resL5.referralCommission.toFixed(3)).toBe("180.000");
+    expect(resL5.balanceAfterCommission.toFixed(3)).toBe("420.000");
   });
 
   it("enforces zero commission and zero admin share when profit is zero or negative", async () => {
@@ -418,10 +445,10 @@ describe("Referral E2E Test Suite — Core Harness & Authoritative Oracles", () 
         { referrerId: "ref2", level: 2 },
       ],
     });
-    // Pool B is 600.000. ref1: 30.000, ref2: 60.000. Total paid: 90.000. Balance: 510.000.
+    // Pool B is 600.000. ref1: 18.000, ref2: 42.000. Total paid: 60.000. Balance: 540.000.
     expect(multi.remainingPool.toFixed(3)).toBe("600.000");
-    expect(multi.totalCommissionPaid.toFixed(3)).toBe("90.000");
-    expect(multi.balanceAfterCommissions.toFixed(3)).toBe("510.000");
+    expect(multi.totalCommissionPaid.toFixed(3)).toBe("60.000");
+    expect(multi.balanceAfterCommissions.toFixed(3)).toBe("540.000");
     expect(multi.totalCommissionPaid.plus(multi.balanceAfterCommissions).toFixed(3)).toBe(
       multi.remainingPool.toFixed(3)
     );

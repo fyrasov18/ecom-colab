@@ -10,6 +10,9 @@ import {
 } from "@/modules/finance/referral-commissions";
 import {
   confirmPartnerPromotion,
+  rejectPartnerPromotion,
+  reEvaluatePartnerPromotion,
+  updateReferralSettings,
   ReferralLevel,
 } from "@/modules/referrals/levels";
 
@@ -185,7 +188,7 @@ export async function confirmPromotionAction(
     let targetLevel: ReferralLevel | undefined = undefined;
     if (targetLevelRaw) {
       const parsedLevel = parseInt(targetLevelRaw, 10);
-      if (parsedLevel === 1 || parsedLevel === 2 || parsedLevel === 3) {
+      if (parsedLevel >= 1 && parsedLevel <= 5) {
         targetLevel = parsedLevel as ReferralLevel;
       }
     }
@@ -200,6 +203,108 @@ export async function confirmPromotionAction(
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Erreur lors de la confirmation de promotion.";
+    return { ok: false, error: message };
+  }
+}
+
+/**
+ * Admin server action: Rejects promotion of a partner with a reason.
+ * Strictly enforces SUPER_ADMIN or ADMIN role.
+ */
+export async function rejectPromotionAction(
+  arg1: unknown,
+  arg2?: unknown,
+): Promise<AdminCommissionActionState> {
+  try {
+    const user = await requireSession(["SUPER_ADMIN", "ADMIN"]);
+    const payload = extractPayload(arg1, arg2);
+    const partnerId = getField(payload, "partnerId");
+    const reason = getField(payload, "reason");
+
+    if (!partnerId) {
+      return { ok: false, error: "Identifiant du partenaire manquant." };
+    }
+
+    if (!reason || reason.trim().length === 0) {
+      return { ok: false, error: "Le motif du refus est obligatoire." };
+    }
+
+    const result = await rejectPartnerPromotion(partnerId, user.id, reason.trim());
+    revalidatePath("/partenaires/parrainage");
+    return {
+      ok: true,
+      message: `Demande de promotion rejetée. Le partenaire reste au Niveau ${result.level}.`,
+      data: result,
+    };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Erreur lors du rejet de la promotion.";
+    return { ok: false, error: message };
+  }
+}
+
+/**
+ * Admin server action: Saves dynamic referral threshold and order qualification settings.
+ * Strictly enforces SUPER_ADMIN role.
+ */
+export async function saveReferralSettingsAction(
+  _prev: AdminCommissionActionState,
+  formData: FormData,
+): Promise<AdminCommissionActionState> {
+  try {
+    const user = await requireSession(["SUPER_ADMIN", "ADMIN"]);
+    const l2 = parseInt(String(formData.get("level2Threshold") ?? ""), 10);
+    const l3 = parseInt(String(formData.get("level3Threshold") ?? ""), 10);
+    const l4 = parseInt(String(formData.get("level4Threshold") ?? ""), 10);
+    const l5 = parseInt(String(formData.get("level5Threshold") ?? ""), 10);
+    const reqOrders = parseInt(String(formData.get("requiredOrdersToQualify") ?? ""), 10);
+
+    await updateReferralSettings(
+      {
+        level2Threshold: isNaN(l2) ? undefined : l2,
+        level3Threshold: isNaN(l3) ? undefined : l3,
+        level4Threshold: isNaN(l4) ? undefined : l4,
+        level5Threshold: isNaN(l5) ? undefined : l5,
+        requiredOrdersToQualify: isNaN(reqOrders) ? undefined : reqOrders,
+      },
+      user.id,
+    );
+
+    revalidatePath("/partenaires/parrainage");
+    return { ok: true, message: "Paramètres de parrainage enregistrés avec succès." };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Erreur d'enregistrement des paramètres." };
+  }
+}
+
+
+/**
+ * Admin server action: Re-evaluates partner promotion eligibility.
+ * Strictly enforces SUPER_ADMIN or ADMIN role.
+ */
+export async function reEvaluatePromotionAction(
+  arg1: unknown,
+  arg2?: unknown,
+): Promise<AdminCommissionActionState> {
+  try {
+    const user = await requireSession(["SUPER_ADMIN", "ADMIN"]);
+    const payload = extractPayload(arg1, arg2);
+    const partnerId = getField(payload, "partnerId");
+
+    if (!partnerId) {
+      return { ok: false, error: "Identifiant du partenaire manquant." };
+    }
+
+    const result = await reEvaluatePartnerPromotion(partnerId, user.id);
+    revalidatePath("/partenaires/parrainage");
+    return {
+      ok: true,
+      message: `Réévaluation terminée. Statut: ${result.promotionPendingConfirmation ? "En attente de confirmation" : "À jour"}.`,
+      data: result,
+    };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Erreur lors de la réévaluation.";
     return { ok: false, error: message };
   }
 }

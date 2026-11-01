@@ -20,23 +20,27 @@ describe("referral-math: pure money engine", () => {
       expect(ADMIN_PROFIT_SHARE_RATE.plus(REMAINING_POOL_RATE).toString()).toBe("1");
     });
 
-    it("defines referral rates for Levels 1, 2, and 3", () => {
-      expect(REFERRAL_RATES[1].toString()).toBe("0.05");
-      expect(REFERRAL_RATES[2].toString()).toBe("0.1");
+    it("defines referral rates for Levels 1 to 5", () => {
+      expect(REFERRAL_RATES[1].toString()).toBe("0.03");
+      expect(REFERRAL_RATES[2].toString()).toBe("0.07");
       expect(REFERRAL_RATES[3].toString()).toBe("0.15");
+      expect(REFERRAL_RATES[4].toString()).toBe("0.2");
+      expect(REFERRAL_RATES[5].toString()).toBe("0.3");
     });
 
     it("returns correct rates via getReferralCommissionRate", () => {
-      expect(getReferralCommissionRate(1).toString()).toBe("0.05");
-      expect(getReferralCommissionRate(2).toString()).toBe("0.1");
+      expect(getReferralCommissionRate(1).toString()).toBe("0.03");
+      expect(getReferralCommissionRate(2).toString()).toBe("0.07");
       expect(getReferralCommissionRate(3).toString()).toBe("0.15");
+      expect(getReferralCommissionRate(4).toString()).toBe("0.2");
+      expect(getReferralCommissionRate(5).toString()).toBe("0.3");
     });
 
     it("throws error for invalid referral level", () => {
       // @ts-expect-error testing invalid runtime input
       expect(() => getReferralCommissionRate(0)).toThrow(/Invalid referral level/);
       // @ts-expect-error testing invalid runtime input
-      expect(() => getReferralCommissionRate(4)).toThrow(/Invalid referral level/);
+      expect(() => getReferralCommissionRate(6)).toThrow(/Invalid referral level/);
     });
   });
 
@@ -44,28 +48,28 @@ describe("referral-math: pure money engine", () => {
     const revenue = 5000;
     const expenses = 3000;
 
-    it("calculates exact P=2000, A=1400, B=600, C=30 for Level 1 (5%)", () => {
+    it("calculates exact P=2000, A=1400, B=600, C=18 for Level 1 (3%)", () => {
       const res = calculateProfitSharing({ revenue, expenses, referrerLevel: 1 });
       expect(toMoneyStr(res.revenue)).toBe("5000.000");
       expect(toMoneyStr(res.expenses)).toBe("3000.000");
       expect(toMoneyStr(res.profit)).toBe("2000.000");
       expect(toMoneyStr(res.adminShare)).toBe("1400.000");
       expect(toMoneyStr(res.remainingPool)).toBe("600.000");
-      expect(res.commissionRate.toString()).toBe("0.05");
-      expect(toMoneyStr(res.referralCommission)).toBe("30.000");
-      expect(toMoneyStr(res.balanceAfterCommission)).toBe("570.000");
+      expect(res.commissionRate.toString()).toBe("0.03");
+      expect(toMoneyStr(res.referralCommission)).toBe("18.000");
+      expect(toMoneyStr(res.balanceAfterCommission)).toBe("582.000");
       expect(res.isProfitable).toBe(true);
       expect(res.currency).toBe("TND");
     });
 
-    it("calculates exact P=2000, A=1400, B=600, C=60 for Level 2 (10%)", () => {
+    it("calculates exact P=2000, A=1400, B=600, C=42 for Level 2 (7%)", () => {
       const res = calculateProfitSharing({ revenue, expenses, referrerLevel: 2 });
       expect(toMoneyStr(res.profit)).toBe("2000.000");
       expect(toMoneyStr(res.adminShare)).toBe("1400.000");
       expect(toMoneyStr(res.remainingPool)).toBe("600.000");
-      expect(res.commissionRate.toString()).toBe("0.1");
-      expect(toMoneyStr(res.referralCommission)).toBe("60.000");
-      expect(toMoneyStr(res.balanceAfterCommission)).toBe("540.000");
+      expect(res.commissionRate.toString()).toBe("0.07");
+      expect(toMoneyStr(res.referralCommission)).toBe("42.000");
+      expect(toMoneyStr(res.balanceAfterCommission)).toBe("558.000");
       expect(res.isProfitable).toBe(true);
     });
 
@@ -80,8 +84,30 @@ describe("referral-math: pure money engine", () => {
       expect(res.isProfitable).toBe(true);
     });
 
+    it("calculates exact P=2000, A=1400, B=600, C=120 for Level 4 (20%)", () => {
+      const res = calculateProfitSharing({ revenue, expenses, referrerLevel: 4 });
+      expect(toMoneyStr(res.profit)).toBe("2000.000");
+      expect(toMoneyStr(res.adminShare)).toBe("1400.000");
+      expect(toMoneyStr(res.remainingPool)).toBe("600.000");
+      expect(res.commissionRate.toString()).toBe("0.2");
+      expect(toMoneyStr(res.referralCommission)).toBe("120.000");
+      expect(toMoneyStr(res.balanceAfterCommission)).toBe("480.000");
+      expect(res.isProfitable).toBe(true);
+    });
+
+    it("calculates exact P=2000, A=1400, B=600, C=180 for Level 5 (30%)", () => {
+      const res = calculateProfitSharing({ revenue, expenses, referrerLevel: 5 });
+      expect(toMoneyStr(res.profit)).toBe("2000.000");
+      expect(toMoneyStr(res.adminShare)).toBe("1400.000");
+      expect(toMoneyStr(res.remainingPool)).toBe("600.000");
+      expect(res.commissionRate.toString()).toBe("0.3");
+      expect(toMoneyStr(res.referralCommission)).toBe("180.000");
+      expect(toMoneyStr(res.balanceAfterCommission)).toBe("420.000");
+      expect(res.isProfitable).toBe(true);
+    });
+
     it("verifies conservation invariant: A + B = P and B = C + balanceAfterCommission", () => {
-      for (const level of [1, 2, 3] as const) {
+      for (const level of [1, 2, 3, 4, 5] as const) {
         const res = calculateProfitSharing({ revenue, expenses, referrerLevel: level });
         expect(res.adminShare.plus(res.remainingPool).toString()).toBe(res.profit.toString());
         expect(res.referralCommission.plus(res.balanceAfterCommission).toString()).toBe(
@@ -147,10 +173,10 @@ describe("referral-math: pure money engine", () => {
       expect(toMoneyStr(res.adminShare)).toBe("70.004");
       // B = 100.006 - 70.004 = 30.002 DT
       expect(toMoneyStr(res.remainingPool)).toBe("30.002");
-      // C = 5% of 30.002 = 1.5001 -> 1.500 DT
-      expect(toMoneyStr(res.referralCommission)).toBe("1.500");
-      // Balance = 30.002 - 1.500 = 28.502 DT
-      expect(toMoneyStr(res.balanceAfterCommission)).toBe("28.502");
+      // C = 3% of 30.002 = 0.90006 -> 0.900 DT
+      expect(toMoneyStr(res.referralCommission)).toBe("0.900");
+      // Balance = 30.002 - 0.900 = 29.102 DT
+      expect(toMoneyStr(res.balanceAfterCommission)).toBe("29.102");
     });
 
     it("rounds half-up on fractional millimes (0.0005 rounds to 0.001)", () => {
@@ -203,7 +229,7 @@ describe("referral-math: pure money engine", () => {
 
   describe("multi-commission pool allocation cap", () => {
     it("allocates fully when total requested is within Pool B", () => {
-      // Pool B = 600 TND. Two referrers: Ref A (Level 1 = 30 TND), Ref B (Level 2 = 60 TND).
+      // Pool B = 600 TND. Two referrers: Ref A (Level 1 = 3% = 18 TND), Ref B (Level 2 = 7% = 42 TND).
       const result = allocateCommissionsFromPool(600, [
         { id: "comm-1", partnerId: "p1", level: 1 },
         { id: "comm-2", partnerId: "p2", level: 2 },
@@ -211,14 +237,14 @@ describe("referral-math: pure money engine", () => {
 
       expect(result.isExceeded).toBe(false);
       expect(toMoneyStr(result.totalPool)).toBe("600.000");
-      expect(toMoneyStr(result.totalRequested)).toBe("90.000");
-      expect(toMoneyStr(result.totalAllocated)).toBe("90.000");
-      expect(toMoneyStr(result.remainingPool)).toBe("510.000");
+      expect(toMoneyStr(result.totalRequested)).toBe("60.000");
+      expect(toMoneyStr(result.totalAllocated)).toBe("60.000");
+      expect(toMoneyStr(result.remainingPool)).toBe("540.000");
 
       expect(result.allocations[0]!.isCapped).toBe(false);
-      expect(toMoneyStr(result.allocations[0]!.allocatedAmount)).toBe("30.000");
+      expect(toMoneyStr(result.allocations[0]!.allocatedAmount)).toBe("18.000");
       expect(result.allocations[1]!.isCapped).toBe(false);
-      expect(toMoneyStr(result.allocations[1]!.allocatedAmount)).toBe("60.000");
+      expect(toMoneyStr(result.allocations[1]!.allocatedAmount)).toBe("42.000");
     });
 
     it("enforces pro-rata cap when total requested exceeds Pool B", () => {

@@ -13,6 +13,8 @@ import {
   REFERRAL_LEVELS,
   DEFAULT_LEVEL2_THRESHOLD,
   DEFAULT_LEVEL3_THRESHOLD,
+  DEFAULT_LEVEL4_THRESHOLD,
+  DEFAULT_LEVEL5_THRESHOLD,
   DEFAULT_AUTO_PROMOTION_ENABLED,
   type PartnerReferralLevelState,
   type ReferralLevel,
@@ -28,10 +30,12 @@ describe("Milestone 3 Challenger 2: Partner Level Boundaries & Immutability Suit
   // ==========================================================================
   // 1. THRESHOLD BOUNDARIES EMPIRICAL VERIFICATION (0, 1, 2, 3, 4, 9, 10, 11)
   // ==========================================================================
-  describe("1. Threshold Boundaries (0, 1, 2, 3, 4, 9, 10, 11)", () => {
+  describe("1. Threshold Boundaries (0, 1, 9, 10, 11, 99, 100, 300, 900)", () => {
     const defaultThresholds = {
-      level2Threshold: DEFAULT_LEVEL2_THRESHOLD, // 3
-      level3Threshold: DEFAULT_LEVEL3_THRESHOLD, // 10
+      level2Threshold: DEFAULT_LEVEL2_THRESHOLD, // 10
+      level3Threshold: DEFAULT_LEVEL3_THRESHOLD, // 100
+      level4Threshold: DEFAULT_LEVEL4_THRESHOLD, // 300
+      level5Threshold: DEFAULT_LEVEL5_THRESHOLD, // 900
     };
 
     it("evaluates exact boundary points using evaluateTargetLevel", () => {
@@ -39,30 +43,40 @@ describe("Milestone 3 Challenger 2: Partner Level Boundaries & Immutability Suit
       expect(evaluateTargetLevel(0, defaultThresholds)).toBe(1);
       // 1: below L2 threshold -> Level 1
       expect(evaluateTargetLevel(1, defaultThresholds)).toBe(1);
-      // 2: off-by-one below L2 threshold (3) -> Level 1
-      expect(evaluateTargetLevel(2, defaultThresholds)).toBe(1);
-      // 3: exact L2 threshold boundary -> Level 2
-      expect(evaluateTargetLevel(3, defaultThresholds)).toBe(2);
-      // 4: above L2 threshold -> Level 2
-      expect(evaluateTargetLevel(4, defaultThresholds)).toBe(2);
-      // 9: off-by-one below L3 threshold (10) -> Level 2
-      expect(evaluateTargetLevel(9, defaultThresholds)).toBe(2);
-      // 10: exact L3 threshold boundary -> Level 3
-      expect(evaluateTargetLevel(10, defaultThresholds)).toBe(3);
-      // 11: above L3 threshold -> Level 3
-      expect(evaluateTargetLevel(11, defaultThresholds)).toBe(3);
+      // 9: off-by-one below L2 threshold (10) -> Level 1
+      expect(evaluateTargetLevel(9, defaultThresholds)).toBe(1);
+      // 10: exact L2 threshold boundary -> Level 2
+      expect(evaluateTargetLevel(10, defaultThresholds)).toBe(2);
+      // 11: above L2 threshold -> Level 2
+      expect(evaluateTargetLevel(11, defaultThresholds)).toBe(2);
+      // 99: off-by-one below L3 threshold (100) -> Level 2
+      expect(evaluateTargetLevel(99, defaultThresholds)).toBe(2);
+      // 100: exact L3 threshold boundary -> Level 3
+      expect(evaluateTargetLevel(100, defaultThresholds)).toBe(3);
+      // 101: above L3 threshold -> Level 3
+      expect(evaluateTargetLevel(101, defaultThresholds)).toBe(3);
+      // 299: off-by-one below L4 threshold (300) -> Level 3
+      expect(evaluateTargetLevel(299, defaultThresholds)).toBe(3);
+      // 300: exact L4 threshold boundary -> Level 4
+      expect(evaluateTargetLevel(300, defaultThresholds)).toBe(4);
+      // 899: off-by-one below L5 threshold (900) -> Level 4
+      expect(evaluateTargetLevel(899, defaultThresholds)).toBe(4);
+      // 900: exact L5 threshold boundary -> Level 5
+      expect(evaluateTargetLevel(900, defaultThresholds)).toBe(5);
     });
 
     it("empirically verifies getPartnerReferralLevel at every boundary point (0, 1, 2, 3, 4, 9, 10, 11) with auto-promotion enabled", async () => {
       const boundaryCases: { count: number; expectedLevel: ReferralLevel; expectedRate: string }[] = [
-        { count: 0, expectedLevel: 1, expectedRate: "0.05" },
-        { count: 1, expectedLevel: 1, expectedRate: "0.05" },
-        { count: 2, expectedLevel: 1, expectedRate: "0.05" },
-        { count: 3, expectedLevel: 2, expectedRate: "0.1" },
-        { count: 4, expectedLevel: 2, expectedRate: "0.1" },
-        { count: 9, expectedLevel: 2, expectedRate: "0.1" },
-        { count: 10, expectedLevel: 3, expectedRate: "0.15" },
-        { count: 11, expectedLevel: 3, expectedRate: "0.15" },
+        { count: 0, expectedLevel: 1, expectedRate: "0.03" },
+        { count: 1, expectedLevel: 1, expectedRate: "0.03" },
+        { count: 9, expectedLevel: 1, expectedRate: "0.03" },
+        { count: 10, expectedLevel: 2, expectedRate: "0.07" },
+        { count: 11, expectedLevel: 2, expectedRate: "0.07" },
+        { count: 99, expectedLevel: 2, expectedRate: "0.07" },
+        { count: 100, expectedLevel: 3, expectedRate: "0.15" },
+        { count: 101, expectedLevel: 3, expectedRate: "0.15" },
+        { count: 300, expectedLevel: 4, expectedRate: "0.2" },
+        { count: 900, expectedLevel: 5, expectedRate: "0.3" },
       ];
 
       for (const tc of boundaryCases) {
@@ -188,8 +202,8 @@ describe("Milestone 3 Challenger 2: Partner Level Boundaries & Immutability Suit
       const countB = await countDirectQualifiedReferrals(partnerBId, mockDb);
       expect(countB).toBe(10);
       const levelB = await getPartnerReferralLevel(partnerBId, mockDb);
-      expect(levelB.level).toBe(3);
-      expect(levelB.rate.toString()).toBe("0.15");
+      expect(levelB.level).toBe(2);
+      expect(levelB.rate.toString()).toBe("0.07");
 
       // 2. Verify Partner A has 0 direct qualified referrals
       const countA = await countDirectQualifiedReferrals(partnerAId, mockDb);
@@ -198,7 +212,7 @@ describe("Milestone 3 Challenger 2: Partner Level Boundaries & Immutability Suit
       // 3. Crucial Isolation Verification: Partner A strictly remains Level 1 (5%)
       const levelA = await getPartnerReferralLevel(partnerAId, mockDb);
       expect(levelA.level).toBe(1);
-      expect(levelA.rate.toString()).toBe("0.05");
+      expect(levelA.rate.toString()).toBe("0.03");
       expect(levelA.qualifiedCount).toBe(0);
       expect(levelA.targetLevel).toBe(1);
       expect(levelA.highestLevelReached).toBe(1);
@@ -211,7 +225,7 @@ describe("Milestone 3 Challenger 2: Partner Level Boundaries & Immutability Suit
   // 3. ADMIN CONFIRMATION TOGGLE: FALSE KEEPS L1, ADMIN CONFIRM PROMOTES TO L3
   // ==========================================================================
   describe("3. Admin Confirmation Toggle Verification", () => {
-    it("when auto_promotion_enabled is FALSE, level remains Level 1 even with 10 referrals; admin confirmation promotes to Level 3", async () => {
+    it("when auto_promotion_enabled is FALSE, level remains Level 1 even with 10 referrals; admin confirmation promotes to Level 2", async () => {
       const partnerId = "partner-with-10-referrals";
       let storedState: any = null;
 
@@ -247,10 +261,10 @@ describe("Milestone 3 Challenger 2: Partner Level Boundaries & Immutability Suit
 
       // Must remain at Level 1 with 5% rate!
       expect(initialEval.level).toBe(1);
-      expect(initialEval.rate.toString()).toBe("0.05");
+      expect(initialEval.rate.toString()).toBe("0.03");
       expect(initialEval.qualifiedCount).toBe(10);
-      expect(initialEval.targetLevel).toBe(3);
-      expect(initialEval.eligibleLevel).toBe(3);
+      expect(initialEval.targetLevel).toBe(2);
+      expect(initialEval.eligibleLevel).toBe(2);
       expect(initialEval.isEligibleForPromotion).toBe(true);
       expect(initialEval.promotionPendingConfirmation).toBe(true);
       expect(initialEval.autoPromotionEnabled).toBe(false);
@@ -261,7 +275,7 @@ describe("Milestone 3 Challenger 2: Partner Level Boundaries & Immutability Suit
           action: "PARTNER_PROMOTION_ELIGIBLE",
           entityId: partnerId,
           after: expect.objectContaining({
-            eligibleLevel: 3,
+            eligibleLevel: 2,
             pendingConfirmation: true,
             qualifiedCount: 10,
           }),
@@ -269,11 +283,11 @@ describe("Milestone 3 Challenger 2: Partner Level Boundaries & Immutability Suit
       });
 
       // Stage 2: Admin reviews queue and confirms promotion to Level 3
-      const confirmedResult = await confirmPartnerPromotion(partnerId, 3, "admin-supervisor-id", mockDb);
+      const confirmedResult = await confirmPartnerPromotion(partnerId, 2, "admin-supervisor-id", mockDb);
 
-      expect(confirmedResult.level).toBe(3);
-      expect(confirmedResult.rate.toString()).toBe("0.15");
-      expect(confirmedResult.highestLevelReached).toBe(3);
+      expect(confirmedResult.level).toBe(2);
+      expect(confirmedResult.rate.toString()).toBe("0.07");
+      expect(confirmedResult.highestLevelReached).toBe(2);
       expect(confirmedResult.isEligibleForPromotion).toBe(false);
       expect(confirmedResult.promotionPendingConfirmation).toBe(false);
 
@@ -285,7 +299,7 @@ describe("Milestone 3 Challenger 2: Partner Level Boundaries & Immutability Suit
           entityId: partnerId,
           before: { level: 1 },
           after: expect.objectContaining({
-            level: 3,
+            level: 2,
             confirmedBy: "admin-supervisor-id",
           }),
         }),
@@ -293,9 +307,9 @@ describe("Milestone 3 Challenger 2: Partner Level Boundaries & Immutability Suit
 
       // Stage 3: Subsequent getPartnerReferralLevel preserves confirmed Level 3
       const subsequentEval = await getPartnerReferralLevel(partnerId, mockDb);
-      expect(subsequentEval.level).toBe(3);
-      expect(subsequentEval.rate.toString()).toBe("0.15");
-      expect(subsequentEval.highestLevelReached).toBe(3);
+      expect(subsequentEval.level).toBe(2);
+      expect(subsequentEval.rate.toString()).toBe("0.07");
+      expect(subsequentEval.highestLevelReached).toBe(2);
       expect(subsequentEval.promotionPendingConfirmation).toBe(false);
     });
   });
@@ -342,7 +356,7 @@ describe("Milestone 3 Challenger 2: Partner Level Boundaries & Immutability Suit
         mockDb,
       );
       expect(historicalAtMarch.level).toBe(1);
-      expect(historicalAtMarch.rate.toString()).toBe("0.05");
+      expect(historicalAtMarch.rate.toString()).toBe("0.03");
 
       // 2. Resolve rate for Order 2 date (2026-05-15) -> strictly Level 2 (0.10)
       const historicalAtMay = await getPartnerReferralLevelAtDate(
@@ -351,7 +365,7 @@ describe("Milestone 3 Challenger 2: Partner Level Boundaries & Immutability Suit
         mockDb,
       );
       expect(historicalAtMay.level).toBe(2);
-      expect(historicalAtMay.rate.toString()).toBe("0.1");
+      expect(historicalAtMay.rate.toString()).toBe("0.07");
 
       // 3. Resolve rate for Order 3 date (2026-07-15) -> strictly Level 3 (0.15)
       const historicalAtJuly = await getPartnerReferralLevelAtDate(
@@ -368,12 +382,12 @@ describe("Milestone 3 Challenger 2: Partner Level Boundaries & Immutability Suit
       const comm2 = calculateProfitSharing({ revenue: 5000, expenses: 3000, referrerLevel: historicalAtMay.level });
       const comm3 = calculateProfitSharing({ revenue: 5000, expenses: 3000, referrerLevel: historicalAtJuly.level });
 
-      expect(comm1.referralCommission.toFixed(3)).toBe("30.000"); // 5% of 600
-      expect(comm2.referralCommission.toFixed(3)).toBe("60.000"); // 10% of 600
+      expect(comm1.referralCommission.toFixed(3)).toBe("18.000"); // 3% of 600
+      expect(comm2.referralCommission.toFixed(3)).toBe("42.000"); // 7% of 600
       expect(comm3.referralCommission.toFixed(3)).toBe("90.000"); // 15% of 600
 
       // Historical commission 1 remains 30.000 and is NEVER retroactively recalculated
-      expect(comm1.referralCommission.toFixed(3)).toBe("30.000");
+      expect(comm1.referralCommission.toFixed(3)).toBe("18.000");
     });
   });
 
@@ -490,7 +504,7 @@ describe("Milestone 3 Challenger 2: Partner Level Boundaries & Immutability Suit
 
       // Retains Level 2
       expect(result.level).toBe(2);
-      expect(result.rate.toString()).toBe("0.1");
+      expect(result.rate.toString()).toBe("0.07");
       expect(result.highestLevelReached).toBe(2);
     });
   });

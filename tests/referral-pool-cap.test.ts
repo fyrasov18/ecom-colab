@@ -249,10 +249,10 @@ describe("referral-pool-cap: adversarial empirical verification", () => {
   describe("5. Partner level rate derivation without explicit amount", () => {
     it("derives requestedAmount from partner level rate against Pool B", () => {
       // Pool B = 600 TND.
-      // Level 1: 5% of 600 = 30 TND
-      // Level 2: 10% of 600 = 60 TND
+      // Level 1: 3% of 600 = 18 TND
+      // Level 2: 7% of 600 = 42 TND
       // Level 3: 15% of 600 = 90 TND
-      // Total = 180 TND <= 600 TND -> Fully allocated
+      // Total = 150 TND <= 600 TND -> Fully allocated
       const res = allocateCommissionsFromPool(600, [
         { id: "p1", level: 1 },
         { id: "p2", level: 2 },
@@ -260,11 +260,11 @@ describe("referral-pool-cap: adversarial empirical verification", () => {
       ]);
 
       expect(res.isExceeded).toBe(false);
-      expect(toMoneyStr(res.totalRequested)).toBe("180.000");
-      expect(toMoneyStr(res.totalAllocated)).toBe("180.000");
-      expect(toMoneyStr(res.remainingPool)).toBe("420.000");
-      expect(toMoneyStr(res.allocations[0]!.allocatedAmount)).toBe("30.000");
-      expect(toMoneyStr(res.allocations[1]!.allocatedAmount)).toBe("60.000");
+      expect(toMoneyStr(res.totalRequested)).toBe("150.000");
+      expect(toMoneyStr(res.totalAllocated)).toBe("150.000");
+      expect(toMoneyStr(res.remainingPool)).toBe("450.000");
+      expect(toMoneyStr(res.allocations[0]!.allocatedAmount)).toBe("18.000");
+      expect(toMoneyStr(res.allocations[1]!.allocatedAmount)).toBe("42.000");
       expect(toMoneyStr(res.allocations[2]!.allocatedAmount)).toBe("90.000");
     });
   });

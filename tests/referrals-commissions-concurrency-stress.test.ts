@@ -468,7 +468,7 @@ describe("Empirical Challenger 1: Milestone 4 Lifecycle & Concurrency Stress Tes
         attributionId: "attr-stress-1",
         revenue: 5000,
         expenses: 3000,
-        referrerLevel: 1, // P=2000, B=600, C=30 TND
+        referrerLevel: 1, // P=2000, B=600, C=18 TND
         idempotencyKey: "sequential-double-pay",
         status: "ELIGIBLE",
       }, db);
@@ -495,12 +495,12 @@ describe("Empirical Challenger 1: Milestone 4 Lifecycle & Concurrency Stress Tes
         where: { partnerId: "partner-stress-alice" },
       });
       expect(txs).toHaveLength(1);
-      expect(txs[0]!.amount.toFixed(3)).toBe("30.000");
+      expect(txs[0]!.amount.toFixed(3)).toBe("18.000");
 
       const wallet = await db.wallet.findUnique({
         where: { partnerId: "partner-stress-alice" },
       });
-      expect(wallet!.availableBalance.toFixed(3)).toBe("30.000");
+      expect(wallet!.availableBalance.toFixed(3)).toBe("18.000");
     });
 
     it("handles high-concurrency race condition: exactly 1 of N concurrent requests succeeds and N-1 are rejected", async () => {

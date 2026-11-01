@@ -45,4 +45,15 @@ export const SETTING_VALUE_SCHEMAS: Record<string, z.ZodTypeAny> = {
         });
       }
     }),
+  [SETTING_KEYS.REFERRAL_LEVEL2_THRESHOLD]: z.number().int().min(1).max(1_000_000),
+  [SETTING_KEYS.REFERRAL_LEVEL3_THRESHOLD]: z.number().int().min(1).max(1_000_000),
+  [SETTING_KEYS.REFERRAL_LEVEL4_THRESHOLD]: z.number().int().min(1).max(1_000_000),
+  [SETTING_KEYS.REFERRAL_LEVEL5_THRESHOLD]: z.number().int().min(1).max(1_000_000),
+  [SETTING_KEYS.REFERRAL_REQUIRED_ORDERS_TO_QUALIFY]: z.number().int().min(1).max(100),
+  [SETTING_KEYS.REFERRAL_LEVEL1_RATE]: z.number().min(0).max(1),
+  [SETTING_KEYS.REFERRAL_LEVEL2_RATE]: z.number().min(0).max(1),
+  [SETTING_KEYS.REFERRAL_LEVEL3_RATE]: z.number().min(0).max(1),
+  [SETTING_KEYS.REFERRAL_LEVEL4_RATE]: z.number().min(0).max(1),
+  [SETTING_KEYS.REFERRAL_LEVEL5_RATE]: z.number().min(0).max(1),
+  [SETTING_KEYS.REFERRAL_AUTO_PROMOTION_ENABLED]: z.boolean(),
 };

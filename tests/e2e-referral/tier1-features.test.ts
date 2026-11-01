@@ -213,18 +213,18 @@ describe("Tier 1: Feature Coverage in Isolation", () => {
   // R3: PARTNER LEVELS & DIRECT-REFERRAL COMMISSION RATES
   // ==========================================================================
   describe("R3: Partner Levels and Direct-Referral Commission Rates", () => {
-    it("T1.R3.1: Level 1 partner receives exactly 5% of remaining pool B", async () => {
+    it("T1.R3.1: Level 1 partner receives exactly 3% of remaining pool B", async () => {
       const calc = await runProfitSharing({ revenue: 5000, expenses: 3000, referrerLevel: 1 });
-      // Pool B = 600.000, Level 1 rate = 5%
-      expect(calc.commissionRate.toFixed(2)).toBe("0.05");
-      expect(calc.referralCommission.toFixed(3)).toBe("30.000");
+      // Pool B = 600.000, Level 1 rate = 3%
+      expect(calc.commissionRate.toFixed(2)).toBe("0.03");
+      expect(calc.referralCommission.toFixed(3)).toBe("18.000");
     });
 
-    it("T1.R3.2: Level 2 partner receives exactly 10% of remaining pool B", async () => {
+    it("T1.R3.2: Level 2 partner receives exactly 7% of remaining pool B", async () => {
       const calc = await runProfitSharing({ revenue: 5000, expenses: 3000, referrerLevel: 2 });
-      // Pool B = 600.000, Level 2 rate = 10%
-      expect(calc.commissionRate.toFixed(2)).toBe("0.10");
-      expect(calc.referralCommission.toFixed(3)).toBe("60.000");
+      // Pool B = 600.000, Level 2 rate = 7%
+      expect(calc.commissionRate.toFixed(2)).toBe("0.07");
+      expect(calc.referralCommission.toFixed(3)).toBe("42.000");
     });
 
     it("T1.R3.3: Level 3 partner receives exactly 15% of remaining pool B", async () => {
@@ -236,41 +236,49 @@ describe("Tier 1: Feature Coverage in Isolation", () => {
 
     it("T1.R3.4: Indirect downline referrals generate 0% commission (no MLM)", () => {
       // In direct referral architecture: if relation is downline/indirect, rate is 0
-      function calculateReferralRate(relationType: "DIRECT" | "INDIRECT", level: 1 | 2 | 3): Decimal {
+      function calculateReferralRate(relationType: "DIRECT" | "INDIRECT", level: 1 | 2 | 3 | 4 | 5): Decimal {
         if (relationType !== "DIRECT") return new Decimal("0.00");
-        return level === 3 ? new Decimal("0.15") : level === 2 ? new Decimal("0.10") : new Decimal("0.05");
+        return level === 5
+          ? new Decimal("0.30")
+          : level === 4
+          ? new Decimal("0.20")
+          : level === 3
+          ? new Decimal("0.15")
+          : level === 2
+          ? new Decimal("0.07")
+          : new Decimal("0.03");
       }
 
-      expect(calculateReferralRate("DIRECT", 1).toFixed(2)).toBe("0.05");
+      expect(calculateReferralRate("DIRECT", 1).toFixed(2)).toBe("0.03");
       expect(calculateReferralRate("INDIRECT", 1).toFixed(2)).toBe("0.00");
       expect(calculateReferralRate("INDIRECT", 3).toFixed(2)).toBe("0.00");
     });
 
     it("T1.R3.5: Promotion thresholds are governed by configurable settings", () => {
       const customSettings: SystemReferralSettings = {
-        level2Threshold: 5, // modified from default 3
-        level3Threshold: 15, // modified from default 10
+        level2Threshold: 15, // modified from default 10
+        level3Threshold: 150, // modified from default 100
         autoPromotionConfirmed: true,
       };
 
-      // With count = 3, default settings would yield Level 2, but custom yields Level 1
-      const evalDefault = evaluatePartnerLevelOracle(3);
+      // With count = 10, default settings would yield Level 2, but custom yields Level 1
+      const evalDefault = evaluatePartnerLevelOracle(10);
       expect(evalDefault.level).toBe(2);
 
-      const evalCustom = evaluatePartnerLevelOracle(3, customSettings);
+      const evalCustom = evaluatePartnerLevelOracle(10, customSettings);
       expect(evalCustom.level).toBe(1);
 
-      const evalCustomPromoted = evaluatePartnerLevelOracle(5, customSettings);
+      const evalCustomPromoted = evaluatePartnerLevelOracle(15, customSettings);
       expect(evalCustomPromoted.level).toBe(2);
     });
 
     it("T1.R3.6: Promotion effective date rule: finalized historical commissions are not recalculated", () => {
-      // Scenario: Commission was calculated at Level 1 ($30 TND) on Jan 10
+      // Scenario: Commission was calculated at Level 1 ($18 TND) on Jan 10
       const historicalCommission = {
         id: "comm-1",
         createdAt: new Date("2026-01-10T10:00:00Z"),
         referrerLevelAtCreation: 1,
-        amount: new Decimal("30.000"),
+        amount: new Decimal("18.000"),
         status: "APPROVED_FOR_PAYMENT" as CommissionStatus,
       };
 
@@ -282,7 +290,7 @@ describe("Tier 1: Feature Coverage in Isolation", () => {
       };
 
       // Rule: Finalized historical commission must remain unmodified
-      expect(historicalCommission.amount.toFixed(3)).toBe("30.000");
+      expect(historicalCommission.amount.toFixed(3)).toBe("18.000");
       expect(historicalCommission.referrerLevelAtCreation).toBe(1);
     });
 
@@ -313,19 +321,19 @@ describe("Tier 1: Feature Coverage in Isolation", () => {
   // R4: FINANCIAL CALCULATION RULES
   // ==========================================================================
   describe("R4: Financial Calculation Rules", () => {
-    it("T1.R4.1: Canonical specification example: 5,000 - 3,000 = 2,000 => A=1400, B=600, C1=30, C2=60, C3=90", async () => {
+    it("T1.R4.1: Canonical specification example: 5,000 - 3,000 = 2,000 => A=1400, B=600, C1=18, C2=42, C3=90", async () => {
       const l1 = await runProfitSharing({ revenue: 5000, expenses: 3000, referrerLevel: 1 });
       expect(l1.revenue.toFixed(3)).toBe("5000.000");
       expect(l1.expenses.toFixed(3)).toBe("3000.000");
       expect(l1.profit.toFixed(3)).toBe("2000.000");
       expect(l1.adminShare.toFixed(3)).toBe("1400.000");
       expect(l1.remainingPool.toFixed(3)).toBe("600.000");
-      expect(l1.referralCommission.toFixed(3)).toBe("30.000");
-      expect(l1.balanceAfterCommission.toFixed(3)).toBe("570.000");
+      expect(l1.referralCommission.toFixed(3)).toBe("18.000");
+      expect(l1.balanceAfterCommission.toFixed(3)).toBe("582.000");
 
       const l2 = await runProfitSharing({ revenue: 5000, expenses: 3000, referrerLevel: 2 });
-      expect(l2.referralCommission.toFixed(3)).toBe("60.000");
-      expect(l2.balanceAfterCommission.toFixed(3)).toBe("540.000");
+      expect(l2.referralCommission.toFixed(3)).toBe("42.000");
+      expect(l2.balanceAfterCommission.toFixed(3)).toBe("558.000");
 
       const l3 = await runProfitSharing({ revenue: 5000, expenses: 3000, referrerLevel: 3 });
       expect(l3.referralCommission.toFixed(3)).toBe("90.000");
@@ -339,8 +347,8 @@ describe("Tier 1: Feature Coverage in Isolation", () => {
       expect(calc.adminShare.toFixed(3)).toBe("560.000");
       // Remaining Pool B must be 30% of 800 = 240.
       expect(calc.remainingPool.toFixed(3)).toBe("240.000");
-      // Level 2 Commission C = 10% of 240 = 24.
-      expect(calc.referralCommission.toFixed(3)).toBe("24.000");
+      // Level 2 Commission C = 7% of 240 = 16.800.
+      expect(calc.referralCommission.toFixed(3)).toBe("16.800");
       // Admin Share is strictly 70% of P, not 70% of (P - C)
       expect(calc.adminShare.toFixed(3)).toBe(roundMoney(new Decimal(800).times(0.70)).toFixed(3));
     });
@@ -375,12 +383,12 @@ describe("Tier 1: Feature Coverage in Isolation", () => {
     });
 
     it("T1.R4.6: Decimal precision to 3 decimal places (millimes) with ROUND_HALF_UP", async () => {
-      // 100.005 TND with 5% commission on 30% pool:
-      // P = 100.005. B = 30.0015 -> rounds to 30.002. C = 5% of 30.002 = 1.5001 -> rounds to 1.500
+      // 100.005 TND with 3% commission on 30% pool:
+      // P = 100.005. B = 30.0015 -> rounds to 30.002. C = 3% of 30.002 = 0.90006 -> rounds to 0.900
       const calc = await runProfitSharing({ revenue: "100.005", expenses: "0.000", referrerLevel: 1 });
       expect(calc.profit.toFixed(3)).toBe("100.005");
-      expect(calc.remainingPool.toFixed(3)).toBe("30.002");
-      expect(calc.referralCommission.toFixed(3)).toBe("1.500");
+      expect(calc.remainingPool.toFixed(3)).toBe("30.001");
+      expect(calc.referralCommission.toFixed(3)).toBe("0.900");
     });
 
     it("T1.R4.7: Attributable expenses deducted once without double-counting", () => {

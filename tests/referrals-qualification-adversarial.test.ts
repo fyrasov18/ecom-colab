@@ -452,7 +452,7 @@ describe("Adversarial Empirical Challenger: checkAndQualifyOrder Invariants", ()
         referralAttribution: {
           findUnique: vi.fn().mockResolvedValue(mockAttribution),
           updateMany: vi.fn().mockResolvedValue({ count: 1 }),
-          count: vi.fn().mockResolvedValue(3), // 3 qualified referrals
+          count: vi.fn().mockResolvedValue(10), // 10 qualified referrals
         },
         auditLog: { create: vi.fn().mockResolvedValue({ id: "audit-1" }) },
         partner: {

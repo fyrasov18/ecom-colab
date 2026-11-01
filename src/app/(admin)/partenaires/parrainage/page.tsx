@@ -25,6 +25,7 @@ import { ApprovalQueueTable, type QueueCommissionItem } from "./approval-queue";
 import { PaymentQueueTable, type PaymentQueueItem } from "./payment-queue";
 import { PromotionQueueTable, type PromotionCandidate } from "./promotion-queue";
 import { CalculationBreakdownModal } from "./breakdown-modal";
+import { ReferralSettingsForm } from "./referral-settings-form";
 
 export const metadata: Metadata = {
   title: "Hub Parrainage & Commissions | Administration",
@@ -80,8 +81,8 @@ export default async function AdminReferralHubPage() {
     },
   });
 
-  // 4. Promotion Queue
-  const { level2Threshold, level3Threshold } = await getReferralThresholdSettings(prisma);
+  // 4. Promotion Queue (5 levels)
+  const thresholds = await getReferralThresholdSettings(prisma);
   const qualifiedAttributions = await prisma.referralAttribution.findMany({
     where: { status: "QUALIFIED" },
     select: { referrerPartnerId: true },
@@ -95,9 +96,24 @@ export default async function AdminReferralHubPage() {
     );
   }
 
+  const rateMap: Record<number, string> = {
+    1: "3%",
+    2: "7%",
+    3: "15%",
+    4: "20%",
+    5: "30%",
+  };
+
+  const thresholdMap: Record<number, number> = {
+    2: thresholds.level2Threshold,
+    3: thresholds.level3Threshold,
+    4: thresholds.level4Threshold,
+    5: thresholds.level5Threshold,
+  };
+
   const promotionCandidates: PromotionCandidate[] = [];
   for (const [pId, count] of countByReferrer.entries()) {
-    if (count >= level2Threshold) {
+    if (count >= thresholds.level2Threshold) {
       const levelRes = await getPartnerReferralLevel(pId, prisma);
       if (levelRes.targetLevel > levelRes.level) {
         const partner = await prisma.partner.findUnique({
@@ -113,10 +129,9 @@ export default async function AdminReferralHubPage() {
             currentLevel: levelRes.level,
             targetLevel: levelRes.targetLevel,
             qualifiedCount: levelRes.qualifiedCount,
-            threshold: levelRes.targetLevel === 3 ? level3Threshold : level2Threshold,
-            currentRate:
-              levelRes.level === 3 ? "15%" : levelRes.level === 2 ? "10%" : "5%",
-            targetRate: levelRes.targetLevel === 3 ? "15%" : "10%",
+            threshold: thresholdMap[levelRes.targetLevel] ?? thresholds.level2Threshold,
+            currentRate: rateMap[levelRes.level] ?? "3%",
+            targetRate: rateMap[levelRes.targetLevel] ?? "7%",
           });
         }
       }
@@ -323,6 +338,9 @@ export default async function AdminReferralHubPage() {
         </Card>
       </div>
 
+      {/* Settings Form */}
+      <ReferralSettingsForm initialSettings={thresholds} />
+
       {/* 1. Commission Approval Queue */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
@@ -364,7 +382,7 @@ export default async function AdminReferralHubPage() {
               File de confirmation des promotions ({promotionCandidates.length})
             </h2>
             <p className="text-xs text-muted-foreground">
-              Partenaires ayant atteint les seuils de qualification (Seuil Niv 2: {level2Threshold}, Seuil Niv 3: {level3Threshold}).
+              Partenaires ayant atteint les seuils de qualification (Seuils qualifiés requis : Niv 2: {thresholds.level2Threshold}, Niv 3: {thresholds.level3Threshold}, Niv 4: {thresholds.level4Threshold}, Niv 5: {thresholds.level5Threshold}).
             </p>
           </div>
         </div>

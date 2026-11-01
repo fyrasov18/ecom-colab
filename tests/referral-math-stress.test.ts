@@ -144,20 +144,20 @@ describe("Challenger 1: Financial Invariants and Empirical Stress Testing", () =
   });
 
   describe("Invariant 4: Exact Numeric Specification (R=5000, E=3000 -> P=2000, A=1400, B=600)", () => {
-    it("computes exact specification figures for Level 1, 2, and 3", () => {
+    it("computes exact specification figures for Level 1, 2, 3, 4, and 5", () => {
       const p1 = calculateProfitSharing({ revenue: 5000, expenses: 3000, referrerLevel: 1 });
       expect(toMoney(p1.profit)).toBe("2000.000");
       expect(toMoney(p1.adminShare)).toBe("1400.000");
       expect(toMoney(p1.remainingPool)).toBe("600.000");
-      expect(toMoney(p1.referralCommission)).toBe("30.000");
-      expect(toMoney(p1.balanceAfterCommission)).toBe("570.000");
+      expect(toMoney(p1.referralCommission)).toBe("18.000");
+      expect(toMoney(p1.balanceAfterCommission)).toBe("582.000");
 
       const p2 = calculateProfitSharing({ revenue: 5000, expenses: 3000, referrerLevel: 2 });
       expect(toMoney(p2.profit)).toBe("2000.000");
       expect(toMoney(p2.adminShare)).toBe("1400.000");
       expect(toMoney(p2.remainingPool)).toBe("600.000");
-      expect(toMoney(p2.referralCommission)).toBe("60.000");
-      expect(toMoney(p2.balanceAfterCommission)).toBe("540.000");
+      expect(toMoney(p2.referralCommission)).toBe("42.000");
+      expect(toMoney(p2.balanceAfterCommission)).toBe("558.000");
 
       const p3 = calculateProfitSharing({ revenue: 5000, expenses: 3000, referrerLevel: 3 });
       expect(toMoney(p3.profit)).toBe("2000.000");
@@ -165,6 +165,20 @@ describe("Challenger 1: Financial Invariants and Empirical Stress Testing", () =
       expect(toMoney(p3.remainingPool)).toBe("600.000");
       expect(toMoney(p3.referralCommission)).toBe("90.000");
       expect(toMoney(p3.balanceAfterCommission)).toBe("510.000");
+
+      const p4 = calculateProfitSharing({ revenue: 5000, expenses: 3000, referrerLevel: 4 });
+      expect(toMoney(p4.profit)).toBe("2000.000");
+      expect(toMoney(p4.adminShare)).toBe("1400.000");
+      expect(toMoney(p4.remainingPool)).toBe("600.000");
+      expect(toMoney(p4.referralCommission)).toBe("120.000");
+      expect(toMoney(p4.balanceAfterCommission)).toBe("480.000");
+
+      const p5 = calculateProfitSharing({ revenue: 5000, expenses: 3000, referrerLevel: 5 });
+      expect(toMoney(p5.profit)).toBe("2000.000");
+      expect(toMoney(p5.adminShare)).toBe("1400.000");
+      expect(toMoney(p5.remainingPool)).toBe("600.000");
+      expect(toMoney(p5.referralCommission)).toBe("180.000");
+      expect(toMoney(p5.balanceAfterCommission)).toBe("420.000");
     });
   });
 

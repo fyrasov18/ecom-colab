@@ -341,7 +341,7 @@ export async function approveReferralCommission(
   maybeDb?: DbClient,
 ) {
   let reason: string | undefined;
-  let db: DbClient = prisma;
+  let db: DbClient = isDbClient(maybeDb) ? maybeDb : prisma;
 
   if (typeof optsOrReason === "string") {
     reason = optsOrReason;
@@ -351,6 +351,7 @@ export async function approveReferralCommission(
   } else if (typeof optsOrReason === "object" && optsOrReason !== null) {
     reason = optsOrReason.reason;
     if (optsOrReason.db) db = optsOrReason.db;
+    else if (isDbClient(maybeDb)) db = maybeDb;
   }
 
   const comm = await db.referralCommission.findUnique({
