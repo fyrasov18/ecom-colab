@@ -52,6 +52,10 @@ function toInput(fd: FormData) {
         ? null
         : z.enum(["PERCENTAGE", "FIXED"]).parse(commissionTypeRaw),
     commissionValue: commissionValueRaw === "" ? null : num(commissionValueRaw),
+    categoryId: str(fd.get("categoryId")) || null,
+    isWinning: fd.get("isWinning") === "true" || fd.get("isWinning") === "on",
+    isNew: fd.get("isNew") === "true" || fd.get("isNew") === "on",
+    isRecommended: fd.get("isRecommended") === "true" || fd.get("isRecommended") === "on",
   };
 }
 
@@ -63,6 +67,14 @@ export async function saveProduct(
   const id = str(formData.get("id"));
 
   const raw = toInput(formData);
+
+  if (!raw.categoryId) {
+    return {
+      ok: false,
+      error: "Veuillez sélectionner une catégorie obligatoire pour ce produit.",
+    };
+  }
+
   // Re-coerce numbers that schemas expect as numbers (form sends strings).
   const input = {
     ...raw,
@@ -75,10 +87,13 @@ export async function saveProduct(
     if (id) {
       await updateProduct(id, input, user.id);
       revalidatePath(`/produits/${id}`);
+      revalidatePath("/produits");
+      revalidatePath("/catalogue");
       return { ok: true, message: "Produit mis à jour." };
     }
     const product = await createProduct(input, user.id);
     revalidatePath("/produits");
+    revalidatePath("/catalogue");
     void product;
     return { ok: true, message: "Produit créé." };
   } catch (e) {

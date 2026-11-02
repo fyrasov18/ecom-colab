@@ -6,6 +6,7 @@ import type { NotificationType } from "@prisma/client";
  */
 
 export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
+  ANNOUNCEMENT: "Annonce",
   ORDER_STATUS: "Commande",
   EARNING: "Gain",
   SETTLEMENT: "Règlement",
@@ -18,6 +19,7 @@ type Tone = "default" | "secondary" | "outline" | "success" | "warning" | "destr
 
 /** Severity drives the badge colour in the list. */
 export const NOTIFICATION_TYPE_TONES: Record<NotificationType, Tone> = {
+  ANNOUNCEMENT: "info",
   ORDER_STATUS: "info",
   EARNING: "success",
   SETTLEMENT: "success",

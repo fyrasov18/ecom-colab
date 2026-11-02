@@ -41,10 +41,28 @@ export default async function PartnerProductPage({
             <ArrowLeft className="h-4 w-4" /> Retour au catalogue
           </Link>
         </Button>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-2xl font-semibold tracking-tight">{product.name}</h1>
           {product.status === "OUT_OF_STOCK" && (
             <Badge variant="warning">Rupture de stock</Badge>
+          )}
+          {product.categoryRef && (
+            <Badge variant="outline">{product.categoryRef.name}</Badge>
+          )}
+          {product.isWinning && (
+            <span className="inline-flex items-center text-xs font-semibold text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded">
+              ⭐ Produit gagnant
+            </span>
+          )}
+          {product.isRecommended && (
+            <span className="inline-flex items-center text-xs font-semibold text-rose-600 bg-rose-500/10 px-2 py-0.5 rounded">
+              🔥 Recommandé
+            </span>
+          )}
+          {product.isNew && (
+            <span className="inline-flex items-center text-xs font-semibold text-sky-600 bg-sky-500/10 px-2 py-0.5 rounded">
+              🆕 Nouveau
+            </span>
           )}
         </div>
         <p className="text-lg font-semibold text-primary">

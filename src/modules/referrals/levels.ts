@@ -305,6 +305,16 @@ export async function getPartnerReferralLevel(
           qualifiedCount,
         },
       });
+    try {
+        const { queueLevelUpPopup } = await import("@/modules/announcements/service");
+        await queueLevelUpPopup({
+          partnerId,
+          previousLevel: oldLevel,
+          newLevel: targetLevel,
+        }, db);
+      } catch (err) {
+        console.error("Failed to queue auto level up popup:", err);
+      }
     } else {
       // Auto-promotion disabled -> check if this promotion was previously rejected
       const wasRejectedForThis =
@@ -429,6 +439,18 @@ export async function confirmPartnerPromotion(
       confirmedBy: actorId,
     },
   });
+
+  try {
+    const { queueLevelUpPopup } = await import("@/modules/announcements/service");
+    await queueLevelUpPopup({
+      partnerId,
+      previousLevel: oldLevel,
+      newLevel: promotedLevel,
+      actorId,
+    }, db);
+  } catch (err) {
+    console.error("Failed to queue level up popup:", err);
+  }
 
   const qualifiedCount = await countDirectQualifiedReferrals(partnerId, db);
   const { autoPromotionEnabled } = await getReferralThresholdSettings(db);

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { PackageCheck } from "lucide-react";
 import { getProductAdmin } from "@/modules/products/service";
 import { listPartnerOptions } from "@/modules/partners/service";
+import { listActiveCategories } from "@/modules/categories/service";
 import { requireSession } from "@/lib/rbac";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,9 +29,10 @@ export default async function ProductDetailPage({
 }) {
   const { id } = await params;
   const user = await requireSession(["SUPER_ADMIN", "ADMIN"]);
-  const [product, partnerRows] = await Promise.all([
+  const [product, partnerRows, categories] = await Promise.all([
     getProductAdmin(id),
     listPartnerOptions(),
+    listActiveCategories(),
   ]);
   if (!product) notFound();
 
@@ -79,7 +81,7 @@ export default async function ProductDetailPage({
           <CardTitle className="text-base">Informations &amp; tarification</CardTitle>
         </CardHeader>
         <CardContent>
-          <ProductForm product={product} />
+          <ProductForm product={product} categories={categories} />
         </CardContent>
       </Card>
 

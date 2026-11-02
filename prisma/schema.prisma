@@ -28,6 +28,7 @@ model User {
   /// Partners this user invited (registration referral). Set server-side only —
   /// the "admin" invitation code records the inviting Admin here.
   invitedPartners      Partner[]                @relation("PartnerInvitedBy")
+  createdAnnouncements Announcement[]         @relation("AnnouncementCreatedBy")
 
   @@index([role, status])
 }
@@ -71,6 +72,7 @@ model Partner {
   referrerAttributions   ReferralAttribution[]  @relation("ReferrerAttributions")
   referredAttribution    ReferralAttribution?   @relation("ReferredAttribution")
   referralCommissions    ReferralCommission[]
+  popupEvents            PartnerPopupEvent[]
 
   @@index([status])
 }
@@ -108,6 +110,23 @@ model PerformanceLevel {
   @@index([isActive, sortOrder])
 }
 
+model Category {
+  id           String    @id @default(cuid())
+  name         String
+  nameAr       String?
+  slug         String    @unique
+  description  String?
+  icon         String?
+  imageUrl     String?
+  displayOrder Int       @default(0)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  products     Product[]
+
+  @@index([isActive, displayOrder])
+}
+
 model Product {
   id                  String                  @id @default(cuid())
   name                String
@@ -125,6 +144,11 @@ model Product {
   createdAt           DateTime                @default(now())
   updatedAt           DateTime                @updatedAt
   category            String?
+  categoryId          String?
+  categoryRef         Category?               @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  isWinning           Boolean                 @default(false)
+  isNew               Boolean                 @default(false)
+  isRecommended       Boolean                 @default(false)
   ingestedFrom        String?
   sku                 String?
   source              ProductSource           @default(ADMIN)
@@ -136,6 +160,10 @@ model Product {
   telegramSessions    TelegramSession[]
 
   @@index([status])
+  @@index([categoryId])
+  @@index([isWinning])
+  @@index([isNew])
+  @@index([isRecommended])
 }
 
 model ProductMedia {
@@ -583,6 +611,7 @@ enum ReturnKind {
 }
 
 enum NotificationType {
+  ANNOUNCEMENT
   ORDER_STATUS
   EARNING
   SETTLEMENT
@@ -691,3 +720,86 @@ enum ReferralCommissionStatus {
   REJECTED
 }
 
+
+
+enum AnnouncementType {
+  PRODUCT
+  PROMO
+  INFO
+  FEATURE
+  TRAINING
+}
+
+enum AnnouncementStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+enum AnnouncementAudience {
+  ALL
+  ACTIVE_ONLY
+  LEVEL_1
+  LEVEL_2
+  LEVEL_3
+  LEVEL_4
+  LEVEL_5
+}
+
+enum PartnerPopupType {
+  WELCOME
+  LEVEL_UP
+  ANNOUNCEMENT
+}
+
+model Announcement {
+  id             String               @id @default(cuid())
+  title          String
+  content        String               @db.Text
+  type           AnnouncementType     @default(INFO)
+  imageUrl       String?
+  buttonText     String?
+  buttonUrl      String?
+  targetAudience AnnouncementAudience @default(ALL)
+  status         AnnouncementStatus   @default(DRAFT)
+  scheduledAt    DateTime?
+  publishedAt    DateTime?
+  isFullScreen   Boolean              @default(true)
+  createdById    String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  createdBy      User?                @relation("AnnouncementCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  popups         PartnerPopupEvent[]
+
+  @@index([status, scheduledAt])
+  @@index([publishedAt])
+  @@index([type])
+}
+
+model PartnerPopupEvent {
+  id             String           @id @default(cuid())
+  partnerId      String
+  type           PartnerPopupType
+  eventKey       String
+  announcementId String?
+  title          String?
+  message        String?          @db.Text
+  buttonText     String?
+  buttonUrl      String?
+  imageUrl       String?
+  metadata       Json?
+  displayedAt    DateTime?
+  dismissedAt    DateTime?
+  clickedAt      DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  partner        Partner          @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  announcement   Announcement?    @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+
+  @@unique([partnerId, type, eventKey])
+  @@index([partnerId, dismissedAt])
+  @@index([announcementId])
+}

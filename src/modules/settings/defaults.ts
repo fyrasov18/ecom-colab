@@ -16,6 +16,8 @@ export const SETTING_KEYS = {
   REFERRAL_LEVEL4_RATE: "referral.level4_rate",
   REFERRAL_LEVEL5_RATE: "referral.level5_rate",
   REFERRAL_AUTO_PROMOTION_ENABLED: "referral.auto_promotion_enabled",
+  ANNOUNCEMENT_WELCOME_SETTINGS: "announcements.welcome_settings",
+  ANNOUNCEMENT_LEVEL_UP_SETTINGS: "announcements.level_up_settings",
 } as const;
 
 export type SettingKey = (typeof SETTING_KEYS)[keyof typeof SETTING_KEYS];
@@ -55,6 +57,25 @@ export const SETTING_DEFAULTS = {
   [SETTING_KEYS.REFERRAL_LEVEL4_RATE]: 0.20,
   [SETTING_KEYS.REFERRAL_LEVEL5_RATE]: 0.30,
   [SETTING_KEYS.REFERRAL_AUTO_PROMOTION_ENABLED]: false,
+  [SETTING_KEYS.ANNOUNCEMENT_WELCOME_SETTINGS]: {
+    isEnabled: true,
+    title: "Bienvenue sur E-com Colab, {partnerName} !",
+    message: "Votre compte partenaire a été validé avec succès par notre équipe. Vous avez désormais accès à notre catalogue exclusif de produits gagnants, aux kits marketing prêts à l'emploi et à notre système de commissions accéléré.",
+    buttonText: "Découvrir mon espace",
+    buttonUrl: "/catalogue",
+    badgeText: "Compte validé",
+    imageUrl: "",
+    themeColor: "indigo",
+  },
+  [SETTING_KEYS.ANNOUNCEMENT_LEVEL_UP_SETTINGS]: {
+    isEnabled: true,
+    title: "Félicitations {partnerName} ! Vous passez au Niveau {newLevel} !",
+    message: "Grâce à vos performances, votre statut partenaire progresse officiellement. Votre taux de commission de parrainage passe désormais à {commissionRate} % ! Continuez sur cette lancée pour débloquer les paliers supérieurs.",
+    buttonText: "Voir mes nouveaux avantages",
+    buttonUrl: "/parrainage",
+    imageUrl: "",
+    themeColor: "amber",
+  },
 } satisfies Record<SettingKey, unknown>;
 
 export const SETTING_CATEGORIES: Record<string, string> = {
@@ -73,6 +94,8 @@ export const SETTING_CATEGORIES: Record<string, string> = {
   [SETTING_KEYS.REFERRAL_LEVEL4_RATE]: "referral",
   [SETTING_KEYS.REFERRAL_LEVEL5_RATE]: "referral",
   [SETTING_KEYS.REFERRAL_AUTO_PROMOTION_ENABLED]: "referral",
+  [SETTING_KEYS.ANNOUNCEMENT_WELCOME_SETTINGS]: "announcements",
+  [SETTING_KEYS.ANNOUNCEMENT_LEVEL_UP_SETTINGS]: "announcements",
 };
 
 export const SETTING_DESCRIPTIONS: Record<string, string> = {

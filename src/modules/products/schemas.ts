@@ -17,6 +17,15 @@ export const productInputSchema = z.object({
   status: z.enum(["ACTIVE", "INACTIVE", "OUT_OF_STOCK", "ARCHIVED"]),
   commissionType: z.enum(["PERCENTAGE", "FIXED"]).nullable(),
   commissionValue: moneyAmount.nullable(),
+  categoryId: z
+    .string()
+    .trim()
+    .min(1, "Veuillez sélectionner une catégorie")
+    .optional()
+    .nullable(),
+  isWinning: z.boolean().default(false),
+  isNew: z.boolean().default(false),
+  isRecommended: z.boolean().default(false),
 });
 
 export type ProductInput = z.infer<typeof productInputSchema>;

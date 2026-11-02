@@ -52,14 +52,31 @@ export async function alertIfLowStock(
 export type ProductFilters = {
   search?: string;
   status?: ProductStatus;
+  categoryId?: string;
+  isWinning?: boolean;
+  isNew?: boolean;
+  isRecommended?: boolean;
   page?: number;
 };
 
 export async function listProducts(filters: ProductFilters = {}) {
-  const { search, status, page = 1 } = filters;
+  const {
+    search,
+    status,
+    categoryId,
+    isWinning,
+    isNew,
+    isRecommended,
+    page = 1,
+  } = filters;
+
   const where: Prisma.ProductWhereInput = {
     AND: [
       status ? { status } : {},
+      categoryId ? { categoryId } : {},
+      isWinning !== undefined ? { isWinning } : {},
+      isNew !== undefined ? { isNew } : {},
+      isRecommended !== undefined ? { isRecommended } : {},
       search
         ? {
             OR: [
@@ -80,6 +97,9 @@ export async function listProducts(filters: ProductFilters = {}) {
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
       include: {
+        categoryRef: {
+          select: { id: true, name: true, nameAr: true, slug: true },
+        },
         _count: { select: { partnerAssignations: true, orderItems: true } },
       },
     }),
@@ -92,7 +112,7 @@ export async function listProductOptions() {
   return prisma.product.findMany({
     where: { status: { in: ["ACTIVE", "OUT_OF_STOCK", "INACTIVE"] } },
     orderBy: { name: "asc" },
-    select: { id: true, name: true, status: true },
+    select: { id: true, name: true, status: true, categoryId: true },
   });
 }
 
@@ -100,6 +120,7 @@ export async function getProductAdmin(id: string) {
   return prisma.product.findUnique({
     where: { id },
     include: {
+      categoryRef: true,
       media: { orderBy: { sortOrder: "asc" } },
       marketingAssets: { orderBy: [{ kind: "asc" }, { sortOrder: "asc" }] },
       partnerAssignations: {
@@ -125,6 +146,10 @@ function parseInput(input: ProductInput) {
     status: parsed.status,
     commissionType: parsed.commissionType,
     commissionValue: parsed.commissionValue,
+    categoryId: parsed.categoryId || null,
+    isWinning: parsed.isWinning ?? false,
+    isNew: parsed.isNew ?? false,
+    isRecommended: parsed.isRecommended ?? false,
   };
 }
 
@@ -149,7 +174,15 @@ export async function createProduct(input: ProductInput, actorId: string) {
       action: "PRODUCT_CREATED",
       entityType: "Product",
       entityId: product.id,
-      after: { name: product.name, slug: product.slug, sellingPrice: product.sellingPrice },
+      after: {
+        name: product.name,
+        slug: product.slug,
+        sellingPrice: product.sellingPrice,
+        categoryId: product.categoryId,
+        isWinning: product.isWinning,
+        isNew: product.isNew,
+        isRecommended: product.isRecommended,
+      },
     });
     return product;
   });
@@ -175,6 +208,10 @@ export async function updateProduct(id: string, input: ProductInput, actorId: st
         status: before.status,
         commissionType: before.commissionType,
         commissionValue: before.commissionValue,
+        categoryId: before.categoryId,
+        isWinning: before.isWinning,
+        isNew: before.isNew,
+        isRecommended: before.isRecommended,
       },
       after: {
         purchaseCost: product.purchaseCost,
@@ -185,6 +222,10 @@ export async function updateProduct(id: string, input: ProductInput, actorId: st
         status: product.status,
         commissionType: product.commissionType,
         commissionValue: product.commissionValue,
+        categoryId: product.categoryId,
+        isWinning: product.isWinning,
+        isNew: product.isNew,
+        isRecommended: product.isRecommended,
       },
     });
 

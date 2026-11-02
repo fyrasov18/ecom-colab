@@ -1,27 +1,136 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
+
+export type PartnerCatalogueFilters = {
+  categoryId?: string;
+  badge?: "WINNING" | "NEW" | "RECOMMENDED";
+  search?: string;
+};
 
 /**
  * Partner-facing catalogue: ONLY products actively assigned to the partner.
  * Enforced server-side — never trust IDs from the URL.
+ * Automatically hides products belonging to inactive categories.
  */
-export async function listAssignedProducts(partnerId: string) {
+export async function listAssignedProducts(
+  partnerId: string,
+  filters: PartnerCatalogueFilters = {},
+) {
+  const { categoryId, badge, search } = filters;
+
+  const productWhere: Prisma.ProductWhereInput = {
+    status: { in: ["ACTIVE", "OUT_OF_STOCK"] },
+    OR: [
+      { categoryId: null },
+      { categoryRef: { isActive: true } },
+    ],
+    AND: [
+      categoryId ? { categoryId } : {},
+      badge === "WINNING" ? { isWinning: true } : {},
+      badge === "NEW" ? { isNew: true } : {},
+      badge === "RECOMMENDED" ? { isRecommended: true } : {},
+      search
+        ? {
+            OR: [
+              { name: { contains: search, mode: "insensitive" } },
+              { description: { contains: search, mode: "insensitive" } },
+            ],
+          }
+        : {},
+    ],
+  };
+
   return prisma.partnerProduct.findMany({
     where: {
       partnerId,
       status: "ACTIVE",
-      product: { status: { in: ["ACTIVE", "OUT_OF_STOCK"] } },
+      product: productWhere,
     },
     orderBy: { assignedAt: "desc" },
     include: {
       product: {
         include: {
+          categoryRef: true,
           media: { orderBy: { sortOrder: "asc" } },
           marketingAssets: { orderBy: [{ kind: "asc" }, { sortOrder: "asc" }] },
         },
       },
     },
   });
+}
+
+/**
+ * Returns active categories with their assigned product counts for the given partner,
+ * as well as overall stats for winning, new, and recommended badges.
+ */
+export async function getPartnerCatalogueStats(partnerId: string) {
+  const [categories, assignedProducts] = await Promise.all([
+    prisma.category.findMany({
+      where: { isActive: true },
+      orderBy: [{ displayOrder: "asc" }, { name: "asc" }],
+      select: {
+        id: true,
+        name: true,
+        nameAr: true,
+        slug: true,
+        icon: true,
+        imageUrl: true,
+        displayOrder: true,
+      },
+    }),
+    prisma.partnerProduct.findMany({
+      where: {
+        partnerId,
+        status: "ACTIVE",
+        product: {
+          status: { in: ["ACTIVE", "OUT_OF_STOCK"] },
+          OR: [{ categoryId: null }, { categoryRef: { isActive: true } }],
+        },
+      },
+      select: {
+        product: {
+          select: {
+            id: true,
+            categoryId: true,
+            isWinning: true,
+            isNew: true,
+            isRecommended: true,
+          },
+        },
+      },
+    }),
+  ]);
+
+  const categoryCounts: Record<string, number> = {};
+  let totalAssigned = 0;
+  let winningCount = 0;
+  let newCount = 0;
+  let recommendedCount = 0;
+
+  for (const item of assignedProducts) {
+    totalAssigned++;
+    const p = item.product;
+    if (p.categoryId) {
+      categoryCounts[p.categoryId] = (categoryCounts[p.categoryId] || 0) + 1;
+    }
+    if (p.isWinning) winningCount++;
+    if (p.isNew) newCount++;
+    if (p.isRecommended) recommendedCount++;
+  }
+
+  const categoriesWithCounts = categories.map((cat) => ({
+    ...cat,
+    productCount: categoryCounts[cat.id] || 0,
+  }));
+
+  return {
+    totalAssigned,
+    winningCount,
+    newCount,
+    recommendedCount,
+    categories: categoriesWithCounts,
+  };
 }
 
 /**
@@ -43,6 +152,7 @@ export async function getAssignedProduct(partnerId: string, productId: string) {
     include: {
       product: {
         include: {
+          categoryRef: true,
           media: { orderBy: { sortOrder: "asc" } },
           marketingAssets: { orderBy: [{ kind: "asc" }, { sortOrder: "asc" }] },
         },

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { SETTING_KEYS } from "./defaults";
+import { welcomeSettingsSchema, levelUpSettingsSchema } from "@/modules/announcements/schemas";
 
 /** Fallback commission applied when no more specific rule exists. */
 export type GlobalCommission = {
@@ -56,4 +57,6 @@ export const SETTING_VALUE_SCHEMAS: Record<string, z.ZodTypeAny> = {
   [SETTING_KEYS.REFERRAL_LEVEL4_RATE]: z.number().min(0).max(1),
   [SETTING_KEYS.REFERRAL_LEVEL5_RATE]: z.number().min(0).max(1),
   [SETTING_KEYS.REFERRAL_AUTO_PROMOTION_ENABLED]: z.boolean(),
+  [SETTING_KEYS.ANNOUNCEMENT_WELCOME_SETTINGS]: welcomeSettingsSchema,
+  [SETTING_KEYS.ANNOUNCEMENT_LEVEL_UP_SETTINGS]: levelUpSettingsSchema,
 };

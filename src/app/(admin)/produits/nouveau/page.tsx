@@ -1,10 +1,15 @@
 import type { Metadata } from "next";
+import { requireSession } from "@/lib/rbac";
+import { listActiveCategories } from "@/modules/categories/service";
 import { ProductForm } from "../product-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const metadata: Metadata = { title: "Nouveau produit" };
 
-export default function NewProductPage() {
+export default async function NewProductPage() {
+  await requireSession(["SUPER_ADMIN", "ADMIN"]);
+  const categories = await listActiveCategories();
+
   return (
     <div className="mx-auto max-w-3xl space-y-5">
       <div>
@@ -19,7 +24,7 @@ export default function NewProductPage() {
           <CardTitle className="text-base">Informations produit</CardTitle>
         </CardHeader>
         <CardContent>
-          <ProductForm />
+          <ProductForm categories={categories} />
         </CardContent>
       </Card>
     </div>

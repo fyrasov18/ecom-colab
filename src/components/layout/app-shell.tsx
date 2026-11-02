@@ -11,6 +11,7 @@ import {
   CalendarClock,
   Contact,
   FilePlus2,
+  FolderTree,
   LayoutDashboard,
   Megaphone,
   Menu,
@@ -57,6 +58,9 @@ function isActive(pathname: string, href: string): boolean {
   if (href === "/partenaires") {
     if (pathname.startsWith("/partenaires/parrainage")) return false;
   }
+  if (href === "/produits") {
+    if (pathname.startsWith("/produits/categories")) return false;
+  }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -74,6 +78,7 @@ const ADMIN_NAV: NavGroup[] = [
     label: "Catalogue",
     items: [
       { href: "/produits", label: "Produits", icon: Package },
+      { href: "/produits/categories", label: "Catégories", icon: FolderTree },
       { href: "/marketing", label: "Marketing", icon: Megaphone },
     ],
   },
@@ -82,6 +87,7 @@ const ADMIN_NAV: NavGroup[] = [
     items: [
       { href: "/partenaires", label: "Partenaires", icon: Users },
       { href: "/partenaires/parrainage", label: "Parrainage", icon: UserPlus },
+      { href: "/annonces", label: "Annonces & Popups", icon: Megaphone },
       { href: "/performances", label: "Performances", icon: BarChart3 },
     ],
   },

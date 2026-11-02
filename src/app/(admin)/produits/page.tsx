@@ -1,7 +1,8 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Plus, Search } from "lucide-react";
+import { FolderTree, Plus, Search } from "lucide-react";
 import { listProducts } from "@/modules/products/service";
+import { listActiveCategories } from "@/modules/categories/service";
 import { formatPrice } from "@/lib/money";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ export default async function ProductsPage({
 }) {
   const sp = await searchParams;
   const search = typeof sp.q === "string" ? sp.q : "";
+  const categoryId = typeof sp.category === "string" && sp.category !== "" ? sp.category : undefined;
   const status =
     sp.status === "ACTIVE" ||
     sp.status === "INACTIVE" ||
@@ -49,7 +51,10 @@ export default async function ProductsPage({
       : undefined;
   const page = Math.max(1, Number(sp.page) || 1);
 
-  const { items, total, totalPages } = await listProducts({ search, status, page });
+  const [{ items, total, totalPages }, categories] = await Promise.all([
+    listProducts({ search, status, categoryId, page }),
+    listActiveCategories(),
+  ]);
 
   return (
     <div className="space-y-5">
@@ -58,11 +63,18 @@ export default async function ProductsPage({
           <h1 className="text-2xl font-semibold tracking-tight">Produits</h1>
           <p className="text-sm text-muted-foreground">{total} produit(s)</p>
         </div>
-        <Button asChild>
-          <Link href="/produits/nouveau">
-            <Plus className="h-4 w-4" /> Ajouter un produit
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline">
+            <Link href="/produits/categories">
+              <FolderTree className="h-4 w-4 mr-1.5" /> Catégories
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href="/produits/nouveau">
+              <Plus className="h-4 w-4 mr-1.5" /> Ajouter un produit
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <form className="flex flex-wrap items-center gap-3" method="GET">
@@ -76,6 +88,14 @@ export default async function ProductsPage({
             className="flex h-9 w-full rounded-md border border-input bg-card pl-8 pr-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
+        <NativeSelect name="category" defaultValue={categoryId ?? ""} className="w-52">
+          <option value="">Toutes les catégories</option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </NativeSelect>
         <NativeSelect name="status" defaultValue={status ?? ""} className="w-44">
           <option value="">Tous les statuts</option>
           <option value="ACTIVE">Actif</option>
@@ -104,6 +124,7 @@ export default async function ProductsPage({
             <TableHeader>
               <TableRow>
                 <TableHead>Produit</TableHead>
+                <TableHead>Catégorie</TableHead>
                 <TableHead>Prix vente</TableHead>
                 <TableHead>Coûts (achat+emball.+livr.)</TableHead>
                 <TableHead>Stock</TableHead>
@@ -120,8 +141,43 @@ export default async function ProductsPage({
                 return (
                   <TableRow key={p.id}>
                     <TableCell>
-                      <div className="font-medium">{p.name}</div>
+                      <div className="font-medium flex items-center gap-1.5 flex-wrap">
+                        <span>{p.name}</span>
+                        {p.isWinning && (
+                          <span
+                            className="inline-flex items-center text-[11px] font-semibold text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded"
+                            title="Produit gagnant"
+                          >
+                            ⭐ Gagnant
+                          </span>
+                        )}
+                        {p.isNew && (
+                          <span
+                            className="inline-flex items-center text-[11px] font-semibold text-sky-600 bg-sky-500/10 px-1.5 py-0.5 rounded"
+                            title="Nouveau produit"
+                          >
+                            🆕 Nouveau
+                          </span>
+                        )}
+                        {p.isRecommended && (
+                          <span
+                            className="inline-flex items-center text-[11px] font-semibold text-rose-600 bg-rose-500/10 px-1.5 py-0.5 rounded"
+                            title="Produit recommandé"
+                          >
+                            🔥 Recommandé
+                          </span>
+                        )}
+                      </div>
                       <div className="text-xs text-muted-foreground">/{p.slug}</div>
+                    </TableCell>
+                    <TableCell>
+                      {p.categoryRef ? (
+                        <Badge variant="outline" className="text-xs">
+                          {p.categoryRef.name}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="font-medium">{formatPrice(p.sellingPrice)} DT</TableCell>
                     <TableCell className="text-muted-foreground">{formatPrice(costs)} DT</TableCell>
@@ -151,11 +207,11 @@ export default async function ProductsPage({
               })}
             </TableBody>
           </Table>
+          <div className="p-4 border-t">
+            <Pagination page={page} totalPages={totalPages} searchParams={sp} />
+          </div>
         </div>
       )}
-
-      <Pagination page={page} totalPages={totalPages} searchParams={sp} />
     </div>
   );
 }
-

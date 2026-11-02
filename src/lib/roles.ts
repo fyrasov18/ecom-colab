@@ -26,6 +26,7 @@ export const ADMIN_PREFIXES = [
   "/finance",
   "/performances",
   "/marketing",
+  "/annonces",
   "/notifications",
   "/parametres",
   "/audit",
