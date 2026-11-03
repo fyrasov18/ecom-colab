@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Menu, X, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export function LandingNavbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -65,6 +66,7 @@ export function LandingNavbar() {
 
         {/* Desktop actions */}
         <div className="hidden sm:flex items-center gap-3">
+          <ThemeToggle className="text-slate-300 hover:text-white hover:bg-white/10 border-white/10" />
           <Button
             asChild
             variant="ghost"
@@ -133,6 +135,10 @@ export function LandingNavbar() {
             >
               FAQ
             </a>
+            <div className="mt-3 flex items-center justify-between pb-2">
+              <span className="text-xs text-slate-400">Mode sombre / clair</span>
+              <ThemeToggle className="text-slate-300 hover:text-white hover:bg-white/10 border-white/10" />
+            </div>
             <div className="mt-3 flex flex-col gap-2 pt-3 border-t border-white/[0.08]">
               <Button asChild variant="outline" className="w-full border-white/10 text-white bg-white/05">
                 <Link href="/login">Connexion à l&apos;espace</Link>

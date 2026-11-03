@@ -36,7 +36,7 @@ export function Pagination({
       >
         <ChevronLeft className="h-4 w-4" /> Précédent
       </Link>
-      <span className="text-sm text-muted-foreground">
+      <span className="text-sm tabular-nums text-muted-foreground font-medium">
         Page {page} / {totalPages}
       </span>
       <Link

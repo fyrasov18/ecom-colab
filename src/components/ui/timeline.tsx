@@ -16,10 +16,10 @@ export type TimelineEntry = {
 
 const TONE_DOT: Record<NonNullable<TimelineEntry["tone"]>, string> = {
   default: "bg-primary",
-  success: "bg-success-600",
-  warning: "bg-warning-600",
-  destructive: "bg-danger-600",
-  muted: "bg-ink-300",
+  success: "bg-success",
+  warning: "bg-warning",
+  destructive: "bg-destructive",
+  muted: "bg-muted-foreground/30",
 };
 
 function formatAt(at: Date | string) {
@@ -60,7 +60,7 @@ export function Timeline({
             <div className="flex flex-col items-center">
               <span
                 className={cn(
-                  "mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full",
+                  "mt-1.5 h-2 w-2 shrink-0 rounded-full",
                   TONE_DOT[tone],
                 )}
                 aria-hidden="true"
@@ -77,7 +77,7 @@ export function Timeline({
               <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                 <p className="text-sm font-medium text-foreground">{entry.title}</p>
                 <time
-                  className="text-xs text-muted-foreground"
+                  className="text-xs text-muted-foreground tabular-nums"
                   dateTime={
                     typeof entry.at === "string" ? entry.at : entry.at.toISOString()
                   }

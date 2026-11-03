@@ -212,6 +212,9 @@ export function AnnouncementModal({ announcement, trigger }: Props) {
                   onChange={(e) => setImageUrl(e.target.value)}
                   placeholder="https://..."
                 />
+                <p className="text-[11px] text-muted-foreground">
+                  Lien direct d&apos;image (.png, .jpg, .webp). Les liens de partage (Kommodo, etc.) sont convertis automatiquement.
+                </p>
               </div>
 
               <div className="space-y-1.5">

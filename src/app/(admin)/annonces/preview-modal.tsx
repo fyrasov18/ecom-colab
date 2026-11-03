@@ -44,6 +44,7 @@ export function NotificationPreviewModal({
   trigger,
 }: PreviewProps) {
   const [open, setOpen] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   const isLevelUp = type === "LEVEL_UP";
   const isWelcome = type === "WELCOME";
@@ -171,10 +172,16 @@ export function NotificationPreviewModal({
               </div>
             )}
 
-            {imageUrl && (
+            {imageUrl && !imageError && (
               <div className="my-4 h-44 w-full overflow-hidden rounded-xl bg-muted border">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={imageUrl} alt={title} className="h-full w-full object-cover" />
+                <img
+                  src={imageUrl}
+                  alt={title}
+                  referrerPolicy="no-referrer"
+                  className="h-full w-full object-cover"
+                  onError={() => setImageError(true)}
+                />
               </div>
             )}
 

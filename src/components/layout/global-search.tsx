@@ -106,7 +106,7 @@ export function GlobalSearch() {
       {open && query.trim().length >= 2 && (
         <div
           id="global-search-results"
-          className="absolute left-0 right-0 top-11 z-50 max-h-96 overflow-y-auto rounded-lg border bg-popover p-1 shadow-lg"
+          className="absolute left-0 right-0 top-11 z-50 max-h-96 overflow-y-auto rounded-md border border-border bg-popover p-1 shadow-lift"
         >
           {loading && (
             <div className="flex items-center gap-2 px-3 py-4 text-sm text-muted-foreground">

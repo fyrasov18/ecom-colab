@@ -20,6 +20,45 @@ import {
 type DbClient = typeof prisma | Prisma.TransactionClient;
 
 /**
+ * Automatically converts web sharing links (like kommodo.ai/i/...)
+ * into direct CDN image URLs (.jpg, .png) so browsers can render them in <img>.
+ */
+export async function resolveDirectImageUrl(rawUrl?: string | null): Promise<string | null> {
+  if (!rawUrl || typeof rawUrl !== "string") return null;
+  const url = rawUrl.trim();
+  if (!url) return null;
+
+  // Direct image extensions are already direct URLs
+  if (/\.(jpeg|jpg|png|webp|svg|gif)(\?.*)?$/i.test(url)) {
+    return url;
+  }
+
+  // Handle Kommodo viewer URLs (e.g. https://kommodo.ai/i/...)
+  if (url.includes("kommodo.ai/i/")) {
+    try {
+      const res = await fetch(url, {
+        headers: { "User-Agent": "Mozilla/5.0" },
+        signal: AbortSignal.timeout(3500),
+      });
+      if (res.ok) {
+        const text = await res.text();
+        const ogMatch =
+          text.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i) ||
+          text.match(/<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:image["']/i) ||
+          text.match(/"imageUrl"\s*:\s*"([^"]+)"/i);
+        if (ogMatch && ogMatch[1]) {
+          return ogMatch[1].replace(/&amp;/g, "&");
+        }
+      }
+    } catch {
+      // Fallback to original url
+    }
+  }
+
+  return url;
+}
+
+/**
  * ─────────────────────────────────────────────────────────────────────────────
  * 1. SETTINGS & TEMPLATES MANAGEMENT
  * ─────────────────────────────────────────────────────────────────────────────
@@ -53,6 +92,9 @@ export async function updateWelcomeNotificationSettings(
   db: DbClient = prisma,
 ): Promise<WelcomeSettings> {
   const parsed = welcomeSettingsSchema.parse(input);
+  if (parsed.imageUrl) {
+    parsed.imageUrl = (await resolveDirectImageUrl(parsed.imageUrl)) || parsed.imageUrl;
+  }
 
   await db.systemSetting.upsert({
     where: { key: SETTING_KEYS.ANNOUNCEMENT_WELCOME_SETTINGS },
@@ -108,6 +150,9 @@ export async function updateLevelUpNotificationSettings(
   db: DbClient = prisma,
 ): Promise<LevelUpSettings> {
   const parsed = levelUpSettingsSchema.parse(input);
+  if (parsed.imageUrl) {
+    parsed.imageUrl = (await resolveDirectImageUrl(parsed.imageUrl)) || parsed.imageUrl;
+  }
 
   await db.systemSetting.upsert({
     where: { key: SETTING_KEYS.ANNOUNCEMENT_LEVEL_UP_SETTINGS },
@@ -241,6 +286,9 @@ export async function getAnnouncementById(id: string) {
 
 export async function createAnnouncement(input: AnnouncementInput, actorId: string) {
   const parsed = announcementInputSchema.parse(input);
+  if (parsed.imageUrl) {
+    parsed.imageUrl = (await resolveDirectImageUrl(parsed.imageUrl)) || parsed.imageUrl;
+  }
 
   const scheduledDate = parsed.scheduledAt && parsed.scheduledAt.trim() !== ""
     ? new Date(parsed.scheduledAt)
@@ -289,6 +337,9 @@ export async function updateAnnouncement(
   actorId: string,
 ) {
   const parsed = announcementInputSchema.parse(input);
+  if (parsed.imageUrl) {
+    parsed.imageUrl = (await resolveDirectImageUrl(parsed.imageUrl)) || parsed.imageUrl;
+  }
 
   const scheduledDate = parsed.scheduledAt && parsed.scheduledAt.trim() !== ""
     ? new Date(parsed.scheduledAt)
@@ -496,7 +547,7 @@ export async function getPendingPartnerPopup(
         buttonText: existingWelcome.buttonText || welcomeSettings.buttonText,
         buttonUrl: existingWelcome.buttonUrl || welcomeSettings.buttonUrl,
         badgeText: welcomeSettings.badgeText,
-        imageUrl: existingWelcome.imageUrl || welcomeSettings.imageUrl || null,
+        imageUrl: welcomeSettings.imageUrl || existingWelcome.imageUrl || null,
         themeColor: welcomeSettings.themeColor,
       };
     }

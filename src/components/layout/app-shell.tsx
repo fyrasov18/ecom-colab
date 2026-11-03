@@ -34,6 +34,7 @@ import { cn } from "@/lib/utils";
 import { formatUnreadCount } from "@/modules/notifications/labels";
 import { GlobalSearch } from "./global-search";
 import { LogoutButton } from "./logout-button";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { PageTransition } from "@/components/ui/page-transition";
 
 type NavItem = { href: string; label: string; icon: LucideIcon; superAdminOnly?: boolean };
@@ -365,9 +366,10 @@ export function AppShell({
 
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
             <TodayChip />
+            <ThemeToggle />
             <Link
               href={notificationsHref}
-              className="relative rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              className="relative rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
               aria-label={
                 unreadCount > 0 ? `Notifications (${badge} non lues)` : "Notifications"
               }
@@ -471,7 +473,7 @@ function NavGroupBlock({
               title={collapsedMode ? item.label : undefined}
               className={cn(
                 /* Base */
-                "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium",
+                "relative flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium",
                 /* Smooth transitions — transform + colors only (GPU) */
                 "transition-all duration-150 ease-out",
                 /* Collapsed icon-only mode */
@@ -518,7 +520,7 @@ function Brand({
   if (compact) {
     return (
       <div className="flex h-16 shrink-0 items-center justify-center border-b border-sidebar-border">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sidebar-active text-sm font-bold text-white">
+        <div className="flex h-9 w-9 items-center justify-center rounded-md bg-sidebar-active text-sm font-bold text-white">
           E
         </div>
       </div>
@@ -526,7 +528,7 @@ function Brand({
   }
   return (
     <div className="flex h-16 shrink-0 items-center gap-2.5 border-b border-sidebar-border px-4">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-active text-sm font-bold text-white">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-sidebar-active text-sm font-bold text-white">
         E
       </div>
       <div className="min-w-0 leading-tight">
@@ -552,7 +554,7 @@ function TodayChip() {
     year: "numeric",
   }).format(new Date());
   return (
-    <div className="hidden h-8 items-center rounded-lg border bg-card px-3 text-xs font-medium text-muted-foreground lg:flex">
+    <div className="hidden h-8 items-center rounded-md border bg-card px-3 text-xs font-medium text-muted-foreground lg:flex">
       {label}
     </div>
   );

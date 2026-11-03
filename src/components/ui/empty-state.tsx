@@ -11,8 +11,8 @@ export function EmptyState({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed px-6 py-14 text-center">
-      <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed px-6 py-14 text-center">
+      <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-md bg-accent text-accent-foreground">
         <Inbox className="h-5 w-5" />
       </div>
       <p className="text-sm font-medium">{title}</p>

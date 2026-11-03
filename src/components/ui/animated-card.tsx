@@ -36,7 +36,7 @@ export function AnimatedCard({
   return (
     <div
       className={cn(
-        "animate-scale-in rounded-xl border bg-card text-card-foreground shadow-card",
+        "animate-scale-in rounded-lg border bg-card text-card-foreground shadow-card",
         !noGlow && "hover-glow",
         className,
       )}
@@ -137,7 +137,7 @@ export function SkeletonCard({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "rounded-xl border bg-card shadow-card overflow-hidden",
+        "rounded-lg border bg-card shadow-card overflow-hidden",
         className,
       )}
       aria-hidden="true"

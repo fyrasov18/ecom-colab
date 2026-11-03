@@ -32,6 +32,7 @@ export function FullscreenPopupModal({ initialPopup, partnerId }: Props) {
   const router = useRouter();
   const [popup, setPopup] = useState<PartnerPopupPayload | null>(initialPopup);
   const [closing, setClosing] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
     if (popup?.id) {
@@ -189,13 +190,15 @@ export function FullscreenPopupModal({ initialPopup, partnerId }: Props) {
           )}
 
           {/* Optional Image */}
-          {popup.imageUrl && (
+          {popup.imageUrl && !imageError && (
             <div className="my-4 h-48 w-full overflow-hidden rounded-xl bg-muted border">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={popup.imageUrl}
                 alt={popup.title}
+                referrerPolicy="no-referrer"
                 className="h-full w-full object-cover"
+                onError={() => setImageError(true)}
               />
             </div>
           )}
