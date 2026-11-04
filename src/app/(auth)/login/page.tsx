@@ -1,8 +1,8 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { LoginForm, type DevAccount } from "./login-form";
-import { LoginBackground } from "@/components/ui/login-background";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { AuthSplitShell } from "@/components/auth/auth-split-shell";
+import { LoginHeroVisual } from "@/components/auth/login-hero-visual";
 
 export const metadata: Metadata = { title: "Connexion" };
 
@@ -24,16 +24,12 @@ function devAccounts(): DevAccount[] | undefined {
 
 export default function LoginPage() {
   return (
-    <main className="relative flex min-h-screen items-center justify-center p-4">
-      <div className="fixed top-4 right-4 z-50">
-        <ThemeToggle variant="outline" />
-      </div>
-      <LoginBackground />
-      <div className="animate-fade-up w-full max-w-md">
+    <AuthSplitShell heroVisual={<LoginHeroVisual />}>
+      <div className="animate-fade-up w-full">
         <Suspense>
           <LoginForm devAccounts={devAccounts()} />
         </Suspense>
       </div>
-    </main>
+    </AuthSplitShell>
   );
 }
