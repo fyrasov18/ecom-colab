@@ -18,13 +18,94 @@ import {
  * ledger transaction creation, and audit trails.
  */
 function createAdversarialMockDb() {
-  const attributions = new Map<string, any>();
-  const commissions = new Map<string, any>();
-  const financialTransactions = new Map<string, any>();
-  const wallets = new Map<string, any>();
-  const orders = new Map<string, any>();
-  const auditLogs: any[] = [];
-  const systemSettings = new Map<string, any>();
+  type MockAttribution = {
+    id?: string;
+    referrerPartnerId?: string;
+    referredPartnerId?: string;
+    status?: string;
+    qualifyingOrderId?: string | null;
+    qualifiedOrderId?: string | null;
+    qualifiedAt?: Date | string | null;
+    [key: string]: unknown;
+  };
+
+  type MockCommission = {
+    id?: string;
+    attributionId?: string;
+    referrerPartnerId?: string;
+    orderId?: string | null;
+    amount?: Prisma.Decimal | number | string;
+    currency?: string;
+    status?: string;
+    idempotencyKey?: string;
+    calculationDetails?: unknown;
+    approvedAt?: Date | string | null;
+    approvedById?: string | null;
+    paidAt?: Date | string | null;
+    paidById?: string | null;
+    rejectionReason?: string | null;
+    createdAt?: Date;
+    updatedAt?: Date;
+    [key: string]: unknown;
+  };
+
+  type MockFinancialTransaction = {
+    id?: string;
+    partnerId?: string;
+    type?: string;
+    amount?: Prisma.Decimal | number | string;
+    currency?: string;
+    status?: string;
+    idempotencyKey?: string;
+    orderId?: string | null;
+    withdrawalId?: string | null;
+    availableAt?: Date | string | null;
+    description?: string | null;
+    createdById?: string | null;
+    createdAt?: Date;
+    [key: string]: unknown;
+  };
+
+  type MockWallet = {
+    id?: string;
+    partnerId?: string;
+    balance?: Prisma.Decimal | number;
+    pendingBalance?: Prisma.Decimal | number;
+    currency?: string;
+    createdAt?: Date;
+    updatedAt?: Date;
+    [key: string]: unknown;
+  };
+
+  type MockOrder = {
+    id?: string;
+    partnerId?: string;
+    status?: string;
+    earningStatus?: string;
+    [key: string]: unknown;
+  };
+
+  type MockSystemSetting = {
+    id?: string;
+    key?: string;
+    value?: unknown;
+    [key: string]: unknown;
+  };
+
+
+  type MockAuditLog = {
+    id: string;
+    createdAt: Date;
+    [key: string]: unknown;
+  };
+
+  const attributions = new Map<string, MockAttribution>();
+  const commissions = new Map<string, MockCommission>();
+  const financialTransactions = new Map<string, MockFinancialTransaction>();
+  const wallets = new Map<string, MockWallet>();
+  const orders = new Map<string, MockOrder>();
+  const auditLogs: MockAuditLog[] = [];
+  const systemSettings = new Map<string, MockSystemSetting>();
 
   let idCounter = 1;
   const nextId = (prefix: string) => `${prefix}-${idCounter++}`;
@@ -45,7 +126,7 @@ function createAdversarialMockDb() {
         }
         return null;
       },
-      count: async ({ where }: { where: any }) => {
+      count: async ({ where }: { where?: { referrerPartnerId?: string; status?: string } }) => {
         let list = Array.from(attributions.values());
         if (where?.referrerPartnerId) {
           list = list.filter((a) => a.referrerPartnerId === where.referrerPartnerId);
@@ -58,7 +139,7 @@ function createAdversarialMockDb() {
     },
 
     referralCommission: {
-      create: async ({ data }: { data: any }) => {
+      create: async ({ data }: { data: Prisma.ReferralCommissionUncheckedCreateInput }) => {
         // Enforce unique idempotencyKey constraint
         for (const c of commissions.values()) {
           if (c.idempotencyKey === data.idempotencyKey) {
@@ -108,34 +189,43 @@ function createAdversarialMockDb() {
         if (!row) throw new Error(`Commission not found: ${where.id}`);
         return { ...row };
       },
-      updateMany: async ({ where, data }: { where: any; data: any }) => {
+      updateMany: async ({ where, data }: { where: { id?: string; status?: string | { in?: string[] } }; data: Record<string, unknown> }) => {
         let count = 0;
-        const row = commissions.get(where.id);
-        if (row) {
-          let matches = true;
-          if (where.status) {
-            if (typeof where.status === "string" && row.status !== where.status) {
-              matches = false;
-            } else if (where.status.in && !where.status.in.includes(row.status)) {
-              matches = false;
+        const targetId = where.id;
+        if (targetId) {
+          const row = commissions.get(targetId);
+          if (row) {
+            let matches = true;
+            if (where.status) {
+              if (typeof where.status === "string" && row.status !== where.status) {
+                matches = false;
+              } else if (
+                typeof where.status === "object" &&
+                where.status !== null &&
+                "in" in where.status &&
+                Array.isArray((where.status as { in?: string[] }).in) &&
+                !(where.status as { in: string[] }).in.includes(String(row.status))
+              ) {
+                matches = false;
+              }
             }
-          }
-          if (matches) {
-            Object.assign(row, data, { updatedAt: new Date() });
-            commissions.set(where.id, row);
-            count++;
+            if (matches) {
+              Object.assign(row, data, { updatedAt: new Date() });
+              commissions.set(targetId, row);
+              count++;
+            }
           }
         }
         return { count };
       },
-      update: async ({ where, data }: { where: { id: string }; data: any }) => {
+      update: async ({ where, data }: { where: { id: string }; data: Record<string, unknown> }) => {
         const row = commissions.get(where.id);
         if (!row) throw new Error("Commission not found");
         Object.assign(row, data, { updatedAt: new Date() });
         commissions.set(where.id, row);
         return { ...row };
       },
-      findMany: async (args?: { where?: any }) => {
+      findMany: async (args?: { where?: { referrerPartnerId?: string; status?: string } }) => {
         let list = Array.from(commissions.values());
         if (args?.where) {
           const w = args.where;
@@ -147,7 +237,7 @@ function createAdversarialMockDb() {
     },
 
     financialTransaction: {
-      create: async ({ data }: { data: any }) => {
+      create: async ({ data }: { data: Prisma.FinancialTransactionUncheckedCreateInput }) => {
         for (const t of financialTransactions.values()) {
           if (t.idempotencyKey === data.idempotencyKey) {
             const p2002 = new Prisma.PrismaClientKnownRequestError(
@@ -184,17 +274,17 @@ function createAdversarialMockDb() {
         }
         return null;
       },
-      findMany: async (args?: { where?: any }) => {
+      findMany: async (args?: { where?: { partnerId?: string } }) => {
         let list = Array.from(financialTransactions.values());
         if (args?.where?.partnerId) {
-          list = list.filter((t) => t.partnerId === args.where.partnerId);
+          list = list.filter((t) => t.partnerId === args.where?.partnerId);
         }
         return list.map((t) => ({ ...t }));
       },
     },
 
     wallet: {
-      upsert: async ({ where, create, update }: { where: { partnerId: string }; create: any; update: any }) => {
+      upsert: async ({ where, create, update }: { where: { partnerId: string }; create: Record<string, unknown>; update: Record<string, unknown> }) => {
         const existing = wallets.get(where.partnerId);
         if (existing) {
           const merged = { ...existing, ...update, updatedAt: new Date() };
@@ -229,7 +319,7 @@ function createAdversarialMockDb() {
         const row = systemSettings.get(where.key);
         return row ? { ...row } : null;
       },
-      upsert: async ({ where, create, update }: { where: { key: string }; create: any; update: any }) => {
+      upsert: async ({ where, create, update }: { where: { key: string }; create: Record<string, unknown>; update: Record<string, unknown> }) => {
         const existing = systemSettings.get(where.key);
         if (existing) {
           const merged = { ...existing, ...update };
@@ -242,7 +332,7 @@ function createAdversarialMockDb() {
     },
 
     auditLog: {
-      create: async ({ data }: { data: any }) => {
+      create: async ({ data }: { data: Record<string, unknown> }) => {
         const row = { id: nextId("audit"), ...data, createdAt: new Date() };
         auditLogs.push(row);
         return row;
@@ -443,7 +533,7 @@ describe("Empirical Challenger 1: Milestone 4 Lifecycle & Concurrency Stress Tes
 
       // 5. Undefined reference via positional parameter
       await expect(
-        payReferralCommission(comm.id, "finance-actor", undefined as any, { db }),
+        payReferralCommission(comm.id, "finance-actor", undefined, { db }),
       ).rejects.toThrow(/Payment reference.*strictly required/i);
 
       // Invariance check: status remains APPROVED_FOR_PAYMENT, paidAt is null, zero ledger entries

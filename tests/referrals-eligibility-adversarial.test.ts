@@ -7,8 +7,17 @@ import {
 import type { Prisma } from "@prisma/client";
 
 describe("Adversarial Empirical Stress Tests: validateReferralEligibility", () => {
+  type MockPartner = {
+    id: string;
+    userId: string;
+    code: string;
+    status: string;
+    phone: string;
+    user: { id: string; email: string };
+  };
+
   // Helper to create mock partner
-  const createMockPartner = (overrides?: Partial<any>) => ({
+  const createMockPartner = (overrides?: Partial<MockPartner>) => ({
     id: "referrer-active-1",
     userId: "user-ref-1",
     code: "PREF01",

@@ -12,6 +12,27 @@ import { registrationSchema } from "@/modules/registration/schemas";
 import { registerPartner } from "@/modules/registration/service";
 import { authorizeCredentials, PendingPartnerError } from "@/lib/auth";
 import bcrypt from "bcryptjs";
+import { Role, type Partner, type ReferralLink } from "@prisma/client";
+
+type ReferralLinkWithPartner = Prisma.ReferralLinkGetPayload<{
+  include: {
+    partner: {
+      include: {
+        user: { select: { id: true; email: true } };
+      };
+    };
+  };
+}>;
+
+type PartnerWithUser = Prisma.PartnerGetPayload<{
+  include: {
+    user: { select: { id: true; email: true } };
+  };
+}>;
+
+type UserWithPartner = Prisma.UserGetPayload<{
+  include: { partner: true };
+}>;
 import type { Prisma } from "@prisma/client";
 
 describe("Milestone 2: Referral Permissions, Code Generation, Attribution & Registration Flow", () => {
@@ -639,7 +660,7 @@ describe("Milestone 2: Referral Permissions, Code Generation, Attribution & Regi
         code: "PREF01",
         isActive: true,
         partner: activeReferrer,
-      } as any);
+      } as unknown as ReferralLinkWithPartner);
 
       const res = await registerPartner({
         fullName: "Candidate Same Email",
@@ -677,9 +698,9 @@ describe("Milestone 2: Referral Permissions, Code Generation, Attribution & Regi
         code: "PREF02",
         isActive: true,
         partner: activeReferrer,
-      } as any);
+      } as unknown as ReferralLinkWithPartner);
 
-      const partnerSpy = vi.spyOn(prisma.partner, "findUnique").mockResolvedValue(activeReferrer as any);
+      const partnerSpy = vi.spyOn(prisma.partner, "findUnique").mockResolvedValue(activeReferrer as unknown as PartnerWithUser);
       const userSpy = vi.spyOn(prisma.user, "findUnique").mockResolvedValue(null);
 
       const res = await registerPartner({
@@ -774,7 +795,7 @@ describe("Milestone 2: Referral Permissions, Code Generation, Attribution & Regi
       const requireSessionSpy = vi.spyOn(rbacModule, "requireSession").mockResolvedValue({
         id: "user-no-partner",
         email: "admin@ecomcolab.tn",
-        role: "PARTNER" as any,
+        role: Role.PARTNER,
         firstName: "Test",
         lastName: "User",
         partnerId: null,
@@ -796,7 +817,7 @@ describe("Milestone 2: Referral Permissions, Code Generation, Attribution & Regi
       const requireSessionSpy = vi.spyOn(rbacModule, "requireSession").mockResolvedValue({
         id: "user-p1",
         email: "p1@partner.tn",
-        role: "PARTNER" as any,
+        role: Role.PARTNER,
         firstName: "Nour",
         lastName: "Salah",
         partnerId: "partner-from-session",
@@ -806,14 +827,14 @@ describe("Milestone 2: Referral Permissions, Code Generation, Attribution & Regi
         id: "partner-from-session",
         code: "P001",
         status: "ACTIVE",
-      } as any);
+      } as unknown as Partner);
 
       const linkSpy = vi.spyOn(prisma.referralLink, "findFirst").mockResolvedValue({
         id: "link-session",
         partnerId: "partner-from-session",
         code: "P001",
         isActive: true,
-      } as any);
+      } as unknown as ReferralLink);
 
       const res = await getPartnerReferralLinkAction();
       expect(res.ok).toBe(true);
@@ -850,7 +871,7 @@ describe("Milestone 2: Referral Permissions, Code Generation, Attribution & Regi
 
       // Mock prisma to return pendingUser
       const { prisma } = await import("@/lib/prisma");
-      const findUniqueSpy = vi.spyOn(prisma.user, "findUnique").mockResolvedValue(pendingUser as any);
+      const findUniqueSpy = vi.spyOn(prisma.user, "findUnique").mockResolvedValue(pendingUser as unknown as UserWithPartner);
 
       await expect(
         authorizeCredentials({
@@ -864,8 +885,8 @@ describe("Milestone 2: Referral Permissions, Code Generation, Attribution & Regi
           email: "pending@example.com",
           password: "Password123!",
         });
-      } catch (err: any) {
-        expect(err.code).toBe("pending");
+      } catch (err: unknown) {
+        expect((err as PendingPartnerError).code).toBe("pending");
       }
 
       findUniqueSpy.mockRestore();
@@ -888,7 +909,7 @@ describe("Milestone 2: Referral Permissions, Code Generation, Attribution & Regi
       };
 
       const { prisma } = await import("@/lib/prisma");
-      const findUniqueSpy = vi.spyOn(prisma.user, "findUnique").mockResolvedValue(suspendedUser as any);
+      const findUniqueSpy = vi.spyOn(prisma.user, "findUnique").mockResolvedValue(suspendedUser as unknown as UserWithPartner);
 
       const result = await authorizeCredentials({
         email: "suspended@example.com",
@@ -916,7 +937,7 @@ describe("Milestone 2: Referral Permissions, Code Generation, Attribution & Regi
       };
 
       const { prisma } = await import("@/lib/prisma");
-      const findUniqueSpy = vi.spyOn(prisma.user, "findUnique").mockResolvedValue(activeUser as any);
+      const findUniqueSpy = vi.spyOn(prisma.user, "findUnique").mockResolvedValue(activeUser as unknown as UserWithPartner);
 
       const result = await authorizeCredentials({
         email: "active@example.com",
@@ -950,7 +971,7 @@ describe("Milestone 2: Referral Permissions, Code Generation, Attribution & Regi
       };
 
       const { prisma } = await import("@/lib/prisma");
-      const findUniqueSpy = vi.spyOn(prisma.user, "findUnique").mockResolvedValue(adminUser as any);
+      const findUniqueSpy = vi.spyOn(prisma.user, "findUnique").mockResolvedValue(adminUser as unknown as UserWithPartner);
 
       const result = await authorizeCredentials({
         email: "admin@ecomcolab.tn",

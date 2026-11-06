@@ -468,7 +468,7 @@ describe("Milestone 3: Qualification & Partner Levels", () => {
   // ==========================================================================
   describe("promotion engine with auto-promotion flag", () => {
     it("when auto-promotion is disabled, partner stays at Level 1 pending admin confirmation", async () => {
-      let savedState: any = null;
+      let savedState: PartnerReferralLevelState | null = null;
 
       const mockDb = {
         partner: {
@@ -530,14 +530,15 @@ describe("Milestone 3: Qualification & Partner Levels", () => {
     });
 
     it("when auto-promotion is enabled, automatically promotes to Level 2 (at 10) and Level 3 (at 100)", async () => {
-      let savedState: any = null;
+      let savedState: PartnerReferralLevelState | null = null;
+      const countMock = vi.fn().mockResolvedValue(10);
 
       const mockDb = {
         partner: {
           findUnique: vi.fn().mockResolvedValue({ id: "p-auto", createdAt: new Date("2026-01-01") }),
         },
         referralAttribution: {
-          count: vi.fn().mockResolvedValue(10), // 10 qualified referrals
+          count: countMock, // 10 qualified referrals
         },
         systemSetting: {
           findUnique: vi.fn().mockImplementation(({ where: { key } }) => {
@@ -573,7 +574,7 @@ describe("Milestone 3: Qualification & Partner Levels", () => {
       });
 
       // Partner reaches 10 qualified referrals
-      (mockDb.referralAttribution.count as any).mockResolvedValue(100);
+      countMock.mockResolvedValue(100);
 
       const resultLevel3 = await getPartnerReferralLevel("p-auto", mockDb);
       expect(resultLevel3.level).toBe(3);

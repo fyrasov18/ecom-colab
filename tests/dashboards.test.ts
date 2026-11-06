@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import Decimal from "decimal.js";
 import * as rbacModule from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
+import type { ReferralCommission, AuditLog, FinancialTransaction, Wallet, Partner, SystemSetting } from "@prisma/client";
 import {
   approveCommissionAction,
   rejectCommissionAction,
@@ -37,8 +38,9 @@ describe("Milestone 5: Admin & Partner Dashboards UI & Actions", () => {
   // ==========================================================================
   describe("Suite 1: Admin Authorization Gates & Role Enforcement", () => {
     it("rejects unauthenticated users attempting admin access (redirects to /login)", async () => {
-      const redirectError = new Error("NEXT_REDIRECT");
-      (redirectError as any).digest = "NEXT_REDIRECT;replace;/login;307;";
+      const redirectError = Object.assign(new Error("NEXT_REDIRECT"), {
+        digest: "NEXT_REDIRECT;replace;/login;307;",
+      });
 
       vi.spyOn(rbacModule, "requireSession").mockRejectedValue(redirectError);
 
@@ -59,9 +61,9 @@ describe("Milestone 5: Admin & Partner Dashboards UI & Actions", () => {
     });
 
     it("rejects partner role attempting to call admin actions (redirects to /tableau-de-bord)", async () => {
-      const roleRedirectError = new Error("NEXT_REDIRECT");
-      (roleRedirectError as any).digest =
-        "NEXT_REDIRECT;replace;/tableau-de-bord;307;";
+      const roleRedirectError = Object.assign(new Error("NEXT_REDIRECT"), {
+        digest: "NEXT_REDIRECT;replace;/tableau-de-bord;307;",
+      });
 
       vi.spyOn(rbacModule, "requireSession").mockRejectedValue(roleRedirectError);
 
@@ -151,9 +153,9 @@ describe("Milestone 5: Admin & Partner Dashboards UI & Actions", () => {
     });
 
     it("rejects unapproved partner (e.g. status PENDING)", async () => {
-      const pendingRedirectError = new Error("NEXT_REDIRECT");
-      (pendingRedirectError as any).digest =
-        "NEXT_REDIRECT;replace;/login?error=pending;307;";
+      const pendingRedirectError = Object.assign(new Error("NEXT_REDIRECT"), {
+        digest: "NEXT_REDIRECT;replace;/login?error=pending;307;",
+      });
 
       vi.spyOn(rbacModule, "requireSession").mockRejectedValue(pendingRedirectError);
 
@@ -196,7 +198,7 @@ describe("Milestone 5: Admin & Partner Dashboards UI & Actions", () => {
         };
 
         vi.spyOn(prisma.referralCommission, "findUnique").mockResolvedValue(
-          mockCommission as any,
+          mockCommission as unknown as ReferralCommission,
         );
         vi.spyOn(prisma.referralCommission, "updateMany").mockResolvedValue({
           count: 1,
@@ -206,13 +208,13 @@ describe("Milestone 5: Admin & Partner Dashboards UI & Actions", () => {
           status: "APPROVED_FOR_PAYMENT",
           approvedAt: new Date(),
           approvedById: mockAdminUser.id,
-        } as any);
-        vi.spyOn(prisma.auditLog, "create").mockResolvedValue({} as any);
+        } as unknown as ReferralCommission);
+        vi.spyOn(prisma.auditLog, "create").mockResolvedValue({} as unknown as AuditLog);
 
         const res = await approveCommissionAction({ commissionId: "comm-el-1" });
         expect(res.ok).toBe(true);
         expect(res.message).toMatch(/approuvée pour paiement/i);
-        expect((res.data as any)?.status).toBe("APPROVED_FOR_PAYMENT");
+        expect((res.data as { status?: unknown })?.status).toBe("APPROVED_FOR_PAYMENT");
       });
 
       it("blocks approving an already PAID commission", async () => {
@@ -223,7 +225,7 @@ describe("Milestone 5: Admin & Partner Dashboards UI & Actions", () => {
         };
 
         vi.spyOn(prisma.referralCommission, "findUnique").mockResolvedValue(
-          mockPaidCommission as any,
+          mockPaidCommission as unknown as ReferralCommission,
         );
 
         const res = await approveCommissionAction({ commissionId: "comm-paid-1" });
@@ -239,7 +241,7 @@ describe("Milestone 5: Admin & Partner Dashboards UI & Actions", () => {
         };
 
         vi.spyOn(prisma.referralCommission, "findUnique").mockResolvedValue(
-          mockRejectedCommission as any,
+          mockRejectedCommission as unknown as ReferralCommission,
         );
 
         const res = await approveCommissionAction({ commissionId: "comm-rej-1" });
@@ -274,14 +276,14 @@ describe("Milestone 5: Admin & Partner Dashboards UI & Actions", () => {
         };
 
         vi.spyOn(prisma.referralCommission, "findUnique").mockResolvedValue(
-          mockCommission as any,
+          mockCommission as unknown as ReferralCommission,
         );
         vi.spyOn(prisma.referralCommission, "update").mockResolvedValue({
           ...mockCommission,
           status: "REJECTED",
           rejectionReason: "Commande retournée par le client",
-        } as any);
-        vi.spyOn(prisma.auditLog, "create").mockResolvedValue({} as any);
+        } as unknown as ReferralCommission);
+        vi.spyOn(prisma.auditLog, "create").mockResolvedValue({} as unknown as AuditLog);
 
         const res = await rejectCommissionAction({
           commissionId: "comm-pending-1",
@@ -290,7 +292,7 @@ describe("Milestone 5: Admin & Partner Dashboards UI & Actions", () => {
 
         expect(res.ok).toBe(true);
         expect(res.message).toMatch(/Commission rejetée/i);
-        expect((res.data as any)?.status).toBe("REJECTED");
+        expect((res.data as { status?: unknown })?.status).toBe("REJECTED");
       });
 
       it("cannot reject a commission that is already PAID", async () => {
@@ -300,7 +302,7 @@ describe("Milestone 5: Admin & Partner Dashboards UI & Actions", () => {
         };
 
         vi.spyOn(prisma.referralCommission, "findUnique").mockResolvedValue(
-          mockPaidCommission as any,
+          mockPaidCommission as unknown as ReferralCommission,
         );
 
         const res = await rejectCommissionAction({
@@ -337,7 +339,7 @@ describe("Milestone 5: Admin & Partner Dashboards UI & Actions", () => {
         };
 
         vi.spyOn(prisma.referralCommission, "findUnique").mockResolvedValue(
-          mockEligibleCommission as any,
+          mockEligibleCommission as unknown as ReferralCommission,
         );
 
         const res = await payCommissionAction({
@@ -359,26 +361,26 @@ describe("Milestone 5: Admin & Partner Dashboards UI & Actions", () => {
         };
 
         vi.spyOn(prisma.referralCommission, "findUnique").mockResolvedValue(
-          mockApprovedCommission as any,
+          mockApprovedCommission as unknown as ReferralCommission,
         );
         vi.spyOn(prisma.referralCommission, "updateMany").mockResolvedValue({
           count: 1,
         });
-        vi.spyOn(prisma.financialTransaction, "create").mockResolvedValue({} as any);
+        vi.spyOn(prisma.financialTransaction, "create").mockResolvedValue({} as unknown as FinancialTransaction);
         vi.spyOn(prisma.financialTransaction, "aggregate").mockResolvedValue({
           _sum: { amount: new Decimal("60.000") },
-        } as any);
+        } as unknown as Awaited<ReturnType<typeof prisma.financialTransaction.aggregate>>);
         vi.spyOn(prisma.withdrawal, "aggregate").mockResolvedValue({
           _sum: { amount: new Decimal("0") },
-        } as any);
-        vi.spyOn(prisma.wallet, "upsert").mockResolvedValue({} as any);
-        vi.spyOn(prisma.auditLog, "create").mockResolvedValue({} as any);
+        } as unknown as Awaited<ReturnType<typeof prisma.withdrawal.aggregate>>);
+        vi.spyOn(prisma.wallet, "upsert").mockResolvedValue({} as unknown as Wallet);
+        vi.spyOn(prisma.auditLog, "create").mockResolvedValue({} as unknown as AuditLog);
         vi.spyOn(prisma.referralCommission, "findUniqueOrThrow").mockResolvedValue({
           ...mockApprovedCommission,
           status: "PAID",
           paidAt: new Date(),
           paidById: mockAdminUser.id,
-        } as any);
+        } as unknown as ReferralCommission);
 
         const res = await payCommissionAction({
           commissionId: "comm-appr-3",
@@ -387,7 +389,7 @@ describe("Milestone 5: Admin & Partner Dashboards UI & Actions", () => {
 
         expect(res.ok).toBe(true);
         expect(res.message).toMatch(/Paiement enregistré avec succès/i);
-        expect((res.data as any)?.status).toBe("PAID");
+        expect((res.data as { status?: unknown })?.status).toBe("PAID");
       });
 
       it("blocks duplicate payouts (idempotency)", async () => {
@@ -397,7 +399,7 @@ describe("Milestone 5: Admin & Partner Dashboards UI & Actions", () => {
         };
 
         vi.spyOn(prisma.referralCommission, "findUnique").mockResolvedValue(
-          mockPaidCommission as any,
+          mockPaidCommission as unknown as ReferralCommission,
         );
 
         const res = await payCommissionAction({
@@ -422,11 +424,11 @@ describe("Milestone 5: Admin & Partner Dashboards UI & Actions", () => {
         vi.spyOn(prisma.partner, "findUnique").mockResolvedValue({
           id: "partner-promoted-1",
           createdAt: new Date(),
-        } as any);
+        } as unknown as Partner);
         vi.spyOn(prisma.systemSetting, "findUnique").mockResolvedValue(null);
-        vi.spyOn(prisma.systemSetting, "upsert").mockResolvedValue({} as any);
+        vi.spyOn(prisma.systemSetting, "upsert").mockResolvedValue({} as unknown as SystemSetting);
         vi.spyOn(prisma.referralAttribution, "count").mockResolvedValue(3);
-        vi.spyOn(prisma.auditLog, "create").mockResolvedValue({} as any);
+        vi.spyOn(prisma.auditLog, "create").mockResolvedValue({} as unknown as AuditLog);
 
         const res = await confirmPromotionAction({
           partnerId: "partner-promoted-1",
@@ -435,7 +437,7 @@ describe("Milestone 5: Admin & Partner Dashboards UI & Actions", () => {
 
         expect(res.ok).toBe(true);
         expect(res.message).toMatch(/Promotion confirmée avec succès/i);
-        expect((res.data as any)?.level).toBe(2);
+        expect((res.data as { level?: unknown })?.level).toBe(2);
       });
     });
   });

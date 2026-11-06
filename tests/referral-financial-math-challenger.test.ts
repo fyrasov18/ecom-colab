@@ -11,6 +11,7 @@ import {
   deleteExpense,
   ExpenseError,
 } from "@/modules/finance/expenses";
+import type { CommissionCalculationDetails } from "@/modules/finance/referral-commissions";
 import {
   createReferralCommission,
   approveReferralCommission,
@@ -28,20 +29,111 @@ import { createWithdrawalPayment } from "@/modules/finance/ledger";
  * Emulates Prisma models, transactions, unique constraints, atomic operations, and ledger.
  */
 function createFinancialMockDb() {
-  const expenses = new Map<string, any>();
-  const attributions = new Map<string, any>();
-  const commissions = new Map<string, any>();
-  const financialTransactions = new Map<string, any>();
-  const wallets = new Map<string, any>();
-  const orders = new Map<string, any>();
-  const auditLogs: any[] = [];
+  type MockAttribution = {
+    id?: string;
+    referrerPartnerId?: string;
+    referredPartnerId?: string;
+    status?: string;
+    qualifyingOrderId?: string | null;
+    qualifiedOrderId?: string | null;
+    qualifiedAt?: Date | string | null;
+    [key: string]: unknown;
+  };
+
+  type MockCommission = {
+    id?: string;
+    attributionId?: string;
+    referrerPartnerId?: string;
+    orderId?: string | null;
+    amount?: Prisma.Decimal | number | string;
+    currency?: string;
+    status?: string;
+    idempotencyKey?: string;
+    calculationDetails?: unknown;
+    approvedAt?: Date | string | null;
+    approvedById?: string | null;
+    paidAt?: Date | string | null;
+    paidById?: string | null;
+    rejectionReason?: string | null;
+    createdAt?: Date;
+    updatedAt?: Date;
+    [key: string]: unknown;
+  };
+
+  type MockFinancialTransaction = {
+    id?: string;
+    partnerId?: string;
+    type?: string;
+    amount?: Prisma.Decimal | number | string;
+    currency?: string;
+    status?: string;
+    idempotencyKey?: string;
+    orderId?: string | null;
+    withdrawalId?: string | null;
+    availableAt?: Date | string | null;
+    description?: string | null;
+    createdById?: string | null;
+    createdAt?: Date;
+    [key: string]: unknown;
+  };
+
+  type MockWallet = {
+    id?: string;
+    partnerId?: string;
+    balance?: Prisma.Decimal | number;
+    pendingBalance?: Prisma.Decimal | number;
+    currency?: string;
+    createdAt?: Date;
+    updatedAt?: Date;
+    [key: string]: unknown;
+  };
+
+  type MockOrder = {
+    id?: string;
+    partnerId?: string;
+    status?: string;
+    earningStatus?: string;
+    [key: string]: unknown;
+  };
+
+
+  type MockExpense = {
+    id?: string;
+    title?: string;
+    category?: string;
+    amount?: Prisma.Decimal | number | string;
+    currency?: string;
+    status?: string;
+    period?: string | null;
+    notes?: string | null;
+    approvedAt?: Date | string | null;
+    approvedById?: string | null;
+    createdById?: string | null;
+    createdAt?: Date;
+    updatedAt?: Date;
+    [key: string]: unknown;
+  };
+
+  type MockAuditLog = {
+    id: string;
+    createdAt: Date;
+    [key: string]: unknown;
+  };
+
+  const expenses = new Map<string, MockExpense>();
+  const attributions = new Map<string, MockAttribution>();
+  const commissions = new Map<string, MockCommission>();
+  const financialTransactions = new Map<string, MockFinancialTransaction>();
+  const wallets = new Map<string, MockWallet>();
+  const orders = new Map<string, MockOrder>();
+  const auditLogs: MockAuditLog[] = [];
 
   let idCounter = 1;
   const nextId = (p: string) => `${p}-${idCounter++}`;
 
   const client = {
     expense: {
-      create: async ({ data }: { data: any }) => {
+      create: async ({ data }: { data: Prisma.ExpenseUncheckedCreateInput }) => {
         const id = nextId("exp");
         const record = {
           id,
@@ -65,7 +157,7 @@ function createFinancialMockDb() {
         const row = expenses.get(where.id);
         return row ? { ...row } : null;
       },
-      findMany: async (args?: { where?: any; orderBy?: any }) => {
+      findMany: async (args?: { where?: { status?: string; period?: string; id?: { in?: string[] } }; orderBy?: unknown }) => {
         let list = Array.from(expenses.values());
         if (args?.where) {
           const w = args.where;
@@ -73,12 +165,12 @@ function createFinancialMockDb() {
           if (w.period) list = list.filter((r) => r.period === w.period);
           if (w.id?.in) {
             const allowed = new Set(w.id.in);
-            list = list.filter((r) => allowed.has(r.id));
+            list = list.filter((r) => Boolean(r.id && allowed.has(r.id)));
           }
         }
         return list.map((r) => ({ ...r }));
       },
-      update: async ({ where, data }: { where: { id: string }; data: any }) => {
+      update: async ({ where, data }: { where: { id: string }; data: Record<string, unknown> }) => {
         const existing = expenses.get(where.id);
         if (!existing) throw new Error("Expense not found");
         const updated = { ...existing, ...data, updatedAt: new Date() };
@@ -102,7 +194,7 @@ function createFinancialMockDb() {
     },
 
     referralCommission: {
-      create: async ({ data }: { data: any }) => {
+      create: async ({ data }: { data: Prisma.ReferralCommissionUncheckedCreateInput }) => {
         for (const c of commissions.values()) {
           if (c.idempotencyKey === data.idempotencyKey) {
             throw new Prisma.PrismaClientKnownRequestError(
@@ -150,44 +242,53 @@ function createFinancialMockDb() {
         if (!row) throw new Error(`Commission not found: ${where.id}`);
         return { ...row };
       },
-      updateMany: async ({ where, data }: { where: any; data: any }) => {
+      updateMany: async ({ where, data }: { where: { id?: string; status?: string | { in?: string[] } }; data: Record<string, unknown> }) => {
         let count = 0;
-        const row = commissions.get(where.id);
-        if (row) {
-          let matches = true;
-          if (where.status) {
-            if (typeof where.status === "string" && row.status !== where.status) {
-              matches = false;
-            } else if (where.status.in && !where.status.in.includes(row.status)) {
-              matches = false;
+        const targetId = where.id;
+        if (targetId) {
+          const row = commissions.get(targetId);
+          if (row) {
+            let matches = true;
+            if (where.status) {
+              if (typeof where.status === "string" && row.status !== where.status) {
+                matches = false;
+              } else if (
+                typeof where.status === "object" &&
+                where.status !== null &&
+                "in" in where.status &&
+                Array.isArray((where.status as { in?: string[] }).in) &&
+                !(where.status as { in: string[] }).in.includes(String(row.status))
+              ) {
+                matches = false;
+              }
             }
-          }
-          if (matches) {
-            Object.assign(row, data, { updatedAt: new Date() });
-            commissions.set(where.id, row);
-            count++;
+            if (matches) {
+              Object.assign(row, data, { updatedAt: new Date() });
+              commissions.set(targetId, row);
+              count++;
+            }
           }
         }
         return { count };
       },
-      update: async ({ where, data }: { where: { id: string }; data: any }) => {
+      update: async ({ where, data }: { where: { id: string }; data: Record<string, unknown> }) => {
         const row = commissions.get(where.id);
         if (!row) throw new Error("Commission not found");
         Object.assign(row, data, { updatedAt: new Date() });
         commissions.set(where.id, row);
         return { ...row };
       },
-      findMany: async (args?: { where?: any }) => {
+      findMany: async (args?: { where?: { referrerPartnerId?: string; status?: string } }) => {
         let list = Array.from(commissions.values());
         if (args?.where?.referrerPartnerId) {
-          list = list.filter((c) => c.referrerPartnerId === args.where.referrerPartnerId);
+          list = list.filter((c) => c.referrerPartnerId === args.where?.referrerPartnerId);
         }
         return list.map((c) => ({ ...c }));
       },
     },
 
     financialTransaction: {
-      create: async ({ data }: { data: any }) => {
+      create: async ({ data }: { data: Prisma.FinancialTransactionUncheckedCreateInput }) => {
         for (const t of financialTransactions.values()) {
           if (t.idempotencyKey === data.idempotencyKey) {
             throw new Prisma.PrismaClientKnownRequestError(
@@ -223,17 +324,17 @@ function createFinancialMockDb() {
         }
         return null;
       },
-      findMany: async (args?: { where?: any }) => {
+      findMany: async (args?: { where?: { partnerId?: string } }) => {
         let list = Array.from(financialTransactions.values());
         if (args?.where?.partnerId) {
-          list = list.filter((t) => t.partnerId === args.where.partnerId);
+          list = list.filter((t) => t.partnerId === args.where?.partnerId);
         }
         return list.map((t) => ({ ...t }));
       },
     },
 
     wallet: {
-      upsert: async ({ where, create, update }: { where: { partnerId: string }; create: any; update: any }) => {
+      upsert: async ({ where, create, update }: { where: { partnerId: string }; create: Record<string, unknown>; update: Record<string, unknown> }) => {
         const existing = wallets.get(where.partnerId);
         if (existing) {
           const merged = { ...existing, ...update, updatedAt: new Date() };
@@ -258,7 +359,7 @@ function createFinancialMockDb() {
     },
 
     auditLog: {
-      create: async ({ data }: { data: any }) => {
+      create: async ({ data }: { data: Record<string, unknown> }) => {
         const row = { id: nextId("audit"), ...data, createdAt: new Date() };
         auditLogs.push(row);
         return row;
@@ -344,7 +445,7 @@ describe("Empirical Challenger 2: Financial Math & Reversals Suite", () => {
         idempotencyKey: "spec-comm-l1",
       }, db);
       expect(comm1.amount.toFixed(3)).toBe("18.000");
-      const det1 = comm1.calculationDetails as any;
+      const det1 = comm1.calculationDetails as unknown as CommissionCalculationDetails;
       expect(det1.revenue).toBe("5000.000");
       expect(det1.expenses).toBe("3000.000");
       expect(det1.profit).toBe("2000.000");
@@ -387,7 +488,7 @@ describe("Empirical Challenger 2: Financial Math & Reversals Suite", () => {
       }, db);
 
       expect(comm.amount.toFixed(3)).toBe("0.000");
-      const det = comm.calculationDetails as any;
+      const det = comm.calculationDetails as unknown as CommissionCalculationDetails;
       expect(det.profit).toBe("0.000");
       expect(det.adminShare).toBe("0.000");
       expect(det.remainingPool).toBe("0.000");
@@ -406,7 +507,7 @@ describe("Empirical Challenger 2: Financial Math & Reversals Suite", () => {
       }, db);
 
       expect(comm.amount.toFixed(3)).toBe("0.000");
-      const det = comm.calculationDetails as any;
+      const det = comm.calculationDetails as unknown as CommissionCalculationDetails;
       expect(det.profit).toBe("-1000.000");
       expect(det.adminShare).toBe("0.000");
       expect(det.remainingPool).toBe("0.000");
@@ -424,7 +525,7 @@ describe("Empirical Challenger 2: Financial Math & Reversals Suite", () => {
       }, db);
 
       expect(comm.amount.toFixed(3)).toBe("0.000");
-      const det = comm.calculationDetails as any;
+      const det = comm.calculationDetails as unknown as CommissionCalculationDetails;
       expect(det.profit).toBe("-500000.000");
       expect(det.adminShare).toBe("0.000");
       expect(det.remainingPool).toBe("0.000");
@@ -603,7 +704,7 @@ describe("Empirical Challenger 2: Financial Math & Reversals Suite", () => {
       );
 
       expect(reversed.status).toBe("REVERSED");
-      const det = reversed.calculationDetails as any;
+      const det = reversed.calculationDetails as unknown as CommissionCalculationDetails;
       expect(det.accountingPolicy).toBe("COMPENSATING_ADJUSTMENT_POSTED_TO_LEDGER");
       expect(det.reversalReason).toBe("Rétractation client post-règlement");
 
@@ -664,7 +765,7 @@ describe("Empirical Challenger 2: Financial Math & Reversals Suite", () => {
 
       const reversed = await reverseReferralCommission(comm.id, "admin-1", "Order cancelled before payout", { db });
       expect(reversed.status).toBe("REVERSED");
-      const det = reversed.calculationDetails as any;
+      const det = reversed.calculationDetails as unknown as CommissionCalculationDetails;
       expect(det.accountingPolicy).toBe("ZERO_FUNDS_MOVED_UNPAID_STATUS_REVERSED");
 
       // No ledger entries posted

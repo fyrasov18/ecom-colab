@@ -1,5 +1,21 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { Prisma } from "@prisma/client";
+import { Prisma, type Partner, type ReferralLink } from "@prisma/client";
+
+type ReferralLinkWithPartner = Prisma.ReferralLinkGetPayload<{
+  include: {
+    partner: {
+      include: {
+        user: { select: { id: true; email: true } };
+      };
+    };
+  };
+}>;
+
+type PartnerWithUser = Prisma.PartnerGetPayload<{
+  include: {
+    user: { select: { id: true; email: true } };
+  };
+}>;
 import { registerPartner } from "@/modules/registration/service";
 import { getPartnerReferralLinkAction } from "@/modules/referrals/actions";
 import { prisma } from "@/lib/prisma";
@@ -224,7 +240,7 @@ describe("Milestone 2 Challenger 2: Registration Atomicity & IDOR Verification",
           },
         };
 
-        vi.spyOn(prisma.referralLink, "findUnique").mockResolvedValue(mockLink as any);
+        vi.spyOn(prisma.referralLink, "findUnique").mockResolvedValue(mockLink as unknown as ReferralLinkWithPartner);
 
         const result = await registerPartner({
           ...baseCandidate,
@@ -256,7 +272,7 @@ describe("Milestone 2 Challenger 2: Registration Atomicity & IDOR Verification",
           status: status, // Non-ACTIVE!
           phone: "98111222",
           user: { id: `user-${status.toLowerCase()}`, email: `direct_${status.toLowerCase()}@example.com` },
-        } as any);
+        } as unknown as PartnerWithUser);
 
         const result = await registerPartner({
           ...baseCandidate,
@@ -298,8 +314,9 @@ describe("Milestone 2 Challenger 2: Registration Atomicity & IDOR Verification",
   describe("Task 2: getPartnerReferralLinkAction Session Scoping & IDOR", () => {
     it("REJECTS unauthenticated requests when requireSession throws redirect", async () => {
       // Simulate requireSession throwing NEXT_REDIRECT error (unauthenticated session)
-      const redirectError = new Error("NEXT_REDIRECT");
-      (redirectError as any).digest = "NEXT_REDIRECT;replace;/login;307;";
+      const redirectError = Object.assign(new Error("NEXT_REDIRECT"), {
+        digest: "NEXT_REDIRECT;replace;/login;307;",
+      });
 
       vi.spyOn(rbacModule, "requireSession").mockRejectedValue(redirectError);
 
@@ -310,21 +327,22 @@ describe("Milestone 2 Challenger 2: Registration Atomicity & IDOR Verification",
       if (!result.ok) {
         expect(result.error).toBeDefined();
         // Crucially, it must NOT return a code or url
-        expect((result as any).code).toBeUndefined();
-        expect((result as any).url).toBeUndefined();
+        expect((result as { code?: unknown }).code).toBeUndefined();
+        expect((result as { url?: unknown }).url).toBeUndefined();
       }
     });
 
     it("REJECTS non-partner roles (e.g. ADMIN, LOGISTICS) when requireSession redirects", async () => {
-      const roleRedirectError = new Error("NEXT_REDIRECT");
-      (roleRedirectError as any).digest = "NEXT_REDIRECT;replace;/admin/partenaires;307;";
+      const roleRedirectError = Object.assign(new Error("NEXT_REDIRECT"), {
+        digest: "NEXT_REDIRECT;replace;/admin/partenaires;307;",
+      });
 
       vi.spyOn(rbacModule, "requireSession").mockRejectedValue(roleRedirectError);
 
       const result = await getPartnerReferralLinkAction();
 
       expect(result.ok).toBe(false);
-      expect((result as any).code).toBeUndefined();
+      expect((result as { code?: unknown }).code).toBeUndefined();
     });
 
     it("REJECTS partner session when partnerId is missing / null", async () => {
@@ -359,7 +377,7 @@ describe("Milestone 2 Challenger 2: Registration Atomicity & IDOR Verification",
         id: "partner-pending-id",
         code: "P099",
         status: "PENDING",
-      } as any);
+      } as unknown as Partner);
 
       const result = await getPartnerReferralLinkAction();
 
@@ -384,7 +402,7 @@ describe("Milestone 2 Challenger 2: Registration Atomicity & IDOR Verification",
         id: "partner-suspended-id",
         code: "P098",
         status: "SUSPENDED",
-      } as any);
+      } as unknown as Partner);
 
       const result = await getPartnerReferralLinkAction();
 
@@ -410,14 +428,14 @@ describe("Milestone 2 Challenger 2: Registration Atomicity & IDOR Verification",
         id: activePartnerId,
         code: "P123",
         status: "ACTIVE",
-      } as any);
+      } as unknown as Partner);
 
       const linkSpy = vi.spyOn(prisma.referralLink, "findFirst").mockResolvedValue({
         id: "link-123",
         partnerId: activePartnerId,
         code: "P123",
         isActive: true,
-      } as any);
+      } as unknown as ReferralLink);
 
       const result = await getPartnerReferralLinkAction();
 

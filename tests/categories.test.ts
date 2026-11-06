@@ -7,6 +7,11 @@ import {
   deleteCategory,
 } from "@/modules/categories/service";
 import { prisma } from "@/lib/prisma";
+import type { Prisma, Category, AuditLog } from "@prisma/client";
+
+type CategoryWithProductCount = Prisma.CategoryGetPayload<{
+  include: { _count: { select: { products: true } } };
+}>;
 
 describe("Category Schema & Slugify", () => {
   it("generates clean slugs from French names", () => {
@@ -58,10 +63,10 @@ describe("Category Safe Deletion & Business Rules", () => {
       createdAt: new Date(),
       updatedAt: new Date(),
       _count: { products: 5 },
-    } as any);
+    } as unknown as CategoryWithProductCount);
 
-    vi.spyOn(prisma, "$transaction").mockImplementation(async (cb: any) => {
-      return cb(prisma);
+    vi.spyOn(prisma, "$transaction").mockImplementation(async (cb) => {
+      return typeof cb === "function" ? cb(prisma) : Promise.all(cb);
     });
 
     await expect(
@@ -83,10 +88,10 @@ describe("Category Safe Deletion & Business Rules", () => {
       createdAt: new Date(),
       updatedAt: new Date(),
       _count: { products: 3 },
-    } as any);
+    } as unknown as CategoryWithProductCount);
 
-    vi.spyOn(prisma, "$transaction").mockImplementation(async (cb: any) => {
-      return cb(prisma);
+    vi.spyOn(prisma, "$transaction").mockImplementation(async (cb) => {
+      return typeof cb === "function" ? cb(prisma) : Promise.all(cb);
     });
 
     await expect(
@@ -108,19 +113,19 @@ describe("Category Safe Deletion & Business Rules", () => {
       createdAt: new Date(),
       updatedAt: new Date(),
       _count: { products: 4 },
-    } as any);
+    } as unknown as CategoryWithProductCount);
 
     vi.spyOn(prisma.category, "findUnique").mockResolvedValue({
       id: "cat-2",
       name: "Nouvelle Catégorie",
-    } as any);
+    } as unknown as Category);
 
     const updateManySpy = vi.spyOn(prisma.product, "updateMany").mockResolvedValue({ count: 4 });
-    const deleteSpy = vi.spyOn(prisma.category, "delete").mockResolvedValue({ id: "cat-1" } as any);
-    const auditSpy = vi.spyOn(prisma.auditLog, "create").mockResolvedValue({} as any);
+    const deleteSpy = vi.spyOn(prisma.category, "delete").mockResolvedValue({ id: "cat-1" } as unknown as Category);
+    const auditSpy = vi.spyOn(prisma.auditLog, "create").mockResolvedValue({} as unknown as AuditLog);
 
-    vi.spyOn(prisma, "$transaction").mockImplementation(async (cb: any) => {
-      return cb(prisma);
+    vi.spyOn(prisma, "$transaction").mockImplementation(async (cb) => {
+      return typeof cb === "function" ? cb(prisma) : Promise.all(cb);
     });
 
     const result = await deleteCategory("cat-1", "admin-1", { reassignToCategoryId: "cat-2" });
@@ -149,13 +154,13 @@ describe("Category Safe Deletion & Business Rules", () => {
       createdAt: new Date(),
       updatedAt: new Date(),
       _count: { products: 0 },
-    } as any);
+    } as unknown as CategoryWithProductCount);
 
-    const deleteSpy = vi.spyOn(prisma.category, "delete").mockResolvedValue({ id: "cat-empty" } as any);
-    vi.spyOn(prisma.auditLog, "create").mockResolvedValue({} as any);
+    const deleteSpy = vi.spyOn(prisma.category, "delete").mockResolvedValue({ id: "cat-empty" } as unknown as Category);
+    vi.spyOn(prisma.auditLog, "create").mockResolvedValue({} as unknown as AuditLog);
 
-    vi.spyOn(prisma, "$transaction").mockImplementation(async (cb: any) => {
-      return cb(prisma);
+    vi.spyOn(prisma, "$transaction").mockImplementation(async (cb) => {
+      return typeof cb === "function" ? cb(prisma) : Promise.all(cb);
     });
 
     const result = await deleteCategory("cat-empty", "admin-1");

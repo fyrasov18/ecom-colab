@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { Prisma } from "@prisma/client";
+import type { AuditEntry } from "@/modules/audit/service";
 import {
   checkAndQualifyOrder,
   checkAndQualifyReferral,
@@ -526,7 +527,14 @@ describe("Adversarial Empirical Challenger: checkAndQualifyOrder Invariants", ()
       // Order 4: Partner C (Referred, Shipped not Delivered) -> ORDER_NOT_DELIVERED
       // Order 5: Partner D (Referred, Delivered but Earning Pending) -> EARNING_NOT_AVAILABLE
 
-      const dbOrders: Record<string, any> = {
+      type MockOrderRecord = {
+        id: string;
+        partnerId: string;
+        status: string;
+        earningStatus: string;
+      };
+
+      const dbOrders: Record<string, MockOrderRecord> = {
         "ord-1": { id: "ord-1", partnerId: "partner-A", status: "DELIVERED", earningStatus: "AVAILABLE" },
         "ord-2": { id: "ord-2", partnerId: "partner-A", status: "DELIVERED", earningStatus: "AVAILABLE" },
         "ord-3": { id: "ord-3", partnerId: "partner-B", status: "DELIVERED", earningStatus: "AVAILABLE" },
@@ -534,7 +542,16 @@ describe("Adversarial Empirical Challenger: checkAndQualifyOrder Invariants", ()
         "ord-5": { id: "ord-5", partnerId: "partner-D", status: "DELIVERED", earningStatus: "PENDING" },
       };
 
-      const dbAttributions: Record<string, any> = {
+      type MockAttributionRecord = {
+        id: string;
+        referrerPartnerId: string;
+        referredPartnerId: string;
+        status: string;
+        qualifiedOrderId?: string | null;
+        qualifiedAt?: Date | null;
+      };
+
+      const dbAttributions: Record<string, MockAttributionRecord> = {
         "partner-A": {
           id: "attr-A",
           referrerPartnerId: "referrer-mentor",
@@ -556,7 +573,7 @@ describe("Adversarial Empirical Challenger: checkAndQualifyOrder Invariants", ()
         },
       };
 
-      const auditLogs: any[] = [];
+      const auditLogs: AuditEntry[] = [];
 
       const mockDb = {
         order: {

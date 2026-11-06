@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import type { AuditEntry } from "@/modules/audit/service";
 import Decimal from "decimal.js";
 import {
   evaluateTargetLevel,
@@ -111,13 +112,14 @@ describe("5-Tier Referral Progression & Rate Specification", () => {
         updatedAt: "2026-01-01T00:00:00.000Z",
       };
 
-      const auditEntries: any[] = [];
+      const auditEntries: AuditEntry[] = [];
+      const countMock = vi.fn().mockResolvedValue(10);
       const mockDb = {
         partner: {
           findUnique: vi.fn().mockResolvedValue({ id: "partner-rej-1", createdAt: new Date("2026-01-01") }),
         },
         referralAttribution: {
-          count: vi.fn().mockResolvedValue(10), // Partner has 10 qualified referrals
+          count: countMock, // Partner has 10 qualified referrals
         },
         systemSetting: {
           findUnique: vi.fn().mockImplementation(({ where: { key } }) => {
@@ -159,7 +161,7 @@ describe("5-Tier Referral Progression & Rate Specification", () => {
       expect(reCheck.promotionPendingConfirmation).toBe(false);
 
       // If partner qualifies MORE referrals (e.g. 15), eligibility re-opens!
-      (mockDb.referralAttribution.count as any).mockResolvedValue(15);
+      countMock.mockResolvedValue(15);
       const withMoreReferrals = await getPartnerReferralLevel("partner-rej-1", mockDb);
       expect(withMoreReferrals.promotionPendingConfirmation).toBe(true);
       expect(withMoreReferrals.targetLevel).toBe(2);

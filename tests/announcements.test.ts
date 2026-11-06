@@ -13,6 +13,7 @@ import {
 } from "@/modules/announcements/service";
 import { confirmPartnerPromotion } from "@/modules/referrals/levels";
 import { prisma } from "@/lib/prisma";
+import type { Partner, PartnerPopupEvent, Notification } from "@prisma/client";
 
 describe("Announcements & Popups Schemas", () => {
   it("validates welcome settings schema with default fallback", () => {
@@ -65,7 +66,7 @@ describe("Welcome Notification — First Login & Idempotency", () => {
       status: "ACTIVE",
       notes: null,
       userId: "user-1",
-    } as any);
+    } as unknown as Partner);
 
     vi.spyOn(prisma.systemSetting, "findUnique").mockResolvedValue(null);
 
@@ -88,7 +89,7 @@ describe("Welcome Notification — First Login & Idempotency", () => {
       clickedAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
-    } as any);
+    } as unknown as PartnerPopupEvent);
 
     const popup = await getPendingPartnerPopup("partner-1", { firstName: "Sami" });
 
@@ -113,7 +114,7 @@ describe("Welcome Notification — First Login & Idempotency", () => {
       status: "ACTIVE",
       notes: null,
       userId: "user-1",
-    } as any);
+    } as unknown as Partner);
 
     vi.spyOn(prisma.systemSetting, "findUnique").mockResolvedValue(null);
 
@@ -124,7 +125,7 @@ describe("Welcome Notification — First Login & Idempotency", () => {
       type: "WELCOME",
       eventKey: "WELCOME",
       dismissedAt: new Date(),
-    } as any);
+    } as unknown as PartnerPopupEvent);
 
     // No Level up or manual announcements
     vi.spyOn(prisma.partnerPopupEvent, "findFirst").mockResolvedValue(null);
@@ -148,13 +149,13 @@ describe("Level Up Notification — Confirmation, Calculations & Idempotency", (
       partnerId: "partner-1",
       type: "LEVEL_UP",
       eventKey: "REFERRAL_LEVEL:2",
-    } as any);
+    } as unknown as PartnerPopupEvent);
 
     vi.spyOn(prisma.partner, "findUnique").mockResolvedValue({
       userId: "user-1",
-    } as any);
+    } as unknown as Partner);
 
-    vi.spyOn(prisma.notification, "create").mockResolvedValue({} as any);
+    vi.spyOn(prisma.notification, "create").mockResolvedValue({} as unknown as Notification);
 
     await queueLevelUpPopup({
       partnerId: "partner-1",
@@ -192,7 +193,7 @@ describe("Level Up Notification — Confirmation, Calculations & Idempotency", (
       status: "ACTIVE",
       notes: null,
       userId: "user-1",
-    } as any);
+    } as unknown as Partner);
 
     vi.spyOn(prisma.systemSetting, "findUnique").mockResolvedValue(null);
 
@@ -200,7 +201,7 @@ describe("Level Up Notification — Confirmation, Calculations & Idempotency", (
     vi.spyOn(prisma.partnerPopupEvent, "findUnique").mockResolvedValue({
       id: "welcome-1",
       dismissedAt: new Date(),
-    } as any);
+    } as unknown as PartnerPopupEvent);
 
     // Level up popup pending
     vi.spyOn(prisma.partnerPopupEvent, "findFirst").mockResolvedValue({
@@ -216,7 +217,7 @@ describe("Level Up Notification — Confirmation, Calculations & Idempotency", (
         newRate: 0.07,
       },
       dismissedAt: null,
-    } as any);
+    } as unknown as PartnerPopupEvent);
 
     const popup = await getPendingPartnerPopup("partner-1", { firstName: "Yassine" });
 
@@ -240,13 +241,13 @@ describe("Manual Announcements & Interaction Telemetry", () => {
       status: "ACTIVE",
       notes: null,
       userId: "user-1",
-    } as any);
+    } as unknown as Partner);
 
     vi.spyOn(prisma.systemSetting, "findUnique").mockResolvedValue(null);
     vi.spyOn(prisma.partnerPopupEvent, "findUnique").mockResolvedValue({
       id: "welcome-dismissed",
       dismissedAt: new Date(),
-    } as any);
+    } as unknown as PartnerPopupEvent);
     vi.spyOn(prisma.partnerPopupEvent, "findFirst").mockResolvedValue(null);
 
     // Prisma query returns only announcements whose scheduledAt <= now

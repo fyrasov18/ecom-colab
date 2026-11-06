@@ -80,7 +80,7 @@ describe("Milestone 3 Challenger 2: Partner Level Boundaries & Immutability Suit
       ];
 
       for (const tc of boundaryCases) {
-        let storedState: any = null;
+        let storedState: PartnerReferralLevelState | null = null;
 
         const mockDb = {
           partner: {
@@ -156,8 +156,8 @@ describe("Milestone 3 Challenger 2: Partner Level Boundaries & Immutability Suit
         });
       }
 
-      let storedStateA: any = null;
-      let storedStateB: any = null;
+      let storedStateA: PartnerReferralLevelState | null = null;
+      let storedStateB: PartnerReferralLevelState | null = null;
 
       const mockDb = {
         partner: {
@@ -227,7 +227,7 @@ describe("Milestone 3 Challenger 2: Partner Level Boundaries & Immutability Suit
   describe("3. Admin Confirmation Toggle Verification", () => {
     it("when auto_promotion_enabled is FALSE, level remains Level 1 even with 10 referrals; admin confirmation promotes to Level 2", async () => {
       const partnerId = "partner-with-10-referrals";
-      let storedState: any = null;
+      let storedState: PartnerReferralLevelState | null = null;
 
       const mockDb = {
         partner: {

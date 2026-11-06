@@ -5,6 +5,7 @@ import {
   listProducts,
 } from "@/modules/products/service";
 import { prisma } from "@/lib/prisma";
+import type { Prisma, Product, AuditLog } from "@prisma/client";
 
 describe("Product Category & Discovery Flags Service", () => {
   beforeEach(() => {
@@ -37,12 +38,12 @@ describe("Product Category & Discovery Flags Service", () => {
       slug: "fer-a-repasser-sans-fil",
       createdAt: new Date(),
       updatedAt: new Date(),
-    } as any);
+    } as unknown as Product);
 
-    vi.spyOn(prisma.auditLog, "create").mockResolvedValue({} as any);
+    vi.spyOn(prisma.auditLog, "create").mockResolvedValue({} as unknown as AuditLog);
 
-    vi.spyOn(prisma, "$transaction").mockImplementation(async (cb: any) => {
-      return cb(prisma);
+    vi.spyOn(prisma, "$transaction").mockImplementation(async (cb) => {
+      return typeof cb === "function" ? cb(prisma) : Promise.all(cb);
     });
 
     const created = await createProduct(baseProductInput, "admin-1");
@@ -67,7 +68,7 @@ describe("Product Category & Discovery Flags Service", () => {
       lowStockThreshold: 5,
       createdAt: new Date(),
       updatedAt: new Date(),
-    } as any);
+    } as unknown as Product);
 
     const updateSpy = vi.spyOn(prisma.product, "update").mockResolvedValue({
       id: "prod-101",
@@ -79,12 +80,12 @@ describe("Product Category & Discovery Flags Service", () => {
       slug: "fer-a-repasser-sans-fil",
       createdAt: new Date(),
       updatedAt: new Date(),
-    } as any);
+    } as unknown as Product);
 
-    vi.spyOn(prisma.auditLog, "create").mockResolvedValue({} as any);
+    vi.spyOn(prisma.auditLog, "create").mockResolvedValue({} as unknown as AuditLog);
 
-    vi.spyOn(prisma, "$transaction").mockImplementation(async (cb: any) => {
-      return cb(prisma);
+    vi.spyOn(prisma, "$transaction").mockImplementation(async (cb) => {
+      return typeof cb === "function" ? cb(prisma) : Promise.all(cb);
     });
 
     const updated = await updateProduct(
@@ -112,6 +113,15 @@ describe("Product Category & Discovery Flags Service", () => {
 
   it("filters products by category and flags in listProducts", async () => {
     const countSpy = vi.spyOn(prisma.product, "count").mockResolvedValue(1);
+    type ProductListItem = Prisma.ProductGetPayload<{
+      include: {
+        categoryRef: {
+          select: { id: true; name: true; nameAr: true; slug: true };
+        };
+        _count: { select: { partnerAssignations: true; orderItems: true } };
+      };
+    }>;
+
     const findManySpy = vi.spyOn(prisma.product, "findMany").mockResolvedValue([
       {
         id: "prod-101",
@@ -122,7 +132,7 @@ describe("Product Category & Discovery Flags Service", () => {
         categoryRef: { id: "cat-maison", name: "Maison", nameAr: null, slug: "maison" },
         _count: { partnerAssignations: 2, orderItems: 5 },
       },
-    ] as any);
+    ] as unknown as ProductListItem[]);
 
     const res = await listProducts({
       categoryId: "cat-maison",

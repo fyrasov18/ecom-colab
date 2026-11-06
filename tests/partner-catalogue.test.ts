@@ -4,6 +4,7 @@ import {
   getPartnerCatalogueStats,
 } from "@/modules/products/partner-catalogue";
 import { prisma } from "@/lib/prisma";
+import type { Category, PartnerProduct } from "@prisma/client";
 
 describe("Partner Catalogue Service", () => {
   const mockPartnerId = "partner-123";
@@ -34,7 +35,7 @@ describe("Partner Catalogue Service", () => {
           marketingAssets: [],
         },
       },
-    ] as any);
+    ] as unknown as PartnerProduct[]);
 
     const products = await listAssignedProducts(mockPartnerId, {
       badge: "WINNING",
@@ -84,7 +85,7 @@ describe("Partner Catalogue Service", () => {
         imageUrl: null,
         displayOrder: 2,
       },
-    ] as any);
+    ] as unknown as Category[]);
 
     vi.spyOn(prisma.partnerProduct, "findMany").mockResolvedValue([
       {
@@ -114,7 +115,7 @@ describe("Partner Catalogue Service", () => {
           isRecommended: true,
         },
       },
-    ] as any);
+    ] as unknown as PartnerProduct[]);
 
     const stats = await getPartnerCatalogueStats(mockPartnerId);
 
