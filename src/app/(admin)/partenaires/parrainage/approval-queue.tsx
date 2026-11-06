@@ -1,5 +1,7 @@
 "use client";
 
+import type { Prisma } from "@prisma/client";
+
 import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -37,7 +39,7 @@ export type QueueCommissionItem = {
   currency: string;
   status: string;
   createdAt: string | Date;
-  calculationDetails?: any;
+  calculationDetails?: Prisma.JsonValue | null;
   referrer: {
     id: string;
     code: string;

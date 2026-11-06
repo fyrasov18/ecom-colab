@@ -139,7 +139,7 @@ export function LevelUpSettingsForm({ initialSettings }: { initialSettings: Leve
                 id="levelup-theme"
                 name="themeColor"
                 value={themeColor}
-                onChange={(e) => setThemeColor(e.target.value as any)}
+                onChange={(e) => setThemeColor(e.target.value as LevelUpSettings["themeColor"])}
               >
                 <option value="amber">Ambre / Festif doré</option>
                 <option value="indigo">Indigo / Bleu prestige</option>

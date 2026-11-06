@@ -1,5 +1,7 @@
 "use client";
 
+import type { Prisma } from "@prisma/client";
+
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Calculator, X, CheckCircle2, AlertTriangle, Info } from "lucide-react";
@@ -12,7 +14,7 @@ export interface CalculationBreakdownProps {
   orderId?: string | null;
   amount: string | number;
   currency?: string;
-  calculationDetails?: any;
+  calculationDetails?: Prisma.JsonValue | null;
   referrerName?: string;
   referredName?: string;
   triggerLabel?: string;

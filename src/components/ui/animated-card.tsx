@@ -76,14 +76,13 @@ export function AnimatedKpiValue({
   delay = 0,
 }: AnimatedKpiValueProps) {
   const reducedMotion = useReducedMotion();
-  const [displayed, setDisplayed] = useState(reducedMotion ? value : 0);
+  const [displayed, setDisplayed] = useState(0);
   const rafRef = useRef<number | null>(null);
   const startRef = useRef<number | null>(null);
   const DURATION = 900; // ms
 
   useEffect(() => {
     if (reducedMotion) {
-      setDisplayed(value);
       return;
     }
 
@@ -111,10 +110,12 @@ export function AnimatedKpiValue({
     };
   }, [value, delay, decimals, reducedMotion]);
 
+  const currentValue = reducedMotion ? value : displayed;
+
   const formatted =
     decimals > 0
-      ? displayed.toFixed(decimals)
-      : Math.round(displayed).toLocaleString("fr-TN");
+      ? currentValue.toFixed(decimals)
+      : Math.round(currentValue).toLocaleString("fr-TN");
 
   return (
     <span

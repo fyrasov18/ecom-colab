@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Eye, Megaphone, Pencil, Plus, X } from "lucide-react";
 import { toast } from "sonner";
@@ -35,7 +35,19 @@ const initialState: AdminAnnouncementActionState = { ok: false };
 
 export function AnnouncementModal({ announcement, trigger }: Props) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, isPending] = useActionState(saveAnnouncementAction, initialState);
+  const [, formAction, isPending] = useActionState(
+    async (prev: AdminAnnouncementActionState, formData: FormData) => {
+      const result = await saveAnnouncementAction(prev, formData);
+      if (result.ok) {
+        if (result.message) toast.success(result.message);
+        setOpen(false);
+      } else if (result.error) {
+        toast.error(result.error);
+      }
+      return result;
+    },
+    initialState,
+  );
 
   // Form state for live preview
   const [title, setTitle] = useState(announcement?.title ?? "");
@@ -47,15 +59,6 @@ export function AnnouncementModal({ announcement, trigger }: Props) {
   const [isFullScreen, setIsFullScreen] = useState(announcement?.isFullScreen ?? true);
 
   const isEditing = Boolean(announcement);
-
-  useEffect(() => {
-    if (state.ok && state.message) {
-      toast.success(state.message);
-      setOpen(false);
-    } else if (!state.ok && state.error) {
-      toast.error(state.error);
-    }
-  }, [state]);
 
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);

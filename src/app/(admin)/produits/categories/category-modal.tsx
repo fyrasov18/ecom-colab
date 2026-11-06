@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
   FolderPlus,
@@ -65,20 +65,23 @@ const initialState: CategoryActionState = { ok: false };
 
 export function CategoryModal({ category, trigger }: Props) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, isPending] = useActionState(saveCategoryAction, initialState);
+  const [, formAction, isPending] = useActionState(
+    async (prev: CategoryActionState, formData: FormData) => {
+      const result = await saveCategoryAction(prev, formData);
+      if (result.ok) {
+        if (result.message) toast.success(result.message);
+        setOpen(false);
+      } else if (result.error) {
+        toast.error(result.error);
+      }
+      return result;
+    },
+    initialState,
+  );
   const [selectedIcon, setSelectedIcon] = useState(category?.icon ?? "Package");
   const [isActive, setIsActive] = useState(category?.isActive ?? true);
 
   const isEditing = Boolean(category);
-
-  useEffect(() => {
-    if (state.ok && state.message) {
-      toast.success(state.message);
-      setOpen(false);
-    } else if (!state.ok && state.error) {
-      toast.error(state.error);
-    }
-  }, [state]);
 
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);

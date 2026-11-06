@@ -1,5 +1,7 @@
 "use client";
 
+import type { Prisma } from "@prisma/client";
+
 import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
 import { Send, Loader2, CheckCircle2, Wallet, DollarSign } from "lucide-react";
@@ -30,7 +32,7 @@ export type PaymentQueueItem = {
   status: string;
   approvedAt?: string | Date | null;
   approvedById?: string | null;
-  calculationDetails?: any;
+  calculationDetails?: Prisma.JsonValue | null;
   referrer: {
     id: string;
     code: string;

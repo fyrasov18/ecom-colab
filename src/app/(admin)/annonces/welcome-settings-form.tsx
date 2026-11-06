@@ -150,7 +150,7 @@ export function WelcomeSettingsForm({ initialSettings }: { initialSettings: Welc
                 id="welcome-theme"
                 name="themeColor"
                 value={themeColor}
-                onChange={(e) => setThemeColor(e.target.value as any)}
+                onChange={(e) => setThemeColor(e.target.value as WelcomeSettings["themeColor"])}
               >
                 <option value="indigo">Indigo / Bleu premium</option>
                 <option value="emerald">Émeraude / Vert succès</option>

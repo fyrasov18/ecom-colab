@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -9,19 +9,40 @@ interface ThemeToggleProps {
   variant?: "ghost" | "outline";
 }
 
-export function ThemeToggle({ className, variant = "ghost" }: ThemeToggleProps) {
-  const [mounted, setMounted] = useState(false);
-  const [isDark, setIsDark] = useState(false);
+const subscribeTheme = (callback: () => void) => {
+  const observer = new MutationObserver(callback);
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["class"],
+  });
+  window.addEventListener("storage", callback);
+  return () => {
+    observer.disconnect();
+    window.removeEventListener("storage", callback);
+  };
+};
 
-  useEffect(() => {
-    setMounted(true);
-    const hasDark = document.documentElement.classList.contains("dark");
-    setIsDark(hasDark);
-  }, []);
+const getThemeSnapshot = () => document.documentElement.classList.contains("dark");
+const getServerThemeSnapshot = () => false;
+
+const emptySubscribe = () => () => {};
+const getMountedSnapshot = () => true;
+const getServerMountedSnapshot = () => false;
+
+export function ThemeToggle({ className, variant = "ghost" }: ThemeToggleProps) {
+  const mounted = useSyncExternalStore(
+    emptySubscribe,
+    getMountedSnapshot,
+    getServerMountedSnapshot,
+  );
+  const isDark = useSyncExternalStore(
+    subscribeTheme,
+    getThemeSnapshot,
+    getServerThemeSnapshot,
+  );
 
   const toggleTheme = () => {
-    const nextDark = !isDark;
-    setIsDark(nextDark);
+    const nextDark = !document.documentElement.classList.contains("dark");
 
     if (nextDark) {
       document.documentElement.classList.add("dark");

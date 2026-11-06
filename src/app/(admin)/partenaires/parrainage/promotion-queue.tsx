@@ -35,20 +35,23 @@ export type PromotionCandidate = {
 };
 
 function PromotionRow({ candidate }: { candidate: PromotionCandidate }) {
-  const [state, action, pending] = useActionState(confirmPromotionAction, initialState);
-  const [rejectState, rejectAction, rejectPending] = useActionState(rejectPromotionAction, initialState);
   const [isRejecting, setIsRejecting] = useState(false);
   const [reason, setReason] = useState("");
+  const [state, action, pending] = useActionState(confirmPromotionAction, initialState);
+  const [rejectState, rejectAction, rejectPending] = useActionState(
+    async (prev: AdminCommissionActionState, formData: FormData) => {
+      const result = await rejectPromotionAction(prev, formData);
+      if (result.ok) {
+        setIsRejecting(false);
+        setReason("");
+      }
+      return result;
+    },
+    initialState,
+  );
 
   useActionToast(state);
   useActionToast(rejectState);
-
-  useEffect(() => {
-    if (rejectState.ok) {
-      setIsRejecting(false);
-      setReason("");
-    }
-  }, [rejectState]);
 
   return (
     <>

@@ -527,7 +527,7 @@ export async function rejectPartnerPromotion(
     throw new Error("Le motif du refus est obligatoire.");
   }
 
-  let state = await getPartnerReferralLevelState(partnerId, db);
+  const state = await getPartnerReferralLevelState(partnerId, db);
   if (!state) {
     throw new Error(`État de parrainage introuvable pour le partenaire ${partnerId}.`);
   }
@@ -721,7 +721,7 @@ export async function reEvaluatePartnerPromotion(
   tx?: Prisma.TransactionClient | PrismaClient,
 ): Promise<PartnerReferralLevelResult> {
   const db = tx ?? prisma;
-  let state = await getPartnerReferralLevelState(partnerId, db);
+  const state = await getPartnerReferralLevelState(partnerId, db);
   if (state) {
     state.lastRejectedLevel = null;
     state.lastRejectedQualifiedCount = null;

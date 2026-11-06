@@ -1,8 +1,8 @@
 import {
-  AnnouncementAudience,
   AnnouncementStatus,
   AnnouncementType,
   Prisma,
+  type PrismaClient,
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/modules/audit/service";
@@ -17,7 +17,7 @@ import {
   type WelcomeSettings,
 } from "./schemas";
 
-type DbClient = typeof prisma | Prisma.TransactionClient;
+type DbClient = PrismaClient | Prisma.TransactionClient;
 
 /**
  * Automatically converts web sharing links (like kommodo.ai/i/...)
@@ -111,7 +111,7 @@ export async function updateWelcomeNotificationSettings(
     },
   });
 
-  await recordAudit(db as any, {
+  await recordAudit(db, {
     actorId,
     action: "WELCOME_NOTIFICATION_SETTINGS_UPDATED",
     entityType: "SystemSetting",
@@ -169,7 +169,7 @@ export async function updateLevelUpNotificationSettings(
     },
   });
 
-  await recordAudit(db as any, {
+  await recordAudit(db, {
     actorId,
     action: "LEVEL_UP_NOTIFICATION_SETTINGS_UPDATED",
     entityType: "SystemSetting",
@@ -742,12 +742,13 @@ export async function queueLevelUpPopup(
   const { partnerId, previousLevel, newLevel } = input;
 
   // Safe guard for mock transaction clients in unit tests
-  if (!(db as any).partnerPopupEvent?.upsert) {
+  const dbClient = db as PrismaClient;
+  if (typeof dbClient.partnerPopupEvent?.upsert !== "function") {
     return null;
   }
 
   // Verify partner exists to avoid foreign key errors in synthetic test fixtures
-  const partner = await (db as any).partner.findUnique({
+  const partner = await db.partner.findUnique({
     where: { id: partnerId },
     select: { id: true, userId: true },
   });
@@ -770,7 +771,7 @@ export async function queueLevelUpPopup(
   // 1. Queue popup event (Idempotent: unique on partnerId, type, eventKey)
   let popup = null;
   try {
-    popup = await (db as any).partnerPopupEvent.upsert({
+    popup = await dbClient.partnerPopupEvent.upsert({
       where: {
         partnerId_type_eventKey: {
           partnerId,
@@ -790,17 +791,22 @@ export async function queueLevelUpPopup(
       },
       update: {}, // Never overwrite if already seen or pending
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     // If foreign key constraint fails (e.g. synthetic test fixtures), skip gracefully
-    if (err?.code === "P2003") {
+    if (
+      typeof err === "object" &&
+      err !== null &&
+      "code" in err &&
+      (err as { code: string }).code === "P2003"
+    ) {
       return null;
     }
     throw err;
   }
 
   // 2. Also notify partner account for the Notification Center
-  if (partner.userId && (db as any).notification?.create) {
-    await notify(db as any, {
+  if (partner.userId && typeof dbClient.notification?.create === "function") {
+    await notify(db, {
       userId: partner.userId,
       type: "SYSTEM",
       title: `Promotion : Passage au Niveau ${newLevel} validé !`,
