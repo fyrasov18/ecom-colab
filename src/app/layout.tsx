@@ -4,11 +4,15 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "E-COM COLAB",
-    template: "%s · E-COM COLAB",
+    default: "EcomPartner · Operating System",
+    template: "%s · EcomPartner",
   },
   description:
-    "Plateforme interne de gestion du partenariat e-commerce : commandes confirmées, logistique, finance et performance.",
+    "EcomPartner — Your E-commerce Business Operating System. Together, We Grow.",
+  icons: {
+    icon: "/brand/app-icon.svg",
+    apple: "/brand/app-icon.svg",
+  },
 };
 
 export default function RootLayout({

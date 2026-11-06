@@ -25,7 +25,7 @@ export function HeroSection() {
         className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 -z-0 h-[650px] w-full max-w-7xl rounded-full opacity-35"
         style={{
           background:
-            "radial-gradient(circle 500px at 50% 15%, rgba(37, 99, 235, 0.5) 0%, rgba(30, 58, 138, 0.25) 50%, transparent 80%)",
+            "radial-gradient(circle 500px at 50% 15%, rgba(16, 185, 129, 0.4) 0%, rgba(5, 150, 105, 0.2) 50%, transparent 80%)",
           filter: "blur(70px)",
         }}
         aria-hidden="true"
@@ -34,27 +34,25 @@ export function HeroSection() {
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 z-10">
         {/* Top Announcement Pill */}
         <div className="flex justify-center mb-6">
-          <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-950/40 px-3.5 py-1.5 text-xs font-medium text-blue-300 shadow-sm backdrop-blur-md transition-transform hover:scale-105">
-            <span className="flex h-2 w-2 rounded-full bg-blue-400 animate-pulse" />
+          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-950/40 px-3.5 py-1.5 text-xs font-medium text-emerald-300 shadow-sm backdrop-blur-md transition-transform hover:scale-105">
+            <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="font-semibold text-white">Nouveau :</span>
             <span>Moteur d&apos;attribution et commissions multi-niveaux</span>
-            <ArrowRight className="h-3 w-3 text-blue-400" />
+            <ArrowRight className="h-3 w-3 text-emerald-400" />
           </div>
         </div>
 
         {/* Hero Title & Subtitle */}
         <div className="mx-auto max-w-4xl text-center">
           <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl lg:text-7xl">
-            Construisez votre business{" "}
-            <span className="bg-gradient-to-r from-blue-400 via-sky-300 to-indigo-300 bg-clip-text text-transparent">
-              e-commerce avec les bons partenaires
+            Votre système d&apos;exploitation{" "}
+            <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-lime-300 bg-clip-text text-transparent">
+              e-commerce tout-en-un
             </span>
           </h1>
 
           <p className="mt-6 text-lg sm:text-xl text-slate-300/90 leading-relaxed max-w-2xl mx-auto">
-            E-com Collaboration facilite la collaboration entre partenaires
-            e-commerce : gestion opérationnelle, suivi des performances et
-            développement de votre activité dans un environnement structuré.
+            EcomPartner centralise la gestion complète de votre activité e-commerce : produits gagnants, commandes, logistique, commissions et réseau de partenaires.
           </p>
 
           {/* Action CTAs */}
@@ -64,12 +62,12 @@ export function HeroSection() {
               size="lg"
               className="w-full sm:w-auto h-12 px-8 text-base font-semibold text-white shadow-xl transition-all duration-200 hover:shadow-blue-500/25 active:scale-95"
               style={{
-                background: "linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)",
-                boxShadow: "0 6px 24px rgba(37,99,235,0.45)",
+                background: "linear-gradient(135deg, #059669 0%, #10b981 100%)",
+                boxShadow: "0 6px 24px rgba(16, 185, 129, 0.45)",
               }}
             >
               <Link href="/register">
-                <Zap className="mr-2 h-4 w-4 text-blue-200" />
+                <Zap className="mr-2 h-4 w-4 text-emerald-200" />
                 Rejoindre la plateforme
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
@@ -112,7 +110,7 @@ export function HeroSection() {
                 <span className="h-3 w-3 rounded-full bg-amber-500/80 inline-block" />
                 <span className="h-3 w-3 rounded-full bg-emerald-500/80 inline-block" />
                 <span className="ml-2 hidden sm:inline font-mono text-[11px] text-slate-500">
-                  https://app.ecomcolab.tn/tableau-de-bord
+                  https://app.ecompartner.tn/tableau-de-bord
                 </span>
               </div>
               <div className="flex items-center gap-2">

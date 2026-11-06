@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowRight, Menu, X, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { EcomPartnerLogo } from "@/components/brand/logo";
 
 export function LandingNavbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -14,26 +15,10 @@ export function LandingNavbar() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Brand logo */}
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div
-            className="flex h-9 w-9 items-center justify-center rounded-xl text-sm font-bold text-white transition-transform duration-200 group-hover:scale-105"
-            style={{
-              background: "linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)",
-              boxShadow: "0 0 20px rgba(37,99,235,0.45)",
-            }}
-          >
-            E
-          </div>
-          <div className="flex flex-col">
-            <span className="text-base font-bold tracking-tight text-white flex items-center gap-1.5">
-              E-COM COLAB
-              <span className="rounded-full bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-blue-400 border border-blue-500/20">
-                PRO
-              </span>
-            </span>
-            <span className="text-[10px] text-slate-400 -mt-0.5">
-              Plateforme Partenaire
-            </span>
-          </div>
+          <EcomPartnerLogo variant="compact" theme="dark" />
+          <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400 border border-emerald-500/20 uppercase tracking-wider hidden sm:inline-flex">
+            OS
+          </span>
         </Link>
 
         {/* Desktop nav links */}
@@ -80,8 +65,8 @@ export function LandingNavbar() {
             size="sm"
             className="relative overflow-hidden font-semibold text-white shadow-lg transition-transform active:scale-95"
             style={{
-              background: "linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)",
-              boxShadow: "0 4px 16px rgba(37, 99, 235, 0.35)",
+              background: "linear-gradient(135deg, #059669 0%, #10b981 100%)",
+              boxShadow: "0 4px 16px rgba(16, 185, 129, 0.35)",
             }}
           >
             <Link href="/register">
@@ -143,7 +128,7 @@ export function LandingNavbar() {
               <Button asChild variant="outline" className="w-full border-white/10 text-white bg-white/05">
                 <Link href="/login">Connexion à l&apos;espace</Link>
               </Button>
-              <Button asChild className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium">
+              <Button asChild className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium">
                 <Link href="/register">Créer un compte partenaire</Link>
               </Button>
             </div>

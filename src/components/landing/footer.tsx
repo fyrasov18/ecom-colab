@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ArrowUp, Heart, Shield, Lock } from "lucide-react";
+import { EcomPartnerLogo } from "@/components/brand/logo";
 
 export function LandingFooter() {
   function scrollToTop() {
@@ -24,25 +25,12 @@ export function LandingFooter() {
         <div className="grid grid-cols-1 md:grid-cols-5 gap-10">
           {/* Brand info column (2 spans) */}
           <div className="md:col-span-2 space-y-4">
-            <Link href="/" className="flex items-center gap-2.5">
-              <div
-                className="flex h-9 w-9 items-center justify-center rounded-xl text-sm font-bold text-white"
-                style={{
-                  background: "linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)",
-                  boxShadow: "0 0 16px rgba(37,99,235,0.4)",
-                }}
-              >
-                E
-              </div>
-              <span className="text-base font-bold tracking-tight text-white">
-                E-COM COLAB
-              </span>
+            <Link href="/" className="inline-block">
+              <EcomPartnerLogo variant="horizontal" theme="dark" />
             </Link>
 
             <p className="text-xs text-slate-400 leading-relaxed max-w-sm">
-              Plateforme collaborative d&apos;e-commerce et d&apos;affiliation en Tunisie.
-              Nous réunissons les marques et les meilleurs vendeurs en ligne pour générer
-              de la croissance rentable et pérenne.
+              Votre système d&apos;exploitation e-commerce complet en Tunisie. Nous réunissons les marques et les meilleurs partenaires pour générer une croissance rentable et pérenne.
             </p>
           </div>
 
@@ -118,7 +106,7 @@ export function LandingFooter() {
         {/* Bottom Bar */}
         <div className="mt-12 pt-8 border-t border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <p className="flex items-center gap-1">
-            &copy; {new Date().getFullYear()} E-COM COLAB. Fait avec{" "}
+            &copy; {new Date().getFullYear()} EcomPartner. Together, We Grow. Fait avec{" "}
             <Heart className="h-3 w-3 text-red-400 inline fill-red-400" /> pour le commerce tunisien.
           </p>
 

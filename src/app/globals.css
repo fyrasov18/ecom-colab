@@ -3,84 +3,82 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ============================================================
-   E-COM COLAB - DESIGN TOKENS
-   Colour, radius and type are defined here and nowhere else.
-   Components consume the SEMANTIC layer (bg-primary, text-muted-
-   foreground). The RAMP layer (brand-600, ink-200, success-700)
-   is for charts, badges and precise brand references.
+   EcomPartner DESIGN TOKENS — v1.0
+   Brand: EcomPartner
+   Tagline: Together, We Grow.
+   Positioning: Your E-commerce Business Operating System
+   Colour, radius and typography hierarchy.
    ============================================================ */
 
 :root {
-  /* Brand ramp */
-  --brand-50: #eff6ff;
-  --brand-100: #dbeafe;
-  --brand-500: #3b82f6;
-  --brand-600: #2563eb;
-  --brand-700: #1d4ed8;
-  --brand-800: #1e3a8a;
-  --brand-900: #172554;
+  /* Brand ramp: Emerald & Lime */
+  --brand-50: #ecfdf5;
+  --brand-100: #d1fae5;
+  --brand-500: #10b981;
+  --brand-600: #059669;
+  --brand-700: #047857;
+  --brand-800: #065f46;
+  --brand-900: #064e3b;
+  --brand-lime: #a3e635;
 
-  /* Neutral ramp */
+  /* Neutral ramp: Slate & Navy */
   --ink-50: #f8fafc;
-  --ink-100: #f3f4f6;
-  --ink-200: #e5e7eb;
-  --ink-300: #d1d5db;
-  --ink-400: #9ca3af;
-  --ink-500: #6b7280;
-  --ink-600: #4b5563;
-  --ink-700: #374151;
+  --ink-100: #f1f5f9;
+  --ink-200: #e2e8f0;
+  --ink-300: #cbd5e1;
+  --ink-400: #94a3b8;
+  --ink-500: #64748b;
+  --ink-600: #475569;
+  --ink-700: #334155;
   --ink-800: #1f2937;
   --ink-900: #111827;
-  --ink-950: #0f172a;
+  --ink-950: #0b1220;
 
-  /* Success */
+  /* Status Colors */
   --success-50: #f0fdf4;
   --success-100: #dcfce7;
   --success-600: #16a34a;
   --success-700: #15803d;
 
-  /* Warning */
   --warning-50: #fffbeb;
   --warning-100: #fef3c7;
   --warning-600: #d97706;
   --warning-700: #b45309;
 
-  /* Danger */
   --danger-50: #fef2f2;
   --danger-100: #fee2e2;
   --danger-600: #dc2626;
   --danger-700: #b91c1c;
 
-  /* Info */
   --info-50: #f0f9ff;
   --info-100: #e0f2fe;
   --info-600: #0284c7;
   --info-700: #0369a1;
 
-  /* Surfaces */
-  --background: #ffffff;
-  --foreground: #09090b;
+  /* Surfaces (Light: Canvas #F8FAFC, Surface #FFFFFF) */
+  --background: #f8fafc;
+  --foreground: #0f172a;
   --card: #ffffff;
-  --card-foreground: #09090b;
+  --card-foreground: #0f172a;
   --popover: #ffffff;
-  --popover-foreground: #09090b;
-  --muted: #f4f4f5;
-  --muted-foreground: #52525b;
+  --popover-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
 
-  /* Actions */
-  --primary: #0052ff;
+  /* Actions (Primary Emerald 500) */
+  --primary: #10b981;
   --primary-foreground: #ffffff;
-  --secondary: #f4f4f5;
-  --secondary-foreground: #18181b;
-  --accent: #f4f4f5;
-  --accent-foreground: #09090b;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f172a;
+  --accent: #f1f5f9;
+  --accent-foreground: #0f172a;
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
 
   /* Lines and focus */
-  --border: #e4e4e7;
-  --input: #e4e4e7;
-  --ring: #09090b;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #10b981;
 
   /* Tone aliases used by status colours */
   --success: #16a34a;
@@ -88,63 +86,64 @@
   --info: #0284c7;
 
   /* Chart series */
-  --chart-1: #2563eb;
-  --chart-2: #16a34a;
-  --chart-3: #d97706;
-  --chart-4: #1e3a8a;
+  --chart-1: #10b981;
+  --chart-2: #059669;
+  --chart-3: #a3e635;
+  --chart-4: #111827;
   --chart-5: #0284c7;
 
-  /* App shell (dark sidebar, same tone in both colour modes) */
-  --sidebar: #09090b;
-  --sidebar-foreground: #f4f4f5;
-  --sidebar-muted: #a1a1aa;
-  --sidebar-faint: #71717a;
+  /* App shell (Dark navy sidebar #0B1220) */
+  --sidebar: #0b1220;
+  --sidebar-foreground: #f8fafc;
+  --sidebar-muted: #94a3b8;
+  --sidebar-faint: #64748b;
   --sidebar-hover: rgba(255, 255, 255, 0.06);
-  --sidebar-active: #0052ff;
-  --sidebar-border: rgba(255, 255, 255, 0.10);
+  --sidebar-active: #10b981;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
 
   /* Elevation */
-  --shadow-soft: 0 1px 2px 0 rgb(0 0 0 / 0.04);
-  --shadow-lift: 0 2px 8px -2px rgb(0 0 0 / 0.08);
+  --shadow-soft: 0 1px 2px rgb(15 23 42 / 0.06);
+  --shadow-lift: 0 8px 24px rgb(15 23 42 / 0.08);
 
-  /* Radius scale: sm 6 / md 8 / lg 12 / xl 16 */
-  --radius-sm: 2px;
-  --radius-md: 4px;
-  --radius-lg: 6px;
-  --radius-xl: 8px;
-  --radius: 4px;
+  /* Radius scale */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius: 10px;
 }
 
 .dark {
-  --background: #09090b;
-  --foreground: #fafafa;
-  --card: #121215;
-  --card-foreground: #fafafa;
-  --popover: #121215;
-  --popover-foreground: #fafafa;
-  --muted: #18181b;
-  --muted-foreground: #a1a1aa;
+  /* Surfaces (Dark: Canvas #0B1220, Card #111827) */
+  --background: #0b1220;
+  --foreground: #f8fafc;
+  --card: #111827;
+  --card-foreground: #f8fafc;
+  --popover: #111827;
+  --popover-foreground: #f8fafc;
+  --muted: #1f2937;
+  --muted-foreground: #94a3b8;
 
-  --primary: #3b82f6;
+  --primary: #10b981;
   --primary-foreground: #ffffff;
-  --secondary: #18181b;
-  --secondary-foreground: #fafafa;
-  --accent: #1e1e24;
-  --accent-foreground: #fafafa;
+  --secondary: #1f2937;
+  --secondary-foreground: #f8fafc;
+  --accent: #1e293b;
+  --accent-foreground: #f8fafc;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
 
-  --border: #27272a;
-  --input: #27272a;
-  --ring: #3b82f6;
+  --border: #1e293b;
+  --input: #1e293b;
+  --ring: #10b981;
 
   --success: #22c55e;
   --warning: #f59e0b;
   --info: #38bdf8;
 
-  --chart-1: #3b82f6;
-  --chart-2: #22c55e;
-  --chart-3: #f59e0b;
+  --chart-1: #10b981;
+  --chart-2: #34d399;
+  --chart-3: #a3e635;
   --chart-4: #60a5fa;
   --chart-5: #38bdf8;
 }
@@ -182,6 +181,7 @@
   --color-brand-700: var(--brand-700);
   --color-brand-800: var(--brand-800);
   --color-brand-900: var(--brand-900);
+  --color-brand-lime: var(--brand-lime);
 
   /* Neutral ramp */
   --color-ink-50: var(--ink-50);
@@ -230,7 +230,7 @@
   --color-sidebar-active: var(--sidebar-active);
   --color-sidebar-border: var(--sidebar-border);
 
-  /* Elevation (renamed to avoid circular @theme self-reference) */
+  /* Elevation */
   --shadow-card: var(--shadow-soft);
   --shadow-elevated: var(--shadow-lift);
 
@@ -241,7 +241,7 @@
   --radius-xl: var(--radius-xl);
 
   /* Type */
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-sans: "Inter", "Manrope", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   --text-display: 30px;
   --text-display--line-height: 1.2;
   --text-display--font-weight: 700;
@@ -262,7 +262,7 @@
   --text-small--line-height: 18px;
   --text-caption: 12px;
   --text-caption--line-height: 16px;
-  /* KPI numbers — big, tight, tabular */
+  /* KPI numbers — tabular */
   --text-kpi: 28px;
   --text-kpi--line-height: 1.15;
   --text-kpi--font-weight: 700;
@@ -278,7 +278,6 @@
   body {
     @apply bg-background text-foreground antialiased;
   }
-  /* Always-visible keyboard focus (accessibility). */
   :focus-visible {
     @apply outline-ring outline-2 outline-offset-2;
   }
@@ -305,10 +304,10 @@
 }
 
 /* ============================================================
-   Agency-level animations — zero JavaScript, GPU-only.
+   EcomPartner Brand Animations & Micro-Interactions
    ============================================================ */
 
-/* Mesh gradient background — Login page */
+/* Mesh gradient background — Dark navy with emerald & lime drift */
 @keyframes mesh-drift {
   0%   { background-position: 0% 0%, 100% 100%, 50% 50%; }
   33%  { background-position: 100% 0%, 0% 100%, 80% 20%; }
@@ -324,25 +323,25 @@
 
 /* Fade + slide-up — page entrance */
 @keyframes fade-up {
-  from { opacity: 0; transform: translateY(14px); }
+  from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
 /* Scale pop — card entrance */
 @keyframes scale-in {
-  from { opacity: 0; transform: scale(0.96); }
+  from { opacity: 0; transform: scale(0.97); }
   to   { opacity: 1; transform: scale(1); }
 }
 
-/* Subtle pulse glow — active nav indicator */
+/* Subtle emerald pulse glow */
 @keyframes glow-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
-  50%       { box-shadow: 0 0 12px 3px rgba(37, 99, 235, 0.22); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  50%       { box-shadow: 0 0 12px 3px rgba(16, 185, 129, 0.25); }
 }
 
-/* Number ticker — KPI cards */
+/* KPI number tick */
 @keyframes counter-in {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
@@ -350,37 +349,35 @@
    Utility classes consumed by components.
    ============================================================ */
 
-/* Animated mesh gradient background */
+/* Animated mesh gradient background for Auth / Hero */
 .bg-mesh-animated {
-  background-color: #0f172a;
+  background-color: #0b1220;
   background-image:
-    radial-gradient(ellipse 80% 60% at 20% 10%, rgba(37, 99, 235, 0.28) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 80% at 80% 90%, rgba(30, 58, 138, 0.32) 0%, transparent 60%),
-    radial-gradient(ellipse 100% 50% at 50% 50%, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
+    radial-gradient(ellipse 80% 60% at 20% 10%, rgba(16, 185, 129, 0.22) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 80% at 80% 90%, rgba(5, 150, 105, 0.24) 0%, transparent 60%),
+    radial-gradient(ellipse 100% 50% at 50% 50%, rgba(163, 230, 53, 0.08) 0%, transparent 70%);
   background-size: 200% 200%;
   animation: mesh-drift 16s ease-in-out infinite;
 }
 
 /* Glassmorphism card */
 .glass-card {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(17, 24, 39, 0.65);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.36), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.36), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
-/* Fade-up entrance — stagger with animation-delay on children */
+/* Entrance animations */
 .animate-fade-up {
-  animation: fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: fade-up 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* Scale-in entrance */
 .animate-scale-in {
-  animation: scale-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: scale-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* Shimmer skeleton */
 .animate-shimmer {
   background: linear-gradient(
     90deg,
@@ -392,37 +389,36 @@
   animation: shimmer 1.8s ease-in-out infinite;
 }
 
-/* Glow on hover for KPI cards */
-/* Swiss micro-interaction: clean border shift + micro-elevation */
+/* Hover elevation for KPI cards */
 .hover-glow {
   transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 }
 .hover-glow:hover {
   border-color: var(--primary);
-  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 16px -2px rgba(16, 185, 129, 0.15);
   transform: translateY(-1px);
 }
 
-/* Active nav item — glow pulse */
+/* Active nav item indicator */
 .nav-active-glow {
   animation: glow-pulse 3s ease-in-out infinite;
 }
 
-/* Subtle agency dark grid background */
+/* Dark tech grid background */
 .bg-grid-agency {
   background-size: 40px 40px;
   background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
 }
 
-/* Agency subtle dots */
+/* Subtle dots */
 .bg-dots-agency {
-  background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
-/* Floating animation for hero mockup */
+/* Floating animation */
 @keyframes float-subtle {
   0%, 100% { transform: translateY(0px); }
   50%      { transform: translateY(-8px); }
@@ -432,7 +428,7 @@
   animation: float-subtle 6s ease-in-out infinite;
 }
 
-/* Radiant glow beam border */
+/* Radiant glow beam border with emerald & lime */
 .glow-border-brand {
   position: relative;
 }
@@ -442,17 +438,14 @@
   inset: -1px;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.6) 0%, rgba(37, 99, 235, 0.15) 50%, rgba(147, 51, 234, 0.4) 100%);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.6) 0%, rgba(163, 230, 53, 0.25) 50%, rgba(5, 150, 105, 0.5) 100%);
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   pointer-events: none;
 }
 
-
-/* ============================================================
-   Reduced-motion safety net — one rule covers everything.
-   ============================================================ */
+/* Reduced-motion */
 @media (prefers-reduced-motion: reduce) {
   [class*="animate-[shell-"],
   .bg-mesh-animated,
@@ -467,4 +460,3 @@
     transform: none;
   }
 }
-

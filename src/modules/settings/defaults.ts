@@ -59,7 +59,7 @@ export const SETTING_DEFAULTS = {
   [SETTING_KEYS.REFERRAL_AUTO_PROMOTION_ENABLED]: false,
   [SETTING_KEYS.ANNOUNCEMENT_WELCOME_SETTINGS]: {
     isEnabled: true,
-    title: "Bienvenue sur E-com Colab, {partnerName} !",
+    title: "Bienvenue sur EcomPartner, {partnerName} !",
     message: "Votre compte partenaire a été validé avec succès par notre équipe. Vous avez désormais accès à notre catalogue exclusif de produits gagnants, aux kits marketing prêts à l'emploi et à notre système de commissions accéléré.",
     buttonText: "Découvrir mon espace",
     buttonUrl: "/catalogue",

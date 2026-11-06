@@ -35,6 +35,7 @@ import { formatUnreadCount } from "@/modules/notifications/labels";
 import { GlobalSearch } from "./global-search";
 import { LogoutButton } from "./logout-button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { EcomPartnerLogo } from "@/components/brand/logo";
 import { PageTransition } from "@/components/ui/page-transition";
 
 type NavItem = { href: string; label: string; icon: LucideIcon; superAdminOnly?: boolean };
@@ -295,7 +296,7 @@ export function AppShell({
             )}
           </button>
           <p className={cn("mt-2 text-center text-[10px] text-sidebar-faint", collapsed && "hidden")}>
-            Version 0.1.0
+            EcomPartner v1.0 · Operating System
           </p>
         </div>
       </aside>
@@ -342,7 +343,7 @@ export function AppShell({
               ))}
             </nav>
             <div className="border-t border-sidebar-border p-3">
-              <p className="px-3 text-[10px] text-sidebar-faint">Version 0.1.0</p>
+              <p className="px-3 text-[10px] text-sidebar-faint">EcomPartner v1.0 · Operating System</p>
             </div>
           </Dialog.Content>
         </Dialog.Portal>
@@ -484,7 +485,7 @@ function NavGroupBlock({
                       "bg-sidebar-active text-white nav-active-glow",
                       /* Left accent bar */
                       !collapsedMode &&
-                        "before:absolute before:left-0 before:top-1/2 before:h-4 before:-translate-y-1/2 before:w-0.5 before:rounded-full before:bg-blue-300 before:opacity-70",
+                        "before:absolute before:left-0 before:top-1/2 before:h-4 before:-translate-y-1/2 before:w-0.5 before:rounded-full before:bg-emerald-300 before:opacity-70",
                     ]
                   : [
                       "text-sidebar-muted",
@@ -517,27 +518,31 @@ function Brand({
   scope: "admin" | "partenaire";
   compact?: boolean;
 }) {
+  const homeHref = scope === "admin" ? "/dashboard" : "/tableau-de-bord";
+
   if (compact) {
     return (
-      <div className="flex h-16 shrink-0 items-center justify-center border-b border-sidebar-border">
-        <div className="flex h-9 w-9 items-center justify-center rounded-md bg-sidebar-active text-sm font-bold text-white">
-          E
-        </div>
-      </div>
+      <Link
+        href={homeHref}
+        className="flex h-16 shrink-0 items-center justify-center border-b border-sidebar-border transition-opacity hover:opacity-90"
+        title="EcomPartner"
+      >
+        <EcomPartnerLogo iconOnly theme="dark" className="h-8 w-8" />
+      </Link>
     );
   }
   return (
-    <div className="flex h-16 shrink-0 items-center gap-2.5 border-b border-sidebar-border px-4">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-sidebar-active text-sm font-bold text-white">
-        E
+    <Link
+      href={homeHref}
+      className="flex h-16 shrink-0 items-center justify-between border-b border-sidebar-border px-4 transition-opacity hover:opacity-95"
+    >
+      <div className="flex items-center gap-2.5 min-w-0">
+        <EcomPartnerLogo variant="compact" theme="dark" />
       </div>
-      <div className="min-w-0 leading-tight">
-        <div className="truncate text-sm font-semibold text-white">E-COM COLAB</div>
-        <div className="truncate text-[11px] text-sidebar-faint">
-          {scope === "admin" ? "Opérations" : "Espace partenaire"}
-        </div>
-      </div>
-    </div>
+      <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400 border border-emerald-500/20 uppercase tracking-wider shrink-0">
+        {scope === "admin" ? "Ops" : "Partner"}
+      </span>
+    </Link>
   );
 }
 
