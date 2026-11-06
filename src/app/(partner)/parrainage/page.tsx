@@ -13,17 +13,12 @@ import {
   AlertCircle,
   Sparkles,
 } from "lucide-react";
-import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/rbac";
 import { formatMoney } from "@/lib/money";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  getPartnerReferralLevel,
-  getReferralThresholdSettings,
-} from "@/modules/referrals/levels";
-import { getOrCreateReferralCode } from "@/modules/referrals/service";
+import { getPartnerReferralDashboardData } from "@/modules/referrals/service";
 import { ReferralLinkCard } from "./referral-link-card";
 import { PartnerBreakdownModal } from "./partner-breakdown-modal";
 
@@ -42,77 +37,17 @@ export default async function PartnerReferralDashboardPage() {
 
   const partnerId = sessionUser.partnerId;
 
-  // 3. Fetch link, levels, threshold config, summaries, attributions and commissions
-  const [
+  // 3. Fetch all dashboard data via domain service (encapsulates Prisma queries)
+  const {
     linkData,
     levelData,
     thresholdSettings,
-    pendingCommissionsAgg,
-    approvedCommissionsAgg,
-    paidCommissionsAgg,
+    pendingAmount,
+    approvedAmount,
+    paidAmount,
     attributions,
     commissions,
-  ] = await Promise.all([
-    getOrCreateReferralCode(partnerId),
-    getPartnerReferralLevel(partnerId),
-    getReferralThresholdSettings(prisma),
-    prisma.referralCommission.aggregate({
-      where: {
-        referrerPartnerId: partnerId,
-        status: { in: ["PENDING_VERIFICATION", "ELIGIBLE"] },
-      },
-      _sum: { amount: true },
-    }),
-    prisma.referralCommission.aggregate({
-      where: {
-        referrerPartnerId: partnerId,
-        status: "APPROVED_FOR_PAYMENT",
-      },
-      _sum: { amount: true },
-    }),
-    prisma.referralCommission.aggregate({
-      where: {
-        referrerPartnerId: partnerId,
-        status: "PAID",
-      },
-      _sum: { amount: true },
-    }),
-    prisma.referralAttribution.findMany({
-      where: { referrerPartnerId: partnerId },
-      include: {
-        referredPartner: {
-          select: {
-            id: true,
-            displayName: true,
-            code: true,
-            createdAt: true,
-            status: true,
-          },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.referralCommission.findMany({
-      where: { referrerPartnerId: partnerId },
-      include: {
-        attribution: {
-          include: {
-            referredPartner: {
-              select: {
-                displayName: true,
-                code: true,
-              },
-            },
-          },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    }),
-  ]);
-
-  const pendingAmount = pendingCommissionsAgg._sum.amount ?? 0;
-  const approvedAmount = approvedCommissionsAgg._sum.amount ?? 0;
-  const paidAmount = paidCommissionsAgg._sum.amount ?? 0;
+  } = await getPartnerReferralDashboardData(partnerId);
 
   // Calculate progress towards next level
   const currentLevel = levelData.level;
@@ -240,7 +175,7 @@ export default async function PartnerReferralDashboardPage() {
               <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 text-xs text-amber-800 flex items-center gap-2">
                 <Clock className="h-4 w-4 text-amber-600 shrink-0" />
                 <span>
-                  Demande de promotion éligible vers le <strong>Niveau {levelData.eligibleLevel}</strong> en cours de validation par l'administrateur.
+                  Demande de promotion éligible vers le <strong>Niveau {levelData.eligibleLevel}</strong> en cours de validation par l&apos;administrateur.
                 </span>
               </div>
             )}

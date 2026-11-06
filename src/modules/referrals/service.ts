@@ -1,6 +1,11 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
+import {
+  getPartnerReferralLevel,
+  getReferralThresholdSettings,
+} from "./levels";
+
 export class ReferralAuthorizationError extends Error {
   constructor(message: string = "Seuls les partenaires actifs peuvent créer un lien de parrainage.") {
     super(message);
@@ -415,4 +420,409 @@ export async function recordPartnerReferral(
       status: "PENDING_QUALIFICATION",
     },
   });
+}
+
+export type ReferralPromotionCandidate = {
+  partnerId: string;
+  displayName: string;
+  code: string;
+  email?: string;
+  currentLevel: number;
+  targetLevel: number;
+  qualifiedCount: number;
+  threshold: number;
+  currentRate: string;
+  targetRate: string;
+};
+
+export type ReferralQueueCommissionItem = {
+  id: string;
+  orderId?: string | null;
+  amount: string | number;
+  currency: string;
+  status: string;
+  createdAt: string | Date;
+  calculationDetails?: Prisma.JsonValue;
+  referrer: {
+    id: string;
+    code: string;
+    displayName: string;
+    email?: string;
+  };
+  referred: {
+    id: string;
+    code: string;
+    displayName: string;
+    email?: string;
+  };
+};
+
+export type ReferralPaymentQueueItem = {
+  id: string;
+  orderId?: string | null;
+  amount: string | number;
+  currency: string;
+  status: string;
+  approvedAt?: string | Date | null;
+  approvedById?: string | null;
+  calculationDetails?: Prisma.JsonValue;
+  referrer: {
+    id: string;
+    code: string;
+    displayName: string;
+    email?: string;
+  };
+  referred: {
+    id: string;
+    code: string;
+    displayName: string;
+  };
+};
+
+/**
+ * Fetches all data required to render the Admin Referral & Commission Hub.
+ * Moves database access out of the presentation layer.
+ */
+export async function getAdminReferralDashboardData(tx?: Prisma.TransactionClient) {
+  const db = tx ?? prisma;
+
+  // 1. Fetch overview metrics
+  const [
+    activeLinksCount,
+    totalAttributionsCount,
+    qualifiedReferralsCount,
+    pendingApprovalCount,
+    totalPaidCommissionsAgg,
+  ] = await Promise.all([
+    db.referralLink.count({ where: { isActive: true } }),
+    db.referralAttribution.count(),
+    db.referralAttribution.count({ where: { status: "QUALIFIED" } }),
+    db.referralCommission.count({
+      where: { status: { in: ["PENDING_VERIFICATION", "ELIGIBLE"] } },
+    }),
+    db.referralCommission.aggregate({
+      where: { status: "PAID" },
+      _sum: { amount: true },
+    }),
+  ]);
+
+  const totalPaidAmount = totalPaidCommissionsAgg._sum.amount ?? 0;
+
+  // 2. Attributions list (recent 50)
+  const attributions = await db.referralAttribution.findMany({
+    take: 50,
+    orderBy: { createdAt: "desc" },
+    include: {
+      referrerPartner: {
+        select: {
+          id: true,
+          code: true,
+          displayName: true,
+          user: { select: { email: true } },
+        },
+      },
+      referredPartner: {
+        select: {
+          id: true,
+          code: true,
+          displayName: true,
+          user: { select: { email: true } },
+        },
+      },
+    },
+  });
+
+  // 3. Promotion Queue (5 levels)
+  const thresholds = await getReferralThresholdSettings(db);
+  const qualifiedAttributions = await db.referralAttribution.findMany({
+    where: { status: "QUALIFIED" },
+    select: { referrerPartnerId: true },
+  });
+
+  const countByReferrer = new Map<string, number>();
+  for (const attr of qualifiedAttributions) {
+    countByReferrer.set(
+      attr.referrerPartnerId,
+      (countByReferrer.get(attr.referrerPartnerId) ?? 0) + 1,
+    );
+  }
+
+  const rateMap: Record<number, string> = {
+    1: "3%",
+    2: "7%",
+    3: "15%",
+    4: "20%",
+    5: "30%",
+  };
+
+  const thresholdMap: Record<number, number> = {
+    2: thresholds.level2Threshold,
+    3: thresholds.level3Threshold,
+    4: thresholds.level4Threshold,
+    5: thresholds.level5Threshold,
+  };
+
+  const promotionCandidates: ReferralPromotionCandidate[] = [];
+  for (const [pId, count] of countByReferrer.entries()) {
+    if (count >= thresholds.level2Threshold) {
+      const levelRes = await getPartnerReferralLevel(pId, db);
+      if (levelRes.targetLevel > levelRes.level) {
+        const partner = await db.partner.findUnique({
+          where: { id: pId },
+          include: { user: { select: { email: true } } },
+        });
+        if (partner) {
+          promotionCandidates.push({
+            partnerId: partner.id,
+            displayName: partner.displayName,
+            code: partner.code,
+            email: partner.user?.email,
+            currentLevel: levelRes.level,
+            targetLevel: levelRes.targetLevel,
+            qualifiedCount: levelRes.qualifiedCount,
+            threshold: thresholdMap[levelRes.targetLevel] ?? thresholds.level2Threshold,
+            currentRate: rateMap[levelRes.level] ?? "3%",
+            targetRate: rateMap[levelRes.targetLevel] ?? "7%",
+          });
+        }
+      }
+    }
+  }
+
+  // 4. Commission Approval Queue (PENDING_VERIFICATION or ELIGIBLE)
+  const approvalCommissions = await db.referralCommission.findMany({
+    where: { status: { in: ["PENDING_VERIFICATION", "ELIGIBLE"] } },
+    orderBy: { createdAt: "desc" },
+    include: {
+      referrerPartner: {
+        select: {
+          id: true,
+          code: true,
+          displayName: true,
+          user: { select: { email: true } },
+        },
+      },
+      attribution: {
+        include: {
+          referredPartner: {
+            select: {
+              id: true,
+              code: true,
+              displayName: true,
+              user: { select: { email: true } },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const approvalQueueItems: ReferralQueueCommissionItem[] = approvalCommissions.map((c) => ({
+    id: c.id,
+    orderId: c.orderId,
+    amount: c.amount.toString(),
+    currency: c.currency,
+    status: c.status,
+    createdAt: c.createdAt,
+    calculationDetails: c.calculationDetails,
+    referrer: {
+      id: c.referrerPartner.id,
+      code: c.referrerPartner.code,
+      displayName: c.referrerPartner.displayName,
+      email: c.referrerPartner.user?.email,
+    },
+    referred: {
+      id: c.attribution.referredPartner.id,
+      code: c.attribution.referredPartner.code,
+      displayName: c.attribution.referredPartner.displayName,
+      email: c.attribution.referredPartner.user?.email,
+    },
+  }));
+
+  // 5. Payment Queue (APPROVED_FOR_PAYMENT)
+  const paymentCommissions = await db.referralCommission.findMany({
+    where: { status: "APPROVED_FOR_PAYMENT" },
+    orderBy: { approvedAt: "desc" },
+    include: {
+      referrerPartner: {
+        select: {
+          id: true,
+          code: true,
+          displayName: true,
+          user: { select: { email: true } },
+        },
+      },
+      attribution: {
+        include: {
+          referredPartner: {
+            select: {
+              id: true,
+              code: true,
+              displayName: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const paymentQueueItems: ReferralPaymentQueueItem[] = paymentCommissions.map((c) => ({
+    id: c.id,
+    orderId: c.orderId,
+    amount: c.amount.toString(),
+    currency: c.currency,
+    status: c.status,
+    approvedAt: c.approvedAt,
+    approvedById: c.approvedById,
+    calculationDetails: c.calculationDetails,
+    referrer: {
+      id: c.referrerPartner.id,
+      code: c.referrerPartner.code,
+      displayName: c.referrerPartner.displayName,
+      email: c.referrerPartner.user?.email,
+    },
+    referred: {
+      id: c.attribution.referredPartner.id,
+      code: c.attribution.referredPartner.code,
+      displayName: c.attribution.referredPartner.displayName,
+    },
+  }));
+
+  // 6. Historical Ledger / Payout Log (PAID, REJECTED, REVERSED)
+  const historicalCommissions = await db.referralCommission.findMany({
+    where: { status: { in: ["PAID", "REJECTED", "REVERSED"] } },
+    orderBy: { updatedAt: "desc" },
+    take: 50,
+    include: {
+      referrerPartner: {
+        select: {
+          id: true,
+          code: true,
+          displayName: true,
+          user: { select: { email: true } },
+        },
+      },
+      attribution: {
+        include: {
+          referredPartner: {
+            select: {
+              id: true,
+              code: true,
+              displayName: true,
+              user: { select: { email: true } },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  return {
+    metrics: {
+      activeLinksCount,
+      totalAttributionsCount,
+      qualifiedReferralsCount,
+      pendingApprovalCount,
+      totalPaidAmount,
+    },
+    attributions,
+    promotionCandidates,
+    approvalQueueItems,
+    paymentQueueItems,
+    historicalCommissions,
+    thresholds,
+  };
+}
+
+/**
+ * Fetches all data required to render the Partner Referral Dashboard.
+ * Moves database access out of the presentation layer.
+ */
+export async function getPartnerReferralDashboardData(
+  partnerId: string,
+  tx?: Prisma.TransactionClient,
+) {
+  const db = tx ?? prisma;
+
+  const [
+    linkData,
+    levelData,
+    thresholdSettings,
+    pendingCommissionsAgg,
+    approvedCommissionsAgg,
+    paidCommissionsAgg,
+    attributions,
+    commissions,
+  ] = await Promise.all([
+    getOrCreateReferralCode(partnerId, db),
+    getPartnerReferralLevel(partnerId, db),
+    getReferralThresholdSettings(db),
+    db.referralCommission.aggregate({
+      where: {
+        referrerPartnerId: partnerId,
+        status: { in: ["PENDING_VERIFICATION", "ELIGIBLE"] },
+      },
+      _sum: { amount: true },
+    }),
+    db.referralCommission.aggregate({
+      where: {
+        referrerPartnerId: partnerId,
+        status: "APPROVED_FOR_PAYMENT",
+      },
+      _sum: { amount: true },
+    }),
+    db.referralCommission.aggregate({
+      where: {
+        referrerPartnerId: partnerId,
+        status: "PAID",
+      },
+      _sum: { amount: true },
+    }),
+    db.referralAttribution.findMany({
+      where: { referrerPartnerId: partnerId },
+      include: {
+        referredPartner: {
+          select: {
+            id: true,
+            displayName: true,
+            code: true,
+            createdAt: true,
+            status: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+    db.referralCommission.findMany({
+      where: { referrerPartnerId: partnerId },
+      include: {
+        attribution: {
+          include: {
+            referredPartner: {
+              select: {
+                displayName: true,
+                code: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
+
+  const pendingAmount = pendingCommissionsAgg._sum.amount ?? 0;
+  const approvedAmount = approvedCommissionsAgg._sum.amount ?? 0;
+  const paidAmount = paidCommissionsAgg._sum.amount ?? 0;
+
+  return {
+    linkData,
+    levelData,
+    thresholdSettings,
+    pendingAmount,
+    approvedAmount,
+    paidAmount,
+    attributions,
+    commissions,
+  };
 }

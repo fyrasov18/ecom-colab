@@ -11,16 +11,12 @@ import {
   ShieldCheck,
   Calendar,
 } from "lucide-react";
-import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/rbac";
 import { formatMoney } from "@/lib/money";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  getPartnerReferralLevel,
-  getReferralThresholdSettings,
-} from "@/modules/referrals/levels";
+import { getAdminReferralDashboardData } from "@/modules/referrals/service";
 import { ApprovalQueueTable, type QueueCommissionItem } from "./approval-queue";
 import { PaymentQueueTable, type PaymentQueueItem } from "./payment-queue";
 import { PromotionQueueTable, type PromotionCandidate } from "./promotion-queue";
@@ -35,236 +31,24 @@ export default async function AdminReferralHubPage() {
   // 1. Strictly enforce SUPER_ADMIN or ADMIN role
   await requireSession(["SUPER_ADMIN", "ADMIN"]);
 
-  // 2. Fetch overview metrics
-  const [
+  // 2. Fetch all hub data via domain service (encapsulates Prisma queries)
+  const {
+    metrics,
+    attributions,
+    promotionCandidates,
+    approvalQueueItems,
+    paymentQueueItems,
+    historicalCommissions,
+    thresholds,
+  } = await getAdminReferralDashboardData();
+
+  const {
     activeLinksCount,
     totalAttributionsCount,
     qualifiedReferralsCount,
     pendingApprovalCount,
-    totalPaidCommissionsAgg,
-  ] = await Promise.all([
-    prisma.referralLink.count({ where: { isActive: true } }),
-    prisma.referralAttribution.count(),
-    prisma.referralAttribution.count({ where: { status: "QUALIFIED" } }),
-    prisma.referralCommission.count({
-      where: { status: { in: ["PENDING_VERIFICATION", "ELIGIBLE"] } },
-    }),
-    prisma.referralCommission.aggregate({
-      where: { status: "PAID" },
-      _sum: { amount: true },
-    }),
-  ]);
-
-  const totalPaidAmount = totalPaidCommissionsAgg._sum.amount ?? 0;
-
-  // 3. Attributions list (recent 50)
-  const attributions = await prisma.referralAttribution.findMany({
-    take: 50,
-    orderBy: { createdAt: "desc" },
-    include: {
-      referrerPartner: {
-        select: {
-          id: true,
-          code: true,
-          displayName: true,
-          user: { select: { email: true } },
-        },
-      },
-      referredPartner: {
-        select: {
-          id: true,
-          code: true,
-          displayName: true,
-          user: { select: { email: true } },
-        },
-      },
-    },
-  });
-
-  // 4. Promotion Queue (5 levels)
-  const thresholds = await getReferralThresholdSettings(prisma);
-  const qualifiedAttributions = await prisma.referralAttribution.findMany({
-    where: { status: "QUALIFIED" },
-    select: { referrerPartnerId: true },
-  });
-
-  const countByReferrer = new Map<string, number>();
-  for (const attr of qualifiedAttributions) {
-    countByReferrer.set(
-      attr.referrerPartnerId,
-      (countByReferrer.get(attr.referrerPartnerId) ?? 0) + 1,
-    );
-  }
-
-  const rateMap: Record<number, string> = {
-    1: "3%",
-    2: "7%",
-    3: "15%",
-    4: "20%",
-    5: "30%",
-  };
-
-  const thresholdMap: Record<number, number> = {
-    2: thresholds.level2Threshold,
-    3: thresholds.level3Threshold,
-    4: thresholds.level4Threshold,
-    5: thresholds.level5Threshold,
-  };
-
-  const promotionCandidates: PromotionCandidate[] = [];
-  for (const [pId, count] of countByReferrer.entries()) {
-    if (count >= thresholds.level2Threshold) {
-      const levelRes = await getPartnerReferralLevel(pId, prisma);
-      if (levelRes.targetLevel > levelRes.level) {
-        const partner = await prisma.partner.findUnique({
-          where: { id: pId },
-          include: { user: { select: { email: true } } },
-        });
-        if (partner) {
-          promotionCandidates.push({
-            partnerId: partner.id,
-            displayName: partner.displayName,
-            code: partner.code,
-            email: partner.user.email,
-            currentLevel: levelRes.level,
-            targetLevel: levelRes.targetLevel,
-            qualifiedCount: levelRes.qualifiedCount,
-            threshold: thresholdMap[levelRes.targetLevel] ?? thresholds.level2Threshold,
-            currentRate: rateMap[levelRes.level] ?? "3%",
-            targetRate: rateMap[levelRes.targetLevel] ?? "7%",
-          });
-        }
-      }
-    }
-  }
-
-  // 5. Commission Approval Queue (PENDING_VERIFICATION or ELIGIBLE)
-  const approvalCommissions = await prisma.referralCommission.findMany({
-    where: { status: { in: ["PENDING_VERIFICATION", "ELIGIBLE"] } },
-    orderBy: { createdAt: "desc" },
-    include: {
-      referrerPartner: {
-        select: {
-          id: true,
-          code: true,
-          displayName: true,
-          user: { select: { email: true } },
-        },
-      },
-      attribution: {
-        include: {
-          referredPartner: {
-            select: {
-              id: true,
-              code: true,
-              displayName: true,
-              user: { select: { email: true } },
-            },
-          },
-        },
-      },
-    },
-  });
-
-  const approvalQueueItems: QueueCommissionItem[] = approvalCommissions.map((c) => ({
-    id: c.id,
-    orderId: c.orderId,
-    amount: c.amount.toString(),
-    currency: c.currency,
-    status: c.status,
-    createdAt: c.createdAt,
-    calculationDetails: c.calculationDetails,
-    referrer: {
-      id: c.referrerPartner.id,
-      code: c.referrerPartner.code,
-      displayName: c.referrerPartner.displayName,
-      email: c.referrerPartner.user?.email,
-    },
-    referred: {
-      id: c.attribution.referredPartner.id,
-      code: c.attribution.referredPartner.code,
-      displayName: c.attribution.referredPartner.displayName,
-      email: c.attribution.referredPartner.user?.email,
-    },
-  }));
-
-  // 6. Payment Queue (APPROVED_FOR_PAYMENT)
-  const paymentCommissions = await prisma.referralCommission.findMany({
-    where: { status: "APPROVED_FOR_PAYMENT" },
-    orderBy: { approvedAt: "desc" },
-    include: {
-      referrerPartner: {
-        select: {
-          id: true,
-          code: true,
-          displayName: true,
-          user: { select: { email: true } },
-        },
-      },
-      attribution: {
-        include: {
-          referredPartner: {
-            select: {
-              id: true,
-              code: true,
-              displayName: true,
-            },
-          },
-        },
-      },
-    },
-  });
-
-  const paymentQueueItems: PaymentQueueItem[] = paymentCommissions.map((c) => ({
-    id: c.id,
-    orderId: c.orderId,
-    amount: c.amount.toString(),
-    currency: c.currency,
-    status: c.status,
-    approvedAt: c.approvedAt,
-    approvedById: c.approvedById,
-    calculationDetails: c.calculationDetails,
-    referrer: {
-      id: c.referrerPartner.id,
-      code: c.referrerPartner.code,
-      displayName: c.referrerPartner.displayName,
-      email: c.referrerPartner.user?.email,
-    },
-    referred: {
-      id: c.attribution.referredPartner.id,
-      code: c.attribution.referredPartner.code,
-      displayName: c.attribution.referredPartner.displayName,
-    },
-  }));
-
-  // 7. Historical Ledger / Payout Log (PAID, REJECTED, REVERSED)
-  const historicalCommissions = await prisma.referralCommission.findMany({
-    where: { status: { in: ["PAID", "REJECTED", "REVERSED"] } },
-    orderBy: { updatedAt: "desc" },
-    take: 50,
-    include: {
-      referrerPartner: {
-        select: {
-          id: true,
-          code: true,
-          displayName: true,
-          user: { select: { email: true } },
-        },
-      },
-      attribution: {
-        include: {
-          referredPartner: {
-            select: {
-              id: true,
-              code: true,
-              displayName: true,
-              user: { select: { email: true } },
-            },
-          },
-        },
-      },
-    },
-  });
+    totalPaidAmount,
+  } = metrics;
 
   return (
     <div className="space-y-8">
