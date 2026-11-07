@@ -40,6 +40,7 @@ export async function saveWelcomeSettingsAction(
     buttonText: str(formData.get("buttonText")),
     buttonUrl: str(formData.get("buttonUrl")),
     badgeText: str(formData.get("badgeText")),
+    bannerText: str(formData.get("bannerText")) || undefined,
     imageUrl: str(formData.get("imageUrl")),
     themeColor: str(formData.get("themeColor")),
   };

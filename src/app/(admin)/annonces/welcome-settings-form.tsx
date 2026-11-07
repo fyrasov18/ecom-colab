@@ -24,6 +24,9 @@ export function WelcomeSettingsForm({ initialSettings }: { initialSettings: Welc
   const [buttonText, setButtonText] = useState(initialSettings.buttonText);
   const [buttonUrl, setButtonUrl] = useState(initialSettings.buttonUrl);
   const [badgeText, setBadgeText] = useState(initialSettings.badgeText);
+  const [bannerText, setBannerText] = useState(
+    (initialSettings as Record<string, unknown>).bannerText as string ?? "🚀 Bien plus qu’une simple plateforme de dropshipping !"
+  );
   const [imageUrl, setImageUrl] = useState(initialSettings.imageUrl ?? "");
   const [themeColor, setThemeColor] = useState(initialSettings.themeColor);
 
@@ -55,6 +58,8 @@ export function WelcomeSettingsForm({ initialSettings }: { initialSettings: Welc
             buttonText={buttonText}
             buttonUrl={buttonUrl}
             badgeText={badgeText}
+            bannerText={bannerText}
+            themeColor={themeColor}
             imageUrl={imageUrl}
             trigger={
               <Button type="button" variant="outline" size="sm" className="gap-1.5 shrink-0">
@@ -110,6 +115,20 @@ export function WelcomeSettingsForm({ initialSettings }: { initialSettings: Welc
                 onChange={(e) => setMessage(e.target.value)}
                 className="flex w-full rounded-md border border-input bg-card px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
+            </div>
+
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="welcome-banner">Bandeau violet mis en avant</Label>
+              <Input
+                id="welcome-banner"
+                name="bannerText"
+                value={bannerText}
+                onChange={(e) => setBannerText(e.target.value)}
+                placeholder="🚀 Bien plus qu’une simple plateforme de dropshipping !"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Affiché dans le bandeau supérieur coloré au centre de la popup.
+              </p>
             </div>
 
             <div className="space-y-1.5">

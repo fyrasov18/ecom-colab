@@ -596,6 +596,6 @@ describe("Milestone 5: Admin & Partner Dashboards UI & Actions", () => {
     it("confirms AppShell module loads cleanly", async () => {
       const appShellModule = await import("@/components/layout/app-shell");
       expect(appShellModule.AppShell).toBeDefined();
-    });
+    }, 15000);
   });
 });

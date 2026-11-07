@@ -4,19 +4,16 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
-  Bell,
-  CheckCircle2,
-  Gift,
   Megaphone,
   PartyPopper,
   Sparkles,
-  Star,
   TrendingUp,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CelebrationConfetti } from "./confetti";
+import { WelcomeOnboardingModal } from "./welcome-onboarding-modal";
 import {
   dismissPartnerPopupAction,
   trackPopupDisplayedAction,
@@ -28,7 +25,7 @@ type Props = {
   partnerId: string;
 };
 
-export function FullscreenPopupModal({ initialPopup, partnerId }: Props) {
+export function FullscreenPopupModal({ initialPopup, partnerId: _partnerId }: Props) {
   const router = useRouter();
   const [popup, setPopup] = useState<PartnerPopupPayload | null>(initialPopup);
   const [closing, setClosing] = useState(false);
@@ -70,6 +67,24 @@ export function FullscreenPopupModal({ initialPopup, partnerId }: Props) {
   const isLevelUp = popup.type === "LEVEL_UP";
   const isWelcome = popup.type === "WELCOME";
 
+  // Dedicated Premium Welcome Onboarding Modal
+  if (isWelcome) {
+    return (
+      <WelcomeOnboardingModal
+        isOpen={Boolean(popup)}
+        onClose={handleClose}
+        onAction={handleAction}
+        title={popup.title}
+        subtitle={popup.message}
+        buttonText={popup.buttonText}
+        themeColor={popup.themeColor}
+        bannerText={(popup.metadata?.bannerText as string) || undefined}
+        badgeText={popup.badgeText}
+        isClosing={closing}
+      />
+    );
+  }
+
   // Level Up Metadata
   const oldLevel = Number(popup.metadata?.previousLevel ?? 1);
   const newLevel = Number(popup.metadata?.newLevel ?? 2);
@@ -100,8 +115,6 @@ export function FullscreenPopupModal({ initialPopup, partnerId }: Props) {
         } ${
           isLevelUp
             ? "border-amber-500/40 shadow-amber-500/10"
-            : isWelcome
-            ? "border-indigo-500/40 shadow-indigo-500/10"
             : "border-border shadow-xl"
         }`}
       >
@@ -124,13 +137,6 @@ export function FullscreenPopupModal({ initialPopup, partnerId }: Props) {
                 <Sparkles className="h-4 w-4" />
               </div>
             </div>
-          ) : isWelcome ? (
-            <div className="relative mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-linear-to-tr from-indigo-500/20 via-primary/30 to-sky-400/20 ring-8 ring-indigo-500/10">
-              <CheckCircle2 className="h-10 w-10 text-indigo-500 animate-pulse" />
-              <div className="absolute -top-1 -right-1 rounded-full bg-indigo-500 p-1 text-white shadow-xs">
-                <Star className="h-4 w-4" />
-              </div>
-            </div>
           ) : (
             <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary ring-6 ring-primary/5">
               <Megaphone className="h-8 w-8" />
@@ -141,10 +147,6 @@ export function FullscreenPopupModal({ initialPopup, partnerId }: Props) {
           {isLevelUp ? (
             <Badge className="mb-3 bg-amber-500/15 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 border-amber-500/30 gap-1.5 px-3 py-1 font-semibold text-xs uppercase tracking-wider">
               <TrendingUp className="h-3.5 w-3.5" /> Promotion de niveau
-            </Badge>
-          ) : isWelcome ? (
-            <Badge className="mb-3 bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-500/20 border-indigo-500/30 gap-1.5 px-3 py-1 font-semibold text-xs uppercase tracking-wider">
-              <Star className="h-3.5 w-3.5" /> {popup.badgeText || "Compte Partenaire Actif"}
             </Badge>
           ) : (
             <Badge variant="outline" className="mb-3 px-3 py-1 text-xs uppercase tracking-wider">
@@ -224,8 +226,6 @@ export function FullscreenPopupModal({ initialPopup, partnerId }: Props) {
               className={`w-full flex-1 order-1 sm:order-2 gap-2 text-sm font-semibold shadow-md ${
                 isLevelUp
                   ? "bg-amber-600 hover:bg-amber-700 text-white"
-                  : isWelcome
-                  ? "bg-indigo-600 hover:bg-indigo-700 text-white"
                   : ""
               }`}
             >

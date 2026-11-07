@@ -7,20 +7,21 @@ export const welcomeSettingsSchema = z.object({
     .trim()
     .min(2, "Le titre est obligatoire")
     .max(160, "Le titre est trop long")
-    .default("Bienvenue sur E-com Colab, {partnerName} !"),
+    .default("Bienvenue chez Ecom Partner, {partnerName} ! 🎉"),
   message: z
     .string()
     .trim()
     .min(5, "Le message est obligatoire")
     .max(2000, "Le message est trop long")
     .default(
-      "Votre compte partenaire a été validé avec succès par notre équipe. Vous avez désormais accès à notre catalogue exclusif de produits gagnants, aux kits marketing prêts à l'emploi et à notre système de commissions accéléré.",
+      "Votre compte partenaire a été validé avec succès. Félicitations !",
     ),
   buttonText: z.string().trim().min(1, "Le texte du bouton est requis").default("Découvrir mon espace"),
   buttonUrl: z.string().trim().min(1, "Le lien du bouton est requis").default("/catalogue"),
   badgeText: z.string().trim().max(50).default("Compte partenaire activé"),
+  bannerText: z.string().trim().max(200).optional().default("🚀 Bien plus qu’une simple plateforme de dropshipping !"),
   imageUrl: z.string().trim().max(500).optional().or(z.literal("")),
-  themeColor: z.enum(["indigo", "emerald", "amber", "rose", "purple", "blue"]).default("indigo"),
+  themeColor: z.enum(["indigo", "emerald", "amber", "rose", "purple", "blue"]).default("purple"),
 });
 
 export type WelcomeSettings = z.infer<typeof welcomeSettingsSchema>;

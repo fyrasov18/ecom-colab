@@ -523,6 +523,9 @@ export async function getPendingPartnerPopup(
           buttonText: welcomeSettings.buttonText,
           buttonUrl: welcomeSettings.buttonUrl,
           imageUrl: welcomeSettings.imageUrl || null,
+          metadata: {
+            bannerText: welcomeSettings.bannerText,
+          },
         },
       });
 
@@ -536,6 +539,9 @@ export async function getPendingPartnerPopup(
         badgeText: welcomeSettings.badgeText,
         imageUrl: welcomeSettings.imageUrl || null,
         themeColor: welcomeSettings.themeColor,
+        metadata: {
+          bannerText: welcomeSettings.bannerText,
+        },
       };
     } else if (existingWelcome.dismissedAt === null) {
       // Not yet dismissed
@@ -549,6 +555,9 @@ export async function getPendingPartnerPopup(
         badgeText: welcomeSettings.badgeText,
         imageUrl: welcomeSettings.imageUrl || existingWelcome.imageUrl || null,
         themeColor: welcomeSettings.themeColor,
+        metadata: {
+          bannerText: ((existingWelcome.metadata as Record<string, unknown>)?.bannerText as string) || welcomeSettings.bannerText,
+        },
       };
     }
   }

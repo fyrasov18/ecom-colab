@@ -4,17 +4,16 @@ import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
   ArrowRight,
-  CheckCircle2,
   Eye,
   Megaphone,
   PartyPopper,
   Sparkles,
-  Star,
   TrendingUp,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { WelcomeOnboardingModal } from "@/components/announcements/welcome-onboarding-modal";
 
 type PreviewProps = {
   type: "WELCOME" | "LEVEL_UP" | "ANNOUNCEMENT";
@@ -23,6 +22,8 @@ type PreviewProps = {
   buttonText: string;
   buttonUrl?: string;
   badgeText?: string;
+  bannerText?: string;
+  themeColor?: string;
   imageUrl?: string;
   metadata?: {
     oldLevel?: number;
@@ -37,8 +38,10 @@ export function NotificationPreviewModal({
   title,
   message,
   buttonText,
-  buttonUrl = "#",
-  badgeText,
+  buttonUrl: _buttonUrl = "#",
+  badgeText: _badgeText,
+  bannerText,
+  themeColor,
   imageUrl,
   metadata = { oldLevel: 1, newLevel: 2, newRate: 0.07 },
   trigger,
@@ -66,6 +69,40 @@ export function NotificationPreviewModal({
     .replace("{oldLevel}", String(oldLevel))
     .replace("{commissionRate}", String(ratePercent));
 
+  // Dedicated Onboarding Welcome Modal Preview
+  if (isWelcome) {
+    return (
+      <>
+        {trigger ? (
+          <span onClick={() => setOpen(true)} className="cursor-pointer inline-flex">
+            {trigger}
+          </span>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-xs"
+            onClick={() => setOpen(true)}
+          >
+            <Eye className="h-3.5 w-3.5" /> Prévisualiser
+          </Button>
+        )}
+        <WelcomeOnboardingModal
+          isOpen={open}
+          onClose={() => setOpen(false)}
+          onAction={() => setOpen(false)}
+          title={interpolatedTitle}
+          subtitle={interpolatedMessage}
+          buttonText={buttonText}
+          bannerText={bannerText}
+          themeColor={themeColor}
+          isPreview={true}
+        />
+      </>
+    );
+  }
+
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger asChild>
@@ -81,8 +118,6 @@ export function NotificationPreviewModal({
           className={`fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border bg-card p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150 sm:p-8 max-h-[90vh] overflow-y-auto ${
             isLevelUp
               ? "border-amber-500/40 shadow-amber-500/10"
-              : isWelcome
-              ? "border-indigo-500/40 shadow-indigo-500/10"
               : "border-border shadow-xl"
           }`}
           aria-describedby="preview-modal-description"
@@ -110,13 +145,6 @@ export function NotificationPreviewModal({
                   <Sparkles className="h-4 w-4" />
                 </div>
               </div>
-            ) : isWelcome ? (
-              <div className="relative mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-linear-to-tr from-indigo-500/20 via-primary/30 to-sky-400/20 ring-8 ring-indigo-500/10">
-                <CheckCircle2 className="h-10 w-10 text-indigo-500" />
-                <div className="absolute -top-1 -right-1 rounded-full bg-indigo-500 p-1 text-white shadow-xs">
-                  <Star className="h-4 w-4" />
-                </div>
-              </div>
             ) : (
               <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary ring-6 ring-primary/5">
                 <Megaphone className="h-8 w-8" />
@@ -126,10 +154,6 @@ export function NotificationPreviewModal({
             {isLevelUp ? (
               <Badge className="mb-3 bg-amber-500/15 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 border-amber-500/30 gap-1.5 px-3 py-1 font-semibold text-xs uppercase tracking-wider">
                 <TrendingUp className="h-3.5 w-3.5" /> Promotion de niveau
-              </Badge>
-            ) : isWelcome ? (
-              <Badge className="mb-3 bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-500/20 border-indigo-500/30 gap-1.5 px-3 py-1 font-semibold text-xs uppercase tracking-wider">
-                <Star className="h-3.5 w-3.5" /> {badgeText || "Compte Partenaire Actif"}
               </Badge>
             ) : (
               <Badge variant="outline" className="mb-3 px-3 py-1 text-xs uppercase tracking-wider">
@@ -172,8 +196,9 @@ export function NotificationPreviewModal({
               </div>
             )}
 
+            {/* Optional Image */}
             {imageUrl && !imageError && (
-              <div className="my-4 h-44 w-full overflow-hidden rounded-xl bg-muted border">
+              <div className="my-4 h-48 w-full overflow-hidden rounded-xl bg-muted border">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={imageUrl}
@@ -185,29 +210,31 @@ export function NotificationPreviewModal({
               </div>
             )}
 
-            <Dialog.Description
+            {/* Body Message */}
+            <p
               id="preview-modal-description"
-              className="mt-3 text-sm sm:text-base leading-relaxed text-muted-foreground text-center"
+              className="mt-3 text-sm sm:text-base leading-relaxed text-muted-foreground"
             >
               {interpolatedMessage}
-            </Dialog.Description>
+            </p>
 
+            {/* Actions Preview */}
             <div className="mt-6 flex w-full flex-col sm:flex-row gap-3">
+              <Dialog.Close asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full sm:w-auto order-2 sm:order-1"
+                >
+                  Fermer
+                </Button>
+              </Dialog.Close>
               <Button
                 type="button"
-                variant="outline"
                 onClick={() => setOpen(false)}
-                className="w-full sm:w-auto order-2 sm:order-1"
-              >
-                Fermer l&apos;aperçu
-              </Button>
-              <Button
-                type="button"
                 className={`w-full flex-1 order-1 sm:order-2 gap-2 text-sm font-semibold shadow-md ${
                   isLevelUp
                     ? "bg-amber-600 hover:bg-amber-700 text-white"
-                    : isWelcome
-                    ? "bg-indigo-600 hover:bg-indigo-700 text-white"
                     : ""
                 }`}
               >

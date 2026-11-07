@@ -72,13 +72,14 @@ export const SETTING_DEFAULTS = {
   [SETTING_KEYS.REFERRAL_AUTO_PROMOTION_ENABLED]: false,
   [SETTING_KEYS.ANNOUNCEMENT_WELCOME_SETTINGS]: {
     isEnabled: true,
-    title: "Bienvenue sur EcomPartner, {partnerName} !",
-    message: "Votre compte partenaire a été validé avec succès par notre équipe. Vous avez désormais accès à notre catalogue exclusif de produits gagnants, aux kits marketing prêts à l'emploi et à notre système de commissions accéléré.",
-    buttonText: "Découvrir mon espace",
+    title: "Bienvenue chez Ecom Partner, {partnerName} ! 🎉",
+    message: "Votre compte partenaire a été validé avec succès. Félicitations !",
+    buttonText: "On est ensemble ! 🚀",
     buttonUrl: "/catalogue",
     badgeText: "Compte validé",
+    bannerText: "🚀 Bien plus qu’une simple plateforme de dropshipping !",
     imageUrl: "",
-    themeColor: "indigo",
+    themeColor: "purple",
   },
   [SETTING_KEYS.ADMIN_PERMISSION_GRANTS]: {} as Record<string, string[]>,
   [SETTING_KEYS.ANNOUNCEMENT_LEVEL_UP_SETTINGS]: {
