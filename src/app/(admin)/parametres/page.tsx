@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { requireSession } from "@/lib/rbac";
+import { hasPermission } from "@/lib/permissions";
 import { listFinanceSettings } from "@/modules/settings/service";
 import { listPerformanceLevels } from "@/modules/finance/performance-service";
 import { FinanceSettingsForm } from "./settings-form";
@@ -10,12 +11,11 @@ export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
   const user = await requireSession(["SUPER_ADMIN", "ADMIN"]);
-  const [settings, levels] = await Promise.all([
+  const [settings, levels, canEdit] = await Promise.all([
     listFinanceSettings(),
     listPerformanceLevels({ includeInactive: true }),
+    hasPermission(user, "MANAGE_CONTRIBUTION_SETTINGS"),
   ]);
-  // A share percentage is a financial rule, so editing levels is SUPER_ADMIN only.
-  const canEdit = user.role === "SUPER_ADMIN";
 
   return (
     <div className="space-y-6">

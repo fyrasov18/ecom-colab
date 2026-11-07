@@ -50,11 +50,10 @@ export function FinanceSettingsForm({
         <CardHeader>
           <CardTitle className="text-base">Finance</CardTitle>
           <CardDescription>
-            Période de settlement des gains, montant minimum de retrait et
-            règle de coût de retour.
+            Période de settlement, retraits, contribution minimale par commande et règles de partage.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-5 sm:grid-cols-3">
+        <CardContent className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-2">
             <Label htmlFor="settlementPeriodHours">
               Période de settlement (heures)
@@ -93,6 +92,24 @@ export function FinanceSettingsForm({
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="minOrderContribution">
+              Contribution minimale (DT)
+            </Label>
+            <Input
+              id="minOrderContribution"
+              name="minOrderContribution"
+              type="number"
+              min={0}
+              step="0.001"
+              defaultValue={Number(getValue("finance.min_order_contribution") ?? 7.00)}
+              disabled={!canEdit}
+            />
+            <p className="text-xs text-muted-foreground">
+              Seuil brut minimum requis pour autoriser la création de commande (défaut : 7.00 DT).
+            </p>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="returnCostRule">Règle de coût retour/refus</Label>
             <NativeSelect
               id="returnCostRule"
@@ -116,7 +133,7 @@ export function FinanceSettingsForm({
             </p>
           </div>
 
-          <div className="space-y-2 sm:col-span-3">
+          <div className="space-y-2 sm:col-span-2 lg:col-span-4">
             <Label htmlFor="globalCommissionType">
               Commission globale par défaut
             </Label>
@@ -147,19 +164,34 @@ export function FinanceSettingsForm({
                     getValue("finance.global_commission") as
                       | { commissionValue?: number }
                       | undefined
-                  )?.commissionValue ?? 60,
+                  )?.commissionValue ?? 30,
                 )}
                 disabled={!canEdit}
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              Utilisée uniquement si aucune règle plus précise (assignment →
-              partenaire → produit) ne s&apos;applique. Les commandes existantes
-              conservent la commission figée à leur création.
+              Niveau 4 de la hiérarchie : appliquée uniquement si ni assignation produit, ni admin partenaire, ni niveau de performance n&apos;est défini (défaut : 30%).
             </p>
           </div>
 
-          <div className="sm:col-span-3">
+          <div className="space-y-2 sm:col-span-2 lg:col-span-4">
+            <Label htmlFor="reason">
+              Motif de la modification <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="reason"
+              name="reason"
+              placeholder="Ex : Révision trimestrielle des seuils financiers (min 5 caractères)"
+              minLength={5}
+              required={canEdit}
+              disabled={!canEdit}
+            />
+            <p className="text-xs text-muted-foreground">
+              Obligatoire pour toute modification — enregistré de manière immuable dans le journal d&apos;audit.
+            </p>
+          </div>
+
+          <div className="sm:col-span-2 lg:col-span-4">
             <Button type="submit" disabled={pending || !canEdit}>
               {pending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -170,7 +202,7 @@ export function FinanceSettingsForm({
             </Button>
             {!canEdit && (
               <p className="mt-2 text-xs text-muted-foreground">
-                Modification réservée au Super Admin.
+                Modification réservée aux utilisateurs disposant de la permission MANAGE_CONTRIBUTION_SETTINGS.
               </p>
             )}
           </div>

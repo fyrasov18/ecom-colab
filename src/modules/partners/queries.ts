@@ -3,7 +3,10 @@ import { prisma } from "@/lib/prisma";
 
 /** Partner row behind a signed-in partner user (commission defaults, code, …). */
 export async function getPartnerById(partnerId: string) {
-  return prisma.partner.findUniqueOrThrow({ where: { id: partnerId } });
+  return prisma.partner.findUniqueOrThrow({
+    where: { id: partnerId },
+    include: { performanceLevel: true },
+  });
 }
 
 /** Minimal status lookup for the RBAC gate — no sensitive fields. */
@@ -14,4 +17,3 @@ export async function getPartnerStatus(partnerId: string): Promise<PartnerStatus
   });
   return partner?.status ?? null;
 }
-

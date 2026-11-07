@@ -168,14 +168,14 @@ export async function assignProductToPartner(
         partnerId: parsed.partnerId,
         productId: parsed.productId,
         status: "ACTIVE",
-        commissionType: commissionData.commissionType,
-        commissionValue: commissionData.commissionValue,
+        commissionType: opts.allowCommission ? commissionData.commissionType : (existing?.commissionType ?? null),
+        commissionValue: opts.allowCommission ? commissionData.commissionValue : (existing?.commissionValue ? String(existing.commissionValue) : null),
       },
       update: {
         status: "ACTIVE",
         deactivatedAt: null,
-        commissionType: commissionData.commissionType,
-        commissionValue: commissionData.commissionValue,
+        commissionType: opts.allowCommission ? commissionData.commissionType : (existing?.commissionType ?? null),
+        commissionValue: opts.allowCommission ? commissionData.commissionValue : (existing?.commissionValue ? String(existing.commissionValue) : null),
       },
     });
     await recordAudit(tx, {

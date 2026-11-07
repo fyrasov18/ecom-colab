@@ -48,9 +48,16 @@ export const createOrderSchema = z.object({
         "Vous devez confirmer que le client a accepté la commande et les conditions de livraison.",
     }),
   }),
+  previewSnapshot: z.string().optional().or(z.record(z.unknown()).optional()),
 });
 
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
+
+export const unconfirmedOrderSchema = createOrderSchema.extend({
+  confirmed: z.union([z.literal("on"), z.boolean()]).optional(),
+});
+
+export type CreateUnconfirmedOrderInput = z.infer<typeof unconfirmedOrderSchema>;
 
 export const statusChangeSchema = z.object({
   orderId: z.string().min(1),

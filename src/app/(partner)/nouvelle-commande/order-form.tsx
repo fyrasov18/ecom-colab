@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, ShieldCheck } from "lucide-react";
+import { AlertCircle, Loader2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,8 +12,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatPrice } from "@/lib/money";
 import { cn } from "@/lib/utils";
-import { computePartnerEarning } from "@/modules/finance/commission";
 import { d } from "@/lib/money";
+import type { CommissionSource } from "@prisma/client";
+import {
+  calculateOrderContribution,
+  type ContributionCalculationResult,
+} from "@/modules/finance/contribution-engine";
 import { GOVERNORATES, CONFIRMATION_TEXT } from "@/modules/orders/schemas";
 import { submitOrder, type OrderActionState } from "../actions";
 
@@ -29,24 +33,41 @@ type ProductOption = {
   commissionType: "PERCENTAGE" | "FIXED";
   commissionValue: number;
   commissionSource: string;
+  performanceLevelName?: string | null;
 };
 
 const initialState: OrderActionState = { ok: false };
 
-export function OrderForm({ products }: { products: ProductOption[] }) {
+function getSourceLabel(source: string, levelName?: string | null) {
+  switch (source) {
+    case "PARTNER_PRODUCT":
+      return "produit personnalisé";
+    case "PARTNER":
+      return "admin partenaire";
+    case "PERFORMANCE_LEVEL":
+      return levelName ? `niveau ${levelName}` : "niveau de performance";
+    case "GLOBAL":
+      return "défaut global";
+    default:
+      return source;
+  }
+}
+
+export function OrderForm({
+  products,
+  minContribution = 7,
+}: {
+  products: ProductOption[];
+  minContribution?: number;
+}) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(submitOrder, initialState);
 
   const [productId, setProductId] = useState(products[0]?.id ?? "");
   const [quantity, setQuantity] = useState(1);
   const [confirmed, setConfirmed] = useState(false);
-  // The price is *derived* rather than synchronised by an effect: it follows
-  // the selected product until the partner types a price of their own, and
-  // changing product clears that override.
-  const [priceOverride, setPriceOverride] = useState<number | null>(null);
 
   const product = products.find((p) => p.id === productId);
-  const price = priceOverride ?? product?.sellingPrice ?? 0;
 
   useEffect(() => {
     if (state.ok) {
@@ -57,22 +78,26 @@ export function OrderForm({ products }: { products: ProductOption[] }) {
     if (!state.ok && state.error) toast.error(state.error);
   }, [state, router]);
 
-  // Same pure math as the server — single source of truth (commission.ts).
-  const estimate = useMemo(() => {
-    if (!product || quantity < 1 || price <= 0) return null;
-    const revenue = d(price).times(quantity);
-    const productCost = d(product.purchaseCost).times(quantity);
-    const packaging = d(product.packagingCost).times(quantity);
-    const delivery = d(product.deliveryCost);
-    const contribution = revenue.minus(productCost).minus(packaging).minus(delivery);
-    if (contribution.lte(0)) return { invalid: true as const, min: productCost.plus(packaging).plus(delivery) };
-    const { earning, platformShare } = computePartnerEarning(contribution, {
-      type: product.commissionType,
-      value: d(product.commissionValue),
-      source: product.commissionSource as never,
+  // Pure canonical contribution calculation
+  const calculation: ContributionCalculationResult | null = useMemo(() => {
+    if (!product || quantity < 1) return null;
+    return calculateOrderContribution({
+      sellingPrice: product.sellingPrice,
+      quantity,
+      purchaseCost: product.purchaseCost,
+      packagingCost: product.packagingCost,
+      deliveryCost: product.deliveryCost,
+      discount: 0,
+      minContributionThreshold: minContribution,
+      rateRule: {
+        type: product.commissionType,
+        rate: d(product.commissionValue),
+        source: product.commissionSource as CommissionSource,
+        performanceLevelId: null,
+        performanceLevelName: product.performanceLevelName ?? null,
+      },
     });
-    return { invalid: false as const, revenue, productCost, packaging, delivery, contribution, earning, platformShare };
-  }, [product, quantity, price]);
+  }, [product, quantity, minContribution]);
 
   return (
     <form action={formAction} className="grid gap-5 lg:grid-cols-5">
@@ -80,7 +105,7 @@ export function OrderForm({ products }: { products: ProductOption[] }) {
       <div className="space-y-4 lg:col-span-3">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Produit &amp; prix</CardTitle>
+            <CardTitle className="text-base">Produit &amp; conditions</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
@@ -89,10 +114,7 @@ export function OrderForm({ products }: { products: ProductOption[] }) {
                 id="productId"
                 name="productId"
                 value={productId}
-                onChange={(e) => {
-                  setProductId(e.target.value);
-                  setPriceOverride(null);
-                }}
+                onChange={(e) => setProductId(e.target.value)}
               >
                 {products.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -123,17 +145,13 @@ export function OrderForm({ products }: { products: ProductOption[] }) {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="sellingPrice">Prix de vente unitaire (DT) *</Label>
-              <Input
-                id="sellingPrice"
-                name="sellingPrice"
-                type="number"
-                step="0.001"
-                min="0.001"
-                value={price}
-                onChange={(e) => setPriceOverride(Number(e.target.value) || 0)}
-                required
-              />
+              <Label>Prix catalogue (DT)</Label>
+              <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted/40 px-3 py-1 text-sm font-semibold shadow-sm">
+                {formatPrice(product?.sellingPrice ?? 0)} DT
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Prix de vente fixe du catalogue officiel.
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -197,35 +215,68 @@ export function OrderForm({ products }: { products: ProductOption[] }) {
           <CardContent className="space-y-2 text-sm">
             <Row label="Produit" value={product?.name ?? "—"} />
             <Row label="Quantité" value={String(quantity)} />
-            <Row label="Prix de vente" value={`${formatPrice(price)} DT × ${quantity}`} />
+            <Row
+              label="Prix de vente"
+              value={`${formatPrice(product?.sellingPrice ?? 0)} DT × ${quantity}`}
+            />
             <div className="my-2 border-t" />
-            {estimate && !estimate.invalid && (
+            {calculation && (
               <>
-                <Row label="Chiffre d'affaires" value={`${formatPrice(estimate.revenue)} DT`} />
-                <Row label="Coût produit" value={`− ${formatPrice(estimate.productCost)} DT`} />
-                <Row label="Emballage" value={`− ${formatPrice(estimate.packaging)} DT`} />
-                <Row label="Livraison" value={`− ${formatPrice(estimate.delivery)} DT`} />
-                <Row label="Contribution" value={`${formatPrice(estimate.contribution)} DT`} bold />
-                <div className="my-2 border-t" />
+                <Row label="Chiffre d'affaires" value={`${formatPrice(calculation.revenue)} DT`} />
+                <Row label="Coût produit" value={`− ${formatPrice(calculation.productCost)} DT`} />
                 <Row
-                  label="Votre gain estimé"
-                  value={`${formatPrice(estimate.earning)} DT`}
-                  bold
-                  highlight
+                  label="Emballage"
+                  value={`− ${formatPrice(calculation.packagingCostTotal)} DT`}
                 />
-                <p className="text-xs text-muted-foreground">
-                  {product?.commissionType === "PERCENTAGE"
-                    ? `${product.commissionValue} % de la contribution`
-                    : `Forfait ${product?.commissionValue} DT`}
-                </p>
+                <Row
+                  label="Livraison"
+                  value={`− ${formatPrice(calculation.deliveryCostTotal)} DT`}
+                />
+                <Row
+                  label="Contribution"
+                  value={`${formatPrice(calculation.contribution)} DT`}
+                  bold
+                />
+                <Row
+                  label="Seuil minimum requis"
+                  value={`> ${formatPrice(calculation.minContributionThreshold)} DT`}
+                />
+                <div className="my-2 border-t" />
+                {calculation.isEligible ? (
+                  <>
+                    <Row
+                      label="Votre gain estimé"
+                      value={`${formatPrice(calculation.partnerEarning)} DT`}
+                      bold
+                      highlight
+                    />
+                    <Row
+                      label="Part plateforme"
+                      value={`${formatPrice(calculation.platformShare)} DT`}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {product?.commissionType === "PERCENTAGE"
+                        ? `${product.commissionValue} % de la contribution`
+                        : `Forfait ${product?.commissionValue} DT`}{" "}
+                      ({getSourceLabel(product?.commissionSource ?? "", product?.performanceLevelName)})
+                    </p>
+                  </>
+                ) : (
+                  <div className="rounded-md border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive">
+                    <div className="flex items-center gap-1.5 font-medium">
+                      <AlertCircle className="h-4 w-4 shrink-0" />
+                      <span>Contribution insuffisante</span>
+                    </div>
+                    <p className="mt-1 leading-relaxed">
+                      La contribution ({formatPrice(calculation.contribution)} DT) doit être
+                      strictement supérieure au seuil minimal de {formatPrice(minContribution)} DT
+                      pour que la commande soit validée.
+                    </p>
+                  </div>
+                )}
               </>
             )}
-            {estimate?.invalid && (
-              <p className="rounded-md bg-destructive/10 p-2 text-xs text-destructive">
-                Prix de vente trop bas : minimum {formatPrice(estimate.min)} DT pour
-                couvrir les coûts.
-              </p>
-            )}
+
             <div className="my-3 border-t" />
             <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-primary/40 bg-primary/5 p-3">
               <Checkbox
@@ -239,10 +290,15 @@ export function OrderForm({ products }: { products: ProductOption[] }) {
               </span>
             </label>
             <input type="hidden" name="confirmed" value={confirmed ? "on" : ""} />
+            <input
+              type="hidden"
+              name="previewSnapshot"
+              value={calculation ? JSON.stringify(calculation.snapshot) : ""}
+            />
             <Button
               type="submit"
               className="w-full"
-              disabled={pending || !confirmed || !estimate || estimate.invalid}
+              disabled={pending || !confirmed || !calculation || !calculation.isEligible}
             >
               {pending && <Loader2 className="h-4 w-4 animate-spin" />}
               Confirmer et enregistrer la commande
@@ -278,5 +334,3 @@ function Row({
     </div>
   );
 }
-
-

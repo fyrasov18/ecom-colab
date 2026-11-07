@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { requireSession } from "@/lib/rbac";
-import { getGlobalCommission } from "@/modules/settings/service";
-import { resolveCommission } from "@/modules/finance/commission";
+import { getGlobalCommission, getMinOrderContribution } from "@/modules/settings/service";
+import { resolveContributionRate } from "@/modules/finance/contribution-engine";
 import { getPartnerById } from "@/modules/partners/queries";
 import { listOrderableAssignments } from "@/modules/products/partner-catalogue";
 import { OrderForm } from "./order-form";
@@ -15,11 +15,12 @@ export default async function NewOrderPage() {
   const assignments = await listOrderableAssignments(partner.id);
 
   const globalCommission = await getGlobalCommission();
+  const minContribution = await getMinOrderContribution();
 
   const products = assignments
     .filter((a) => a.product.status === "ACTIVE" || a.product.status === "OUT_OF_STOCK")
     .map((a) => {
-      const rule = resolveCommission({
+      const rule = resolveContributionRate({
         partnerProduct: {
           commissionType: a.commissionType,
           commissionValue: a.commissionValue,
@@ -28,10 +29,7 @@ export default async function NewOrderPage() {
           commissionType: partner.defaultCommissionType,
           commissionValue: partner.defaultCommissionValue,
         },
-        product: {
-          commissionType: a.product.commissionType,
-          commissionValue: a.product.commissionValue,
-        },
+        performanceLevel: partner.performanceLevel,
         global: globalCommission,
       });
       return {
@@ -43,9 +41,10 @@ export default async function NewOrderPage() {
         packagingCost: Number(a.product.packagingCost),
         deliveryCost: Number(a.product.deliveryCost),
         stockQuantity: a.product.stockQuantity,
-        commissionType: rule.type as "PERCENTAGE" | "FIXED",
-        commissionValue: Number(rule.value),
+        commissionType: rule.type,
+        commissionValue: Number(rule.rate),
         commissionSource: rule.source,
+        performanceLevelName: rule.performanceLevelName,
       };
     });
 
@@ -53,12 +52,12 @@ export default async function NewOrderPage() {
   const ruleHint = first
     ? ` ${first.commissionType === "PERCENTAGE" ? `${first.commissionValue} %` : `${first.commissionValue} DT`} (${
         first.commissionSource === "PARTNER_PRODUCT"
-          ? "personnalisée"
+          ? "produit personnalisé"
           : first.commissionSource === "PARTNER"
-            ? "partenaire"
-            : first.commissionSource === "PRODUCT"
-              ? "produit"
-              : "global"
+            ? "admin partenaire"
+            : first.commissionSource === "PERFORMANCE_LEVEL"
+              ? `niveau ${first.performanceLevelName ?? ""}`
+              : "défaut global"
       }).`
     : "";
 
@@ -77,14 +76,12 @@ export default async function NewOrderPage() {
           l&apos;équipe.
         </div>
       ) : (
-        <OrderForm products={products} />
+        <OrderForm products={products} minContribution={minContribution} />
       )}
       <p className="text-xs text-muted-foreground">
-        Estimations calculées avec la règle de commission qui vous est appliquée
-        (assignment → partenaire → produit → global). Le gain définitif est figé
-        à la création de la commande.{ruleHint}
+        Estimations calculées selon le moteur canonique de contribution (override produit → admin partenaire → niveau de performance → défaut global 30%).
+        Seuil de contribution minimal requis : {minContribution} DT. Le gain définitif est figé à la création de la commande.{ruleHint}
       </p>
     </div>
   );
 }
-

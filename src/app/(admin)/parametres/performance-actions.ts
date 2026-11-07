@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireSession } from "@/lib/rbac";
+import { requirePermission, PermissionError } from "@/lib/permissions";
 import { z } from "zod";
 import {
   PerformanceLevelError,
@@ -33,8 +33,16 @@ export async function savePerformanceLevel(
   _prev: LevelActionState,
   formData: FormData,
 ): Promise<LevelActionState> {
-  // A share percentage is a financial rule → SUPER_ADMIN only.
-  const user = await requireSession(["SUPER_ADMIN"]);
+  // Financial mutations require dedicated MANAGE_CONTRIBUTION_SETTINGS permission.
+  let user;
+  try {
+    user = await requirePermission("MANAGE_CONTRIBUTION_SETTINGS");
+  } catch (err) {
+    if (err instanceof PermissionError) {
+      return { ok: false, error: err.message };
+    }
+    return { ok: false, error: "Action non autorisée : permission MANAGE_CONTRIBUTION_SETTINGS requise." };
+  }
   const id = String(formData.get("id") ?? "").trim();
   try {
     const input = formSchema.parse({
@@ -58,7 +66,7 @@ export async function savePerformanceLevel(
 }
 
 export async function removePerformanceLevel(formData: FormData): Promise<void> {
-  const user = await requireSession(["SUPER_ADMIN"]);
+  const user = await requirePermission("MANAGE_CONTRIBUTION_SETTINGS");
   const id = String(formData.get("id") ?? "").trim();
   if (!id) return;
   await deletePerformanceLevel(id, user.id);
@@ -67,7 +75,9 @@ export async function removePerformanceLevel(formData: FormData): Promise<void> 
 }
 
 export async function changePartnerLevel(formData: FormData): Promise<void> {
-  const user = await requireSession(["SUPER_ADMIN", "ADMIN"]);
+  // Changing a partner's level changes their future financial contribution rate.
+  // Dedicated MANAGE_CONTRIBUTION_SETTINGS permission is required.
+  const user = await requirePermission("MANAGE_CONTRIBUTION_SETTINGS");
   const partnerId = String(formData.get("partnerId") ?? "").trim();
   const raw = String(formData.get("performanceLevelId") ?? "").trim();
   if (!partnerId) return;

@@ -34,6 +34,13 @@ export async function changeOrderStatus(opts: {
       include: { items: true, shipment: true },
     });
 
+    // Unconfirmed orders cannot transition into operational fulfilment statuses
+    if (to !== "CANCELLED" && order.initialSnapshot !== null && !order.finalSnapshot) {
+      throw new StatusError(
+        "La commande doit être confirmée par le partenaire avant d'entrer en opérations.",
+      );
+    }
+
     const check = checkTransition(
       order.status,
       to as OrderStatus,

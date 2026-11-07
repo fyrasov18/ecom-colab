@@ -39,8 +39,8 @@ model Partner {
   code                   String                 @unique
   displayName            String
   status                 PartnerStatus          @default(ACTIVE)
-  defaultCommissionType  CommissionType         @default(PERCENTAGE)
-  defaultCommissionValue Decimal                @default(60) @db.Decimal(12, 3)
+  defaultCommissionType  CommissionType?        @default(PERCENTAGE)
+  defaultCommissionValue Decimal?               @db.Decimal(12, 3)
   notes                  String?
   createdAt              DateTime               @default(now())
   updatedAt              DateTime               @updatedAt
@@ -256,6 +256,8 @@ model Order {
   statusBeforeHold       OrderStatus?
   createdAt              DateTime               @default(now())
   updatedAt              DateTime               @updatedAt
+  initialSnapshot        Json?
+  finalSnapshot          Json?
   partnerSharePercentage Decimal?               @db.Decimal(5, 2)
   performanceLevelName   String?
   transactions           FinancialTransaction[]
@@ -562,6 +564,7 @@ enum CommissionSource {
   PRODUCT
   PARTNER
   PARTNER_PRODUCT
+  PERFORMANCE_LEVEL
 }
 
 enum OrderStatus {

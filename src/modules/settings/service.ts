@@ -39,6 +39,11 @@ export async function getGlobalCommission(db: Db = prisma): Promise<GlobalCommis
   return getSetting<GlobalCommission>(SETTING_KEYS.GLOBAL_COMMISSION, db);
 }
 
+/** Minimum contribution required per order. */
+export async function getMinOrderContribution(db: Db = prisma): Promise<number> {
+  return getSetting<number>(SETTING_KEYS.MIN_ORDER_CONTRIBUTION, db);
+}
+
 export type SettingDTO = {
   key: string;
   category: string;
@@ -65,19 +70,42 @@ export async function listFinanceSettings(): Promise<SettingDTO[]> {
  * Update a setting with validation + audit. Sensitive settings are
  * SUPER_ADMIN only — enforced by the caller's role check plus audit.
  */
+export class SettingValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SettingValidationError";
+  }
+}
+
 export async function updateSetting(opts: {
   key: SettingKey;
   value: unknown;
   actorId: string;
-}): Promise<void> {
-  const { key, value, actorId } = opts;
+  reason?: string;
+}): Promise<boolean> {
+  const { key, value, actorId, reason } = opts;
   const schema = SETTING_VALUE_SCHEMAS[key];
   if (!schema) throw new Error(`Unknown setting: ${key}`);
 
   const parsed = schema.parse(value);
 
-  await prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx) => {
     const before = await tx.systemSetting.findUnique({ where: { key } });
+    const currentValue = before ? before.value : SETTING_DEFAULTS[key];
+
+    // 1. True No-op check: if value is identical, return false immediately without checking reason or auditing
+    if (JSON.stringify(currentValue) === JSON.stringify(parsed)) {
+      return false;
+    }
+
+    // 2. Value changed: validate mandatory reason (min 5 meaningful chars after trim)
+    const trimmedReason = reason?.trim() ?? "";
+    if (trimmedReason.length < 5) {
+      throw new SettingValidationError(
+        `Un motif d'au moins 5 caractères est obligatoire pour modifier le paramètre "${key}".`,
+      );
+    }
+
     const after = await tx.systemSetting.upsert({
       where: { key },
       create: {
@@ -97,8 +125,9 @@ export async function updateSetting(opts: {
       action: "SETTING_UPDATED",
       entityType: "SystemSetting",
       entityId: key,
-      before: before ? { value: before.value } : null,
-      after: { value: after.value },
+      before: before ? { value: before.value } : { value: SETTING_DEFAULTS[key], isDefault: true },
+      after: { value: after.value, reason: trimmedReason },
     });
+    return true;
   });
 }

@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { OrderStatusBadge } from "@/components/orders/order-status-badge";
 import { CancelOrderForm } from "./cancel-form";
+import { ConfirmOrderForm } from "./confirm-form";
 
 export const metadata: Metadata = { title: "Suivi de commande" };
 
@@ -60,8 +61,8 @@ export default async function PartnerOrderDetailPage({
         <p className="text-sm text-muted-foreground">
           Créée le {fr(order.createdAt)}
           {order.partnerConfirmedAt
-            ? " · Confirmation client enregistrée à la création"
-            : ""}
+            ? " · Confirmation client enregistrée"
+            : " · En attente de confirmation client"}
         </p>
       </div>
 
@@ -165,6 +166,12 @@ export default async function PartnerOrderDetailPage({
         </CardContent>
       </Card>
 
+      {order.status === "CONFIRMED" && !order.partnerConfirmedAt && (
+        <ConfirmOrderForm
+          orderId={order.id}
+          previewSnapshot={order.initialSnapshot ? JSON.stringify(order.initialSnapshot) : undefined}
+        />
+      )}
       {order.status === "CONFIRMED" && <CancelOrderForm orderId={order.id} />}
     </div>
   );

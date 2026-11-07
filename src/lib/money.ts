@@ -7,6 +7,7 @@ import Decimal from "decimal.js";
 Decimal.set({ precision: 28, rounding: Decimal.ROUND_HALF_UP });
 
 export const MONEY_PLACES = 3;
+export const CONTRIBUTION_PLACES = 2;
 
 export function d(value: string | number | Decimal): Decimal {
   return value instanceof Decimal ? value : new Decimal(value);
@@ -15,6 +16,14 @@ export function d(value: string | number | Decimal): Decimal {
 /** Round a monetary amount to 3 decimal places (millimes). */
 export function roundMoney(value: string | number | Decimal): Decimal {
   return d(value).toDecimalPlaces(MONEY_PLACES, Decimal.ROUND_HALF_UP);
+}
+
+/**
+ * Round a monetary amount to exactly 2 decimal places using ROUND_HALF_UP.
+ * Canonical rounding for Contribution, Partner Earning, and Platform Share.
+ */
+export function round2(value: string | number | Decimal): Decimal {
+  return d(value).toDecimalPlaces(CONTRIBUTION_PLACES, Decimal.ROUND_HALF_UP);
 }
 
 /** Format for display: "13,200 DT" style with fr-TN conventions. */

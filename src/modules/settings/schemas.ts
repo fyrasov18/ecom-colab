@@ -22,6 +22,10 @@ export const SETTING_VALUE_SCHEMAS: Record<string, z.ZodTypeAny> = {
     .number()
     .positive("Doit être positif")
     .max(1_000_000),
+  [SETTING_KEYS.MIN_ORDER_CONTRIBUTION]: z
+    .number()
+    .min(0, "La contribution minimale ne peut pas être négative")
+    .max(10_000, "Montant trop élevé"),
   [SETTING_KEYS.RETURN_COST_RULE]: z.enum([
     "REVERSE_PENDING_EARNING",
     "REVERSE_PLUS_DELIVERY",
@@ -59,4 +63,5 @@ export const SETTING_VALUE_SCHEMAS: Record<string, z.ZodTypeAny> = {
   [SETTING_KEYS.REFERRAL_AUTO_PROMOTION_ENABLED]: z.boolean(),
   [SETTING_KEYS.ANNOUNCEMENT_WELCOME_SETTINGS]: welcomeSettingsSchema,
   [SETTING_KEYS.ANNOUNCEMENT_LEVEL_UP_SETTINGS]: levelUpSettingsSchema,
+  [SETTING_KEYS.ADMIN_PERMISSION_GRANTS]: z.record(z.string(), z.array(z.string())),
 };

@@ -185,8 +185,8 @@ async function main() {
         userId: user.id,
         code: `P${String(i + 1).padStart(3, "0")}`,
         displayName: fullName,
-        defaultCommissionType: "PERCENTAGE",
-        defaultCommissionValue: 60,
+        defaultCommissionType: null,
+        defaultCommissionValue: null,
       },
       update: {},
     });

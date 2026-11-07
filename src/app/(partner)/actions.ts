@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/rbac";
-import { createOrder, OrderError } from "@/modules/orders/create";
+import { createOrder, confirmOrder, OrderError } from "@/modules/orders/create";
 import { changeOrderStatus, StatusError } from "@/modules/orders/status";
 
 export type OrderActionState = {
@@ -23,6 +23,14 @@ export async function submitOrder(
   const user = await requireSession(["PARTNER"]);
   if (!user.partnerId) return { ok: false, error: "Compte partenaire introuvable." };
 
+  const isConfirmed = formData.get("confirmed") === "on";
+  if (!isConfirmed) {
+    return {
+      ok: false,
+      error: "Vous devez confirmer que le client a accepté la commande et les conditions de livraison.",
+    };
+  }
+
   try {
     const order = await createOrder(
       {
@@ -36,7 +44,8 @@ export async function submitOrder(
         city: str(formData.get("city")),
         address: str(formData.get("address")),
         notes: str(formData.get("notes")),
-        confirmed: (formData.get("confirmed") ?? "") as "on",
+        confirmed: "on",
+        previewSnapshot: str(formData.get("previewSnapshot")) || undefined,
       } as never,
       { partnerId: user.partnerId, actorId: user.id },
     );
@@ -54,6 +63,42 @@ export async function submitOrder(
       return { ok: false, error: z.issues[0]?.message ?? "Données invalides." };
     }
     return { ok: false, error: "Erreur lors de la création de la commande." };
+  }
+}
+
+/** Partner confirms an unconfirmed order offline. */
+export async function confirmPartnerOrder(
+  _prev: OrderActionState,
+  formData: FormData,
+): Promise<OrderActionState> {
+  const user = await requireSession(["PARTNER"]);
+  if (!user.partnerId) return { ok: false, error: "Compte partenaire introuvable." };
+  const orderId = str(formData.get("orderId"));
+  const isConfirmed = formData.get("confirmed") === "on";
+  if (!isConfirmed) {
+    return {
+      ok: false,
+      error: "Vous devez confirmer que le client a accepté la commande et les conditions de livraison.",
+    };
+  }
+  const previewSnapshot = str(formData.get("previewSnapshot")) || undefined;
+
+  try {
+    const order = await confirmOrder(orderId, {
+      actorId: user.id,
+      partnerId: user.partnerId,
+      previewSnapshot,
+    });
+    revalidatePath("/mes-commandes");
+    revalidatePath(`/mes-commandes/${orderId}`);
+    return {
+      ok: true,
+      message: `Commande #${order.orderNumber} confirmée.`,
+      orderId: order.id,
+    };
+  } catch (e) {
+    if (e instanceof OrderError) return { ok: false, error: e.message };
+    return { ok: false, error: "Confirmation impossible." };
   }
 }
 

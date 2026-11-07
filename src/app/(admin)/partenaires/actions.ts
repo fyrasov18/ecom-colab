@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/rbac";
+import { hasPermission } from "@/lib/permissions";
 import { partnerStatusSchema } from "@/modules/partners/schemas";
 import {
   addSocialAccount,
@@ -49,7 +50,7 @@ export async function removePartnerSocial(formData: FormData): Promise<void> {
 
 export type ActionState = { ok: boolean; error?: string; message?: string };
 
-/** Assign a product to a partner (commission override = SUPER_ADMIN only). */
+/** Assign a product to a partner (commission override requires MANAGE_CONTRIBUTION_SETTINGS). */
 export async function assignProduct(
   _prev: ActionState,
   formData: FormData,
@@ -57,6 +58,15 @@ export async function assignProduct(
   const user = await requireSession(["SUPER_ADMIN", "ADMIN"]);
   const commissionTypeRaw = str(formData.get("commissionType"));
   const commissionValueRaw = str(formData.get("commissionValue"));
+  const hasCommissionOverride = commissionTypeRaw !== "" || commissionValueRaw !== "";
+
+  const canManageContribution = await hasPermission(user, "MANAGE_CONTRIBUTION_SETTINGS");
+  if (hasCommissionOverride && !canManageContribution) {
+    return {
+      ok: false,
+      error: "Action non autorisée : permission MANAGE_CONTRIBUTION_SETTINGS requise pour configurer une commission.",
+    };
+  }
 
   try {
     await assignProductToPartner(
@@ -67,7 +77,7 @@ export async function assignProduct(
         commissionValue: commissionValueRaw === "" ? null : Number(commissionValueRaw),
       },
       user.id,
-      { allowCommission: user.role === "SUPER_ADMIN" },
+      { allowCommission: canManageContribution },
     );
     const partnerId = str(formData.get("partnerId"));
     revalidatePath(`/partenaires/${partnerId}`);
