@@ -13,6 +13,8 @@ export type DbClient = PrismaClient | Prisma.TransactionClient;
  */
 export const PERMISSIONS = {
   MANAGE_CONTRIBUTION_SETTINGS: "MANAGE_CONTRIBUTION_SETTINGS",
+  MANAGE_PLATFORM_BRANDING: "MANAGE_PLATFORM_BRANDING",
+  MANAGE_PARTNER_BRANDING: "MANAGE_PARTNER_BRANDING",
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -20,12 +22,16 @@ export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
 /**
  * Explicit role-based default permission policy.
  * - SUPER_ADMIN receives all management permissions by default.
- * - ADMIN receives no contribution configuration permissions by default (must be explicitly granted).
+ * - ADMIN receives partner branding management by default; platform branding must be explicitly granted.
  * - PARTNER has no admin capabilities.
  */
 export const ROLE_DEFAULT_PERMISSIONS: Record<Role, readonly Permission[]> = {
-  SUPER_ADMIN: [PERMISSIONS.MANAGE_CONTRIBUTION_SETTINGS],
-  ADMIN: [],
+  SUPER_ADMIN: [
+    PERMISSIONS.MANAGE_CONTRIBUTION_SETTINGS,
+    PERMISSIONS.MANAGE_PLATFORM_BRANDING,
+    PERMISSIONS.MANAGE_PARTNER_BRANDING,
+  ],
+  ADMIN: [PERMISSIONS.MANAGE_PARTNER_BRANDING],
   PARTNER: [],
 };
 

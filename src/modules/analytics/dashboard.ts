@@ -39,7 +39,11 @@ export async function getAdminDashboardData() {
     prisma.order.findMany({
       take: 8,
       orderBy: { createdAt: "desc" },
-      include: {
+      select: {
+        id: true,
+        orderNumber: true,
+        status: true,
+        createdAt: true,
         partner: { select: { displayName: true } },
         customer: { select: { fullName: true } },
       },

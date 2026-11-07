@@ -2,17 +2,10 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { LoginForm, type DevAccount } from "./login-form";
 import { AuthSplitShell } from "@/components/auth/auth-split-shell";
-import { LoginHeroVisual } from "@/components/auth/login-hero-visual";
+import { getAuthPagesDesign, getDeliveryPartnersConfig, getPlatformBranding } from "@/modules/branding/service";
 
 export const metadata: Metadata = { title: "Connexion" };
 
-/**
- * Dev-only convenience panel listing the seeded accounts.
- *
- * The list is assembled HERE, on the server, and only when NODE_ENV is not
- * production. In a production build `devAccounts` is `undefined`, so the
- * credentials are never serialised into the RSC payload or the JS bundle.
- */
 function devAccounts(): DevAccount[] | undefined {
   if (process.env.NODE_ENV === "production") return undefined;
   return [
@@ -22,12 +15,36 @@ function devAccounts(): DevAccount[] | undefined {
   ];
 }
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const [authDesign, platformBranding, deliveryPartnersConfig] = await Promise.all([
+    getAuthPagesDesign(),
+    getPlatformBranding(),
+    getDeliveryPartnersConfig(),
+  ]);
+
   return (
-    <AuthSplitShell heroVisual={<LoginHeroVisual />}>
+    <AuthSplitShell
+      pageType="login"
+      authDesign={authDesign}
+      deliveryPartnersConfig={deliveryPartnersConfig}
+      branding={{
+        name: platformBranding.platformName,
+        tagline: platformBranding.platformTagline,
+        logoLight: platformBranding.logoLightUrl,
+        logoDark: platformBranding.logoDarkUrl,
+        logoMark: platformBranding.logoMarkUrl,
+        faviconUrl: platformBranding.faviconUrl || "/brand/app-icon.svg",
+        primaryColor: authDesign.colors.primaryColor,
+        accentColor: authDesign.colors.accentColor,
+        sidebarBg: "#0B1220",
+        borderRadius: "10px",
+        isPartner: false,
+        isCustom: false,
+      }}
+    >
       <div className="animate-fade-up w-full">
         <Suspense>
-          <LoginForm devAccounts={devAccounts()} />
+          <LoginForm devAccounts={devAccounts()} authDesign={authDesign} />
         </Suspense>
       </div>
     </AuthSplitShell>

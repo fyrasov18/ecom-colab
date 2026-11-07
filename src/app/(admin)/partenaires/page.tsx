@@ -1,16 +1,18 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Search, Clock, CheckCircle2, XCircle, Ban, Archive, UserCheck } from "lucide-react";
+import { Search, Clock, CheckCircle2, XCircle, Ban, Archive, UserCheck, Trash2 } from "lucide-react";
 import { listPartners } from "@/modules/partners/service";
 import { formatPrice } from "@/lib/money";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmSubmit } from "@/components/ui/confirm-submit";
 import { EmptyState } from "@/components/ui/empty-state";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Pagination } from "@/components/ui/pagination";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
+import { deletePartnerAction } from "./actions";
 import {
   Table,
   TableBody,
@@ -181,7 +183,7 @@ export default async function PartnersPage({
                 <TableHead className="hidden lg:table-cell">Commandes</TableHead>
                 <TableHead className="hidden xl:table-cell">Solde disponible</TableHead>
                 <TableHead>Statut</TableHead>
-                <TableHead className="w-[80px]" />
+                <TableHead className="w-[100px] text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -216,10 +218,25 @@ export default async function PartnersPage({
                   <TableCell>
                     <PartnerStatusBadge status={p.status} />
                   </TableCell>
-                  <TableCell>
-                    <Button asChild variant="ghost" size="sm">
-                      <Link href={`/partenaires/${p.id}`}>Voir</Link>
-                    </Button>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button asChild variant="ghost" size="sm">
+                        <Link href={`/partenaires/${p.id}`}>Voir</Link>
+                      </Button>
+                      <form action={deletePartnerAction}>
+                        <input type="hidden" name="partnerId" value={p.id} />
+                        <ConfirmSubmit
+                          variant="ghost"
+                          size="sm"
+                          className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive h-8 w-8 p-0"
+                          confirmMessage={`Supprimer définitivement le partenaire "${p.displayName}" (${p.code}) et toutes ses données associées ?`}
+                          title="Supprimer ce partenaire"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Supprimer</span>
+                        </ConfirmSubmit>
+                      </form>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

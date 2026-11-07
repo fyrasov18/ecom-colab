@@ -8,12 +8,22 @@ import {
   addSocialAccount,
   assignProductToPartner,
   deactivateAssignment,
+  deletePartner,
   removeSocialAccount,
   setPartnerStatus,
 } from "@/modules/partners/service";
 
 function str(v: FormDataEntryValue | null): string {
   return String(v ?? "").trim();
+}
+
+export async function deletePartnerAction(formData: FormData): Promise<void> {
+  const user = await requireSession(["SUPER_ADMIN", "ADMIN"]);
+  const partnerId = str(formData.get("partnerId"));
+  if (!partnerId) return;
+  await deletePartner(partnerId, user.id);
+  revalidatePath("/partenaires");
+  revalidatePath("/dashboard");
 }
 
 export async function changePartnerStatus(formData: FormData): Promise<void> {

@@ -445,6 +445,69 @@
   pointer-events: none;
 }
 
+/* ============================================================
+   Continuous Horizontal Logo Marquee
+   ============================================================ */
+
+@keyframes marquee-scroll-ltr {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-100%, 0, 0);
+  }
+}
+
+@keyframes marquee-scroll-rtl {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(100%, 0, 0);
+  }
+}
+
+.animate-marquee-ltr {
+  display: flex;
+  flex-shrink: 0;
+  will-change: transform;
+  animation: marquee-scroll-ltr 30s linear infinite;
+}
+
+.animate-marquee-rtl {
+  display: flex;
+  flex-shrink: 0;
+  will-change: transform;
+  animation: marquee-scroll-rtl 30s linear infinite;
+}
+
+/* Pause marquee animation on mouse hover */
+.marquee-wrapper:hover .animate-marquee-ltr,
+.marquee-wrapper:hover .animate-marquee-rtl {
+  animation-play-state: paused;
+}
+
+/* Mobile responsive speed */
+@media (max-width: 640px) {
+  .animate-marquee-ltr,
+  .animate-marquee-rtl {
+    animation-duration: 22s;
+  }
+}
+
+/* Smooth fade mask at edges */
+.marquee-fade-mask {
+  mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);
+}
+
+@media (max-width: 640px) {
+  .marquee-fade-mask {
+    mask-image: linear-gradient(to right, transparent, black 6%, black 94%, transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, black 6%, black 94%, transparent);
+  }
+}
+
 /* Reduced-motion */
 @media (prefers-reduced-motion: reduce) {
   [class*="animate-[shell-"],
@@ -455,6 +518,18 @@
   .nav-active-glow {
     animation-duration: 1ms !important;
     animation-delay: 0ms !important;
+  }
+  .animate-marquee-ltr,
+  .animate-marquee-rtl {
+    animation: none !important;
+    transform: none !important;
+  }
+  .marquee-duplicate-track {
+    display: none !important;
+  }
+  .marquee-fade-mask {
+    mask-image: none !important;
+    -webkit-mask-image: none !important;
   }
   .hover-glow:hover {
     transform: none;

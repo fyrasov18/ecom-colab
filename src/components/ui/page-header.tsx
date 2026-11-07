@@ -20,7 +20,11 @@ export function PageHeader({
       <div className="min-w-0 space-y-1">
         <h1 className="text-2xl font-bold tracking-tight text-foreground">{title}</h1>
         {description && (
-          <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
+          typeof description === "string" ? (
+            <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
+          ) : (
+            <div className="text-sm leading-relaxed text-muted-foreground">{description}</div>
+          )
         )}
         {meta && <div className="text-xs text-muted-foreground">{meta}</div>}
       </div>

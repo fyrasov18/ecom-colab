@@ -12,6 +12,8 @@ import {
   Phone,
   Mail,
   Calendar,
+  Building2,
+  Globe,
 } from "lucide-react";
 import { getPartnerAdmin } from "@/modules/partners/service";
 import { listPerformanceLevels } from "@/modules/finance/performance-service";
@@ -272,6 +274,99 @@ export default async function PartnerDetailPage({
               {partner.invitedBy
                 ? `${partner.invitedBy.firstName} ${partner.invitedBy.lastName} (${partner.invitedBy.email})`
                 : "—"}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Marque & Identité Entreprise */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-primary" />
+              <CardTitle className="text-base">Identité Commerciale & Marque</CardTitle>
+            </div>
+            {partner.brandColorPrimary && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span
+                  className="h-3 w-3 rounded-full border border-border"
+                  style={{ backgroundColor: partner.brandColorPrimary }}
+                />
+                <span className="font-mono uppercase">{partner.brandColorPrimary}</span>
+              </div>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 text-sm">
+          <div>
+            <div className="text-xs font-medium text-muted-foreground mb-1">Raison Sociale / Boutique</div>
+            <div className="font-semibold text-foreground">
+              {partner.companyName || partner.displayName}
+            </div>
+            {partner.companyDescription && (
+              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                {partner.companyDescription}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <div className="text-xs font-medium text-muted-foreground mb-1">Support & Contact Boutique</div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5 text-xs">
+                <Mail className="h-3 w-3 text-muted-foreground" />
+                <span>{partner.supportEmail || "Non renseigné"}</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs">
+                <Phone className="h-3 w-3 text-muted-foreground" />
+                <span>{partner.supportPhone || "Non renseigné"}</span>
+              </div>
+              {partner.websiteUrl && (
+                <div className="flex items-center gap-1.5 text-xs">
+                  <Globe className="h-3 w-3 text-muted-foreground" />
+                  <a
+                    href={partner.websiteUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary hover:underline truncate"
+                  >
+                    {partner.websiteUrl}
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <div className="text-xs font-medium text-muted-foreground mb-1">Logo Principal</div>
+            <div className="flex h-14 w-28 items-center justify-center rounded border border-border bg-muted/40 p-1">
+              {partner.companyLogoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={partner.companyLogoUrl}
+                  alt={partner.companyName || partner.displayName}
+                  className="max-h-full max-w-full object-contain"
+                />
+              ) : (
+                <span className="text-[10px] text-muted-foreground font-mono">Défaut Plateforme</span>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <div className="text-xs font-medium text-muted-foreground mb-1">Symbole Réduit (Mark)</div>
+            <div className="flex h-14 w-14 items-center justify-center rounded border border-border bg-muted/40 p-1">
+              {partner.companyMarkUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={partner.companyMarkUrl}
+                  alt="Symbole partenaire"
+                  className="max-h-full max-w-full object-contain"
+                />
+              ) : (
+                <Building2 className="h-6 w-6 text-muted-foreground/60" />
+              )}
             </div>
           </div>
         </CardContent>

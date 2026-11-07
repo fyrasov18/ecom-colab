@@ -5,6 +5,7 @@ import { z } from "zod";
 import { requireSession } from "@/lib/rbac";
 import {
   createProduct,
+  deleteProduct,
   setProductStatus,
   updateProduct,
 } from "@/modules/products/service";
@@ -253,5 +254,15 @@ export async function removeMarketingAsset(formData: FormData): Promise<void> {
   await deleteMarketingAsset(id, user.id);
   revalidatePath(`/produits/${productId}`);
   revalidatePath("/marketing");
+}
+
+export async function deleteProductAction(formData: FormData): Promise<void> {
+  const user = await requireSession(["SUPER_ADMIN", "ADMIN"]);
+  const productId = str(formData.get("productId"));
+  if (!productId) return;
+  await deleteProduct(productId, user.id);
+  revalidatePath("/produits");
+  revalidatePath("/catalogue");
+  revalidatePath("/dashboard");
 }
 

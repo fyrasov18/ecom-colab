@@ -123,7 +123,15 @@ export default async function AdminReferralHubPage() {
       </div>
 
       {/* Settings Form */}
-      <ReferralSettingsForm initialSettings={thresholds} />
+      <ReferralSettingsForm
+        initialSettings={{
+          level2Threshold: thresholds.level2Threshold,
+          level3Threshold: thresholds.level3Threshold,
+          level4Threshold: thresholds.level4Threshold,
+          level5Threshold: thresholds.level5Threshold,
+          requiredOrdersToQualify: thresholds.requiredOrdersToQualify,
+        }}
+      />
 
       {/* 1. Commission Approval Queue */}
       <section className="space-y-3">

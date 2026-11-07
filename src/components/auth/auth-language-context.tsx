@@ -31,6 +31,10 @@ const subscribe = (callback: () => void) => {
 
 const getSnapshot = (): AuthLang => {
   try {
+    if (typeof window !== "undefined") {
+      const q = new URLSearchParams(window.location.search).get("lang");
+      if (q === "ar" || q === "en" || q === "fr") return q;
+    }
     const val = localStorage.getItem("ep_auth_lang");
     if (val === "ar" || val === "en" || val === "fr") return val;
   } catch {

@@ -227,3 +227,164 @@ export async function deactivateAssignment(
   });
 }
 
+/**
+ * Permanently deletes a partner and cleanly cleans up all associated test data
+ * (orders, transactions, wallet, referral data, assignments, user account).
+ */
+export async function deletePartner(partnerId: string, actorId: string) {
+  return prisma.$transaction(async (tx) => {
+    const partner = await tx.partner.findUnique({
+      where: { id: partnerId },
+      include: {
+        user: true,
+        orders: { select: { id: true } },
+      },
+    });
+
+    if (!partner) {
+      throw new Error("Partenaire introuvable.");
+    }
+
+    const orderIds = partner.orders.map((o) => o.id);
+
+    // 1. Delete all commissions and transactions referencing this partner's orders
+    if (orderIds.length > 0) {
+      await tx.referralCommission.deleteMany({
+        where: { orderId: { in: orderIds } },
+      });
+      await tx.financialTransaction.deleteMany({
+        where: { orderId: { in: orderIds } },
+      });
+      await tx.orderItem.deleteMany({
+        where: { orderId: { in: orderIds } },
+      });
+      await tx.orderStatusHistory.deleteMany({
+        where: { orderId: { in: orderIds } },
+      });
+      await tx.return.deleteMany({
+        where: { orderId: { in: orderIds } },
+      });
+      await tx.shipment.deleteMany({
+        where: { orderId: { in: orderIds } },
+      });
+      await tx.order.deleteMany({
+        where: { id: { in: orderIds } },
+      });
+    }
+
+    // 2. Delete referral commissions where partner is referrer or attached to their attributions
+    await tx.referralCommission.deleteMany({
+      where: {
+        OR: [
+          { referrerPartnerId: partnerId },
+          {
+            attribution: {
+              OR: [
+                { referrerPartnerId: partnerId },
+                { referredPartnerId: partnerId },
+              ],
+            },
+          },
+        ],
+      },
+    });
+
+    // 3. Delete referral attributions
+    await tx.referralAttribution.deleteMany({
+      where: {
+        OR: [
+          { referrerPartnerId: partnerId },
+          { referredPartnerId: partnerId },
+        ],
+      },
+    });
+
+    // 4. Delete referral links
+    await tx.referralLink.deleteMany({
+      where: { partnerId },
+    });
+
+    // 5. Delete financial transactions & withdrawals
+    await tx.financialTransaction.deleteMany({
+      where: { partnerId },
+    });
+    await tx.withdrawal.deleteMany({
+      where: { partnerId },
+    });
+
+    // 6. Delete wallet, partner products, socials, popup events
+    await tx.wallet.deleteMany({
+      where: { partnerId },
+    });
+    await tx.partnerProduct.deleteMany({
+      where: { partnerId },
+    });
+    await tx.partnerSocialAccount.deleteMany({
+      where: { partnerId },
+    });
+    await tx.partnerPopupEvent.deleteMany({
+      where: { partnerId },
+    });
+
+    // 7. Delete customers owned by this partner
+    const customers = await tx.customer.findMany({
+      where: { ownerPartnerId: partnerId },
+      select: { id: true },
+    });
+    const customerIds = customers.map((c) => c.id);
+    if (customerIds.length > 0) {
+      await tx.order.deleteMany({
+        where: { customerId: { in: customerIds } },
+      });
+      await tx.customer.deleteMany({
+        where: { id: { in: customerIds } },
+      });
+    }
+
+    // 8. Clean up User references if user exists
+    if (partner.userId) {
+      await tx.auditLog.updateMany({
+        where: { actorId: partner.userId },
+        data: { actorId: null },
+      });
+      await tx.orderStatusHistory.updateMany({
+        where: { changedById: partner.userId },
+        data: { changedById: null },
+      });
+      await tx.financialTransaction.updateMany({
+        where: { createdById: partner.userId },
+        data: { createdById: null },
+      });
+      await tx.notification.deleteMany({
+        where: { userId: partner.userId },
+      });
+    }
+
+    // 9. Record audit log
+    await recordAudit(tx, {
+      actorId,
+      action: "PARTNER_DELETED",
+      entityType: "Partner",
+      entityId: partnerId,
+      before: {
+        code: partner.code,
+        displayName: partner.displayName,
+        email: partner.user?.email,
+      },
+    });
+
+    // 10. Delete partner & user
+    await tx.partner.delete({
+      where: { id: partnerId },
+    });
+
+    if (partner.userId) {
+      await tx.user.delete({
+        where: { id: partner.userId },
+      });
+    }
+
+    return partner;
+  });
+}
+

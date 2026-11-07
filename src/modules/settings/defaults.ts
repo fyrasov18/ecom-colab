@@ -1,4 +1,10 @@
 /** Central definition of system settings + defaults. */
+import {
+  DEFAULT_AUTH_PAGES_DESIGN,
+  DEFAULT_DASHBOARD_DESIGN,
+  DEFAULT_PLATFORM_BRANDING,
+} from "@/modules/branding/defaults";
+import { DEFAULT_DELIVERY_PARTNERS_CONFIG } from "@/modules/branding/delivery-partners-schemas";
 
 export const SETTING_KEYS = {
   SETTLEMENT_PERIOD_HOURS: "finance.settlement_period_hours",
@@ -20,6 +26,10 @@ export const SETTING_KEYS = {
   ANNOUNCEMENT_WELCOME_SETTINGS: "announcements.welcome_settings",
   ANNOUNCEMENT_LEVEL_UP_SETTINGS: "announcements.level_up_settings",
   ADMIN_PERMISSION_GRANTS: "security.admin_permission_grants",
+  PLATFORM_BRANDING: "branding.platform",
+  DASHBOARD_DESIGN: "branding.dashboard_design",
+  AUTH_DESIGN: "branding.auth_design",
+  DELIVERY_PARTNERS: "branding.delivery_partners",
 } as const;
 
 export type SettingKey = (typeof SETTING_KEYS)[keyof typeof SETTING_KEYS];
@@ -80,6 +90,10 @@ export const SETTING_DEFAULTS = {
     imageUrl: "",
     themeColor: "amber",
   },
+  [SETTING_KEYS.PLATFORM_BRANDING]: DEFAULT_PLATFORM_BRANDING,
+  [SETTING_KEYS.DASHBOARD_DESIGN]: DEFAULT_DASHBOARD_DESIGN,
+  [SETTING_KEYS.AUTH_DESIGN]: DEFAULT_AUTH_PAGES_DESIGN,
+  [SETTING_KEYS.DELIVERY_PARTNERS]: DEFAULT_DELIVERY_PARTNERS_CONFIG,
 } satisfies Record<SettingKey, unknown>;
 
 export const SETTING_CATEGORIES: Record<string, string> = {
@@ -102,11 +116,23 @@ export const SETTING_CATEGORIES: Record<string, string> = {
   [SETTING_KEYS.ANNOUNCEMENT_WELCOME_SETTINGS]: "announcements",
   [SETTING_KEYS.ANNOUNCEMENT_LEVEL_UP_SETTINGS]: "announcements",
   [SETTING_KEYS.ADMIN_PERMISSION_GRANTS]: "security",
+  [SETTING_KEYS.PLATFORM_BRANDING]: "branding",
+  [SETTING_KEYS.DASHBOARD_DESIGN]: "branding",
+  [SETTING_KEYS.AUTH_DESIGN]: "branding",
+  [SETTING_KEYS.DELIVERY_PARTNERS]: "branding",
 };
 
 export const SETTING_DESCRIPTIONS: Record<string, string> = {
   [SETTING_KEYS.ADMIN_PERMISSION_GRANTS]:
     "Assignation granulaire des permissions administratives par utilisateur.",
+  [SETTING_KEYS.PLATFORM_BRANDING]:
+    "Identité visuelle, logos institutionnels et nom de la plateforme.",
+  [SETTING_KEYS.DASHBOARD_DESIGN]:
+    "Palette de couleurs, géométrie des bordures et thème du tableau de bord.",
+  [SETTING_KEYS.AUTH_DESIGN]:
+    "Design, palette de couleurs et contenu marketing des pages d'authentification (login, inscription).",
+  [SETTING_KEYS.DELIVERY_PARTNERS]:
+    "Configuration de la section et liste des partenaires de livraison affichés sur les pages d'authentification.",
   [SETTING_KEYS.SETTLEMENT_PERIOD_HOURS]:
     "Période de settlement des gains partenaires (heures). Appliquée à la livraison ; modifier ce réglage n'affecte pas les commandes déjà livrées.",
   [SETTING_KEYS.MIN_WITHDRAWAL_AMOUNT]:

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Search, X } from "lucide-react";
+import { Search, Trash2, X } from "lucide-react";
 import { listOrders } from "@/modules/orders/queries";
 import { listPartnerOptions } from "@/modules/partners/service";
 import { formatPrice } from "@/lib/money";
@@ -12,11 +12,13 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Button } from "@/components/ui/button";
+import { ConfirmSubmit } from "@/components/ui/confirm-submit";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Pagination } from "@/components/ui/pagination";
 import { PageHeader } from "@/components/ui/page-header";
 import { OrderStatusBadge } from "@/components/orders/order-status-badge";
+import { deleteOrderAction } from "./actions";
 import {
   Table,
   TableBody,
@@ -215,7 +217,7 @@ export default async function OrdersPage({
                 <TableHead>Statut</TableHead>
                 <TableHead className="hidden xl:table-cell">Créée le</TableHead>
                 <TableHead className="hidden xl:table-cell">Mise à jour</TableHead>
-                <TableHead className="w-[80px]" />
+                <TableHead className="w-[100px] text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -264,10 +266,25 @@ export default async function OrdersPage({
                       minute: "2-digit",
                     })}
                   </TableCell>
-                  <TableCell>
-                    <Button asChild variant="ghost" size="sm">
-                      <Link href={`/commandes/${o.id}`}>Ouvrir</Link>
-                    </Button>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button asChild variant="ghost" size="sm">
+                        <Link href={`/commandes/${o.id}`}>Ouvrir</Link>
+                      </Button>
+                      <form action={deleteOrderAction}>
+                        <input type="hidden" name="orderId" value={o.id} />
+                        <ConfirmSubmit
+                          variant="ghost"
+                          size="sm"
+                          className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive h-8 w-8 p-0"
+                          confirmMessage={`Supprimer définitivement la commande #${o.orderNumber} ?`}
+                          title="Supprimer cette commande"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Supprimer</span>
+                        </ConfirmSubmit>
+                      </form>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

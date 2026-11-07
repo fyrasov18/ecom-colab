@@ -8,6 +8,7 @@ import {
   Activity,
   BarChart3,
   Bell,
+  Building2,
   CalendarClock,
   Contact,
   FilePlus2,
@@ -16,12 +17,14 @@ import {
   Megaphone,
   Menu,
   Package,
+  Palette,
   PanelLeftClose,
   PanelLeftOpen,
   Percent,
   PieChart,
   ScrollText,
   Settings,
+  ShieldCheck,
   ShoppingCart,
   Truck,
   UserPlus,
@@ -36,6 +39,8 @@ import { GlobalSearch } from "./global-search";
 import { LogoutButton } from "./logout-button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { EcomPartnerLogo } from "@/components/brand/logo";
+import { DynamicBrandLogo } from "@/components/brand/dynamic-brand-logo";
+import type { ResolvedBranding } from "@/modules/branding/defaults";
 import { PageTransition } from "@/components/ui/page-transition";
 
 type NavItem = { href: string; label: string; icon: LucideIcon; superAdminOnly?: boolean };
@@ -49,6 +54,8 @@ export type AppShellProps = {
   unreadCount?: number;
   /** Admin only — gates the Audit entry. */
   isSuperAdmin?: boolean;
+  /** Platform or partner brand identity and theme resolution. */
+  branding?: ResolvedBranding | null;
   children: React.ReactNode;
 };
 
@@ -106,6 +113,8 @@ const ADMIN_NAV: NavGroup[] = [
     items: [
       { href: "/notifications", label: "Notifications", icon: Bell },
       { href: "/parametres", label: "Paramètres", icon: Settings },
+      { href: "/parametres/design", label: "Design & Marque", icon: Palette },
+      { href: "/parametres/auth-design", label: "Design Authentification", icon: ShieldCheck },
       { href: "/parametres/system", label: "État du système", icon: Activity },
       { href: "/audit", label: "Audit", icon: ScrollText, superAdminOnly: true },
     ],
@@ -128,6 +137,7 @@ const PARTNER_NAV: NavGroup[] = [
       { href: "/parrainage", label: "Parrainage", icon: UserPlus },
       { href: "/mes-performances", label: "Performances", icon: PieChart },
       { href: "/portefeuille", label: "Portefeuille", icon: Wallet },
+      { href: "/mon-entreprise", label: "Mon entreprise", icon: Building2 },
       { href: "/mes-notifications", label: "Notifications", icon: Bell },
     ],
   },
@@ -193,6 +203,7 @@ export function AppShell({
   user,
   unreadCount = 0,
   isSuperAdmin = false,
+  branding,
   children,
 }: AppShellProps) {
   const pathname = usePathname();
@@ -264,7 +275,7 @@ export function AppShell({
         )}
         aria-label="Navigation latérale"
       >
-        <Brand scope={scope} compact={collapsed} />
+        <Brand scope={scope} compact={collapsed} branding={branding} />
         <nav className="flex-1 space-y-4 overflow-y-auto p-3" aria-label="Navigation principale">
           {groups.map((group) => (
             <NavGroupBlock
@@ -296,7 +307,7 @@ export function AppShell({
             )}
           </button>
           <p className={cn("mt-2 text-center text-[10px] text-sidebar-faint", collapsed && "hidden")}>
-            EcomPartner v1.0 · Operating System
+            {branding?.name || "EcomPartner"} · {branding?.tagline || "Operating System"}
           </p>
         </div>
       </aside>
@@ -321,7 +332,7 @@ export function AppShell({
           >
             <Dialog.Title className="sr-only">Navigation</Dialog.Title>
             <div className="relative">
-              <Brand scope={scope} />
+              <Brand scope={scope} branding={branding} />
               <Dialog.Close asChild>
                 <button
                   type="button"
@@ -514,20 +525,23 @@ function NavGroupBlock({
 function Brand({
   scope,
   compact = false,
+  branding,
 }: {
   scope: "admin" | "partenaire";
   compact?: boolean;
+  branding?: ResolvedBranding | null;
 }) {
   const homeHref = scope === "admin" ? "/dashboard" : "/tableau-de-bord";
+  const brandName = branding?.name || "EcomPartner";
 
   if (compact) {
     return (
       <Link
         href={homeHref}
         className="flex h-16 shrink-0 items-center justify-center border-b border-sidebar-border transition-opacity hover:opacity-90"
-        title="EcomPartner"
+        title={brandName}
       >
-        <EcomPartnerLogo iconOnly theme="dark" className="h-8 w-8" />
+        <DynamicBrandLogo iconOnly theme="dark" branding={branding} className="h-8 w-8" />
       </Link>
     );
   }
@@ -537,7 +551,7 @@ function Brand({
       className="flex h-16 shrink-0 items-center justify-between border-b border-sidebar-border px-4 transition-opacity hover:opacity-95"
     >
       <div className="flex items-center gap-2.5 min-w-0">
-        <EcomPartnerLogo variant="compact" theme="dark" />
+        <DynamicBrandLogo variant="compact" theme="dark" branding={branding} />
       </div>
       <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400 border border-emerald-500/20 uppercase tracking-wider shrink-0">
         {scope === "admin" ? "Ops" : "Partner"}

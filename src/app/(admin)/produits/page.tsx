@@ -1,14 +1,16 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { FolderTree, Plus, Search } from "lucide-react";
+import { FolderTree, Plus, Search, Trash2 } from "lucide-react";
 import { listProducts } from "@/modules/products/service";
 import { listActiveCategories } from "@/modules/categories/service";
 import { formatPrice } from "@/lib/money";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmSubmit } from "@/components/ui/confirm-submit";
 import { EmptyState } from "@/components/ui/empty-state";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Pagination } from "@/components/ui/pagination";
+import { deleteProductAction } from "./actions";
 import {
   Table,
   TableBody,
@@ -130,7 +132,7 @@ export default async function ProductsPage({
                 <TableHead>Stock</TableHead>
                 <TableHead>Partenaires</TableHead>
                 <TableHead>Statut</TableHead>
-                <TableHead />
+                <TableHead className="w-[100px] text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -197,10 +199,25 @@ export default async function ProductsPage({
                         {STATUS_LABEL[p.status] ?? p.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      <Button asChild variant="ghost" size="sm">
-                        <Link href={`/produits/${p.id}`}>Gérer</Link>
-                      </Button>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button asChild variant="ghost" size="sm">
+                          <Link href={`/produits/${p.id}`}>Gérer</Link>
+                        </Button>
+                        <form action={deleteProductAction}>
+                          <input type="hidden" name="productId" value={p.id} />
+                          <ConfirmSubmit
+                            variant="ghost"
+                            size="sm"
+                            className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive h-8 w-8 p-0"
+                            confirmMessage={`Supprimer définitivement le produit "${p.name}" ?`}
+                            title="Supprimer ce produit"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">Supprimer</span>
+                          </ConfirmSubmit>
+                        </form>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/rbac";
 import { changeOrderStatus, StatusError } from "@/modules/orders/status";
 import { statusChangeSchema } from "@/modules/orders/schemas";
+import { deleteOrder } from "@/modules/orders/delete";
 
 export type OrderAdminState = { ok: boolean; error?: string; message?: string };
 
@@ -48,4 +49,14 @@ export async function applyOrderStatus(
     if (e instanceof StatusError) return { ok: false, error: e.message };
     return { ok: false, error: "Changement de statut impossible." };
   }
+}
+
+export async function deleteOrderAction(formData: FormData): Promise<void> {
+  const user = await requireSession(["SUPER_ADMIN", "ADMIN"]);
+  const orderId = str(formData.get("orderId"));
+  if (!orderId) return;
+  await deleteOrder(orderId, user.id);
+  revalidatePath("/commandes");
+  revalidatePath("/dashboard");
+  revalidatePath("/logistique");
 }

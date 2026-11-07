@@ -13,14 +13,20 @@ import {
   EyeOff,
   ArrowRight,
   ArrowLeft,
+  Mail,
+  Lock,
+  User,
+  Phone,
+  Tag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
-import { EcomPartnerLogo } from "@/components/brand/logo";
+import { DynamicBrandLogo } from "@/components/brand/dynamic-brand-logo";
 import { useAuthLanguage } from "@/components/auth/auth-language-context";
 import { registerAction, type RegisterState } from "./actions";
+import type { AuthPagesDesign } from "@/modules/branding/defaults";
 import { cn } from "@/lib/utils";
 
 const initialState: RegisterState = { ok: false };
@@ -34,7 +40,11 @@ function FieldError({ message }: { message?: string }) {
   );
 }
 
-export function RegisterForm() {
+interface RegisterFormProps {
+  authDesign?: AuthPagesDesign | null;
+}
+
+export function RegisterForm({ authDesign }: RegisterFormProps) {
   const searchParams = useSearchParams();
   const refCode = (searchParams.get("ref") || searchParams.get("code") || "").trim();
   const [state, formAction, pending] = useActionState(registerAction, initialState);
@@ -42,6 +52,10 @@ export function RegisterForm() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const buttonBg = authDesign?.colors?.buttonBg || "#10B981";
+  const buttonText = authDesign?.colors?.buttonText || "#FFFFFF";
+  const lightLogoUrl = authDesign?.branding?.logoLightUrl || null;
 
   /* ── Success state ──────────────────────────────────────────────────── */
   if (state.ok) {
@@ -77,12 +91,21 @@ export function RegisterForm() {
           </div>
         </div>
 
-        <Button
-          asChild
-          className="w-full h-11 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold shadow-soft"
+        <div className="rounded-xl border border-border/80 bg-muted/40 p-4 text-xs space-y-2">
+          <p className="font-semibold text-foreground">
+            {t.register.successPendingTitle}
+          </p>
+          <p className="text-muted-foreground leading-relaxed">
+            {t.register.successPendingText}
+          </p>
+        </div>
+
+        <Link
+          href="/login"
+          className="inline-flex w-full items-center justify-center rounded-lg border border-input bg-background px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-accent hover:text-accent-foreground"
         >
-          <Link href="/login">{t.register.backToLogin}</Link>
-        </Button>
+          {t.register.backToLogin}
+        </Link>
       </div>
     );
   }
@@ -101,7 +124,12 @@ export function RegisterForm() {
       {/* Brand Header */}
       <div className="mb-6 space-y-3">
         <div dir="ltr" className="hidden lg:inline-flex">
-          <EcomPartnerLogo variant="horizontal" theme="auto" showTagline={true} />
+          <DynamicBrandLogo
+            variant="horizontal"
+            theme="auto"
+            showTagline={true}
+            customLogoUrl={lightLogoUrl}
+          />
         </div>
         <div className="pt-0 lg:pt-2">
           <h1 className="text-2xl font-bold tracking-tight text-foreground">
@@ -136,16 +164,27 @@ export function RegisterForm() {
               {t.register.fullNameLabel}{" "}
               <span className="text-destructive" aria-hidden="true">*</span>
             </Label>
-            <Input
-              id="fullName"
-              name="fullName"
-              autoComplete="name"
-              required
-              aria-required="true"
-              aria-invalid={!!fe.fullName}
-              dir="auto"
-              placeholder={t.register.fullNamePlaceholder}
-            />
+            <div className="relative">
+              <div
+                className={cn(
+                  "pointer-events-none absolute inset-y-0 flex items-center text-muted-foreground",
+                  isRtl ? "right-3" : "left-3"
+                )}
+              >
+                <User className="h-4 w-4" aria-hidden="true" />
+              </div>
+              <Input
+                id="fullName"
+                name="fullName"
+                autoComplete="name"
+                required
+                aria-required="true"
+                aria-invalid={!!fe.fullName}
+                dir="auto"
+                placeholder={t.register.fullNamePlaceholder}
+                className={cn("transition-all", isRtl ? "pr-9 pl-3" : "pl-9 pr-3")}
+              />
+            </div>
             <FieldError message={fe.fullName} />
           </div>
 
@@ -155,18 +194,31 @@ export function RegisterForm() {
                 {t.register.emailLabel}{" "}
                 <span className="text-destructive" aria-hidden="true">*</span>
               </Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                aria-required="true"
-                aria-invalid={!!fe.email}
-                dir="ltr"
-                placeholder={t.register.emailPlaceholder}
-                className="text-left font-sans"
-              />
+              <div className="relative">
+                <div
+                  className={cn(
+                    "pointer-events-none absolute inset-y-0 flex items-center text-muted-foreground",
+                    isRtl ? "right-3" : "left-3"
+                  )}
+                >
+                  <Mail className="h-4 w-4" aria-hidden="true" />
+                </div>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  aria-required="true"
+                  aria-invalid={!!fe.email}
+                  dir="ltr"
+                  placeholder={t.register.emailPlaceholder}
+                  className={cn(
+                    "text-left font-sans transition-all",
+                    isRtl ? "pr-9 pl-3" : "pl-9 pr-3"
+                  )}
+                />
+              </div>
               <FieldError message={fe.email} />
             </div>
             <div className="space-y-1.5">
@@ -174,18 +226,31 @@ export function RegisterForm() {
                 {t.register.phoneLabel}{" "}
                 <span className="text-destructive" aria-hidden="true">*</span>
               </Label>
-              <Input
-                id="phone"
-                name="phone"
-                autoComplete="tel"
-                inputMode="tel"
-                required
-                aria-required="true"
-                aria-invalid={!!fe.phone}
-                dir="ltr"
-                placeholder={t.register.phonePlaceholder}
-                className="text-left font-sans"
-              />
+              <div className="relative">
+                <div
+                  className={cn(
+                    "pointer-events-none absolute inset-y-0 flex items-center text-muted-foreground",
+                    isRtl ? "right-3" : "left-3"
+                  )}
+                >
+                  <Phone className="h-4 w-4" aria-hidden="true" />
+                </div>
+                <Input
+                  id="phone"
+                  name="phone"
+                  autoComplete="tel"
+                  inputMode="tel"
+                  required
+                  aria-required="true"
+                  aria-invalid={!!fe.phone}
+                  dir="ltr"
+                  placeholder={t.register.phonePlaceholder}
+                  className={cn(
+                    "text-left font-sans transition-all",
+                    isRtl ? "pr-9 pl-3" : "pl-9 pr-3"
+                  )}
+                />
+              </div>
               <FieldError message={fe.phone} />
             </div>
           </div>
@@ -204,6 +269,14 @@ export function RegisterForm() {
                 <span className="text-destructive" aria-hidden="true">*</span>
               </Label>
               <div className="relative">
+                <div
+                  className={cn(
+                    "pointer-events-none absolute inset-y-0 flex items-center text-muted-foreground",
+                    isRtl ? "right-3" : "left-3"
+                  )}
+                >
+                  <Lock className="h-4 w-4" aria-hidden="true" />
+                </div>
                 <Input
                   id="password"
                   name="password"
@@ -213,8 +286,11 @@ export function RegisterForm() {
                   aria-required="true"
                   aria-invalid={!!fe.password}
                   dir="ltr"
-                  placeholder={t.register.passwordPlaceholder}
-                  className={cn("text-left font-sans", isRtl ? "pl-10 pr-3" : "pr-10 pl-3")}
+                  placeholder="••••••••"
+                  className={cn(
+                    "text-left font-sans transition-all",
+                    isRtl ? "pr-9 pl-10" : "pl-9 pr-10"
+                  )}
                 />
                 <Button
                   type="button"
@@ -243,6 +319,14 @@ export function RegisterForm() {
                 <span className="text-destructive" aria-hidden="true">*</span>
               </Label>
               <div className="relative">
+                <div
+                  className={cn(
+                    "pointer-events-none absolute inset-y-0 flex items-center text-muted-foreground",
+                    isRtl ? "right-3" : "left-3"
+                  )}
+                >
+                  <Lock className="h-4 w-4" aria-hidden="true" />
+                </div>
                 <Input
                   id="confirmPassword"
                   name="confirmPassword"
@@ -252,8 +336,11 @@ export function RegisterForm() {
                   aria-required="true"
                   aria-invalid={!!fe.confirmPassword}
                   dir="ltr"
-                  placeholder={t.register.confirmPasswordPlaceholder}
-                  className={cn("text-left font-sans", isRtl ? "pl-10 pr-3" : "pr-10 pl-3")}
+                  placeholder="••••••••"
+                  className={cn(
+                    "text-left font-sans transition-all",
+                    isRtl ? "pr-9 pl-10" : "pl-9 pr-10"
+                  )}
                 />
                 <Button
                   type="button"
@@ -278,65 +365,63 @@ export function RegisterForm() {
           </div>
         </fieldset>
 
-        {/* ── Partner info ─────────────────────────────────────── */}
+        {/* ── Partner Profile ──────────────────────────────────── */}
         <fieldset className="space-y-4">
           <legend className="w-full border-b border-border pb-1.5 text-sm font-semibold text-foreground">
             {t.register.partnerInfoLegend}
           </legend>
 
           <div className="space-y-1.5">
-            <Label htmlFor="invitationCode">
-              {t.register.inviteCodeLabel}{" "}
-              <span className="text-destructive" aria-hidden="true">*</span>
-            </Label>
-            <Input
-              id="invitationCode"
-              name="invitationCode"
-              required
-              aria-required="true"
-              aria-invalid={!!fe.invitationCode}
-              defaultValue={refCode}
-              dir="ltr"
-              placeholder={t.register.inviteCodePlaceholder}
-              className="text-left font-mono"
-            />
-            <FieldError message={fe.invitationCode} />
-          </div>
-
-          <div className="space-y-1.5">
             <Label htmlFor="experience">
-              {t.register.experienceLabel}{" "}
-              <span className="text-destructive" aria-hidden="true">*</span>
+              {t.register.experienceLabel}
             </Label>
             <NativeSelect
               id="experience"
               name="experience"
-              required
-              aria-required="true"
-              aria-invalid={!!fe.experience}
-              defaultValue=""
-              className={isRtl ? "text-right" : "text-left"}
+              defaultValue="DEBUTANT"
+              className="bg-card"
             >
-              <option value="" disabled>
-                {t.register.experiencePlaceholder}
-              </option>
-              {/* Option values must remain strictly DEBUTANT, INTERMEDIAIRE, EXPERT */}
               <option value="DEBUTANT">{t.register.experienceDebutant}</option>
               <option value="INTERMEDIAIRE">{t.register.experienceIntermediaire}</option>
               <option value="EXPERT">{t.register.experienceExpert}</option>
             </NativeSelect>
             <FieldError message={fe.experience} />
           </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="invitationCode">
+              {t.register.inviteCodeLabel}
+            </Label>
+            <div className="relative">
+              <div
+                className={cn(
+                  "pointer-events-none absolute inset-y-0 flex items-center text-muted-foreground",
+                  isRtl ? "right-3" : "left-3"
+                )}
+              >
+                <Tag className="h-4 w-4" aria-hidden="true" />
+              </div>
+              <Input
+                id="invitationCode"
+                name="invitationCode"
+                defaultValue={refCode}
+                placeholder={t.register.inviteCodePlaceholder}
+                className={cn("transition-all", isRtl ? "pr-9 pl-3" : "pl-9 pr-3")}
+              />
+            </div>
+            <FieldError message={fe.invitationCode} />
+          </div>
         </fieldset>
 
-        {/* ── Terms ────────────────────────────────────────────── */}
-        <div className="space-y-2">
-          <div className="flex items-start gap-3">
+        {/* ── Terms and conditions ─────────────────────────────── */}
+        <div className="space-y-2 pt-1">
+          <div className="flex items-start gap-2.5">
             <input
+              type="checkbox"
               id="termsAccepted"
               name="termsAccepted"
-              type="checkbox"
-              value="on"
+              value="true"
+              required
               aria-required="true"
               aria-invalid={!!fe.termsAccepted}
               className="mt-1 h-4 w-4 accent-primary cursor-pointer rounded border-input"
@@ -367,9 +452,10 @@ export function RegisterForm() {
           type="submit"
           disabled={pending}
           aria-busy={pending}
-          className="w-full h-11 gap-2 font-semibold text-white shadow-soft transition-all duration-200"
+          className="w-full h-11 gap-2 font-semibold shadow-soft transition-all duration-200 hover:opacity-95 cursor-pointer"
           style={{
-            background: "linear-gradient(135deg, #059669 0%, #10b981 100%)",
+            backgroundColor: buttonBg,
+            color: buttonText,
           }}
         >
           {pending && (

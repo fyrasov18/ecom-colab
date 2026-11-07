@@ -255,3 +255,62 @@ export async function setProductStatus(
     return product;
   });
 }
+
+/**
+ * Permanently deletes a product and all associated test data
+ * (marketing assets, media, partner product assignations, order items, telegram sessions).
+ */
+export async function deleteProduct(id: string, actorId: string) {
+  return prisma.$transaction(async (tx) => {
+    const product = await tx.product.findUnique({
+      where: { id },
+    });
+    if (!product) {
+      throw new Error("Produit introuvable.");
+    }
+
+    // 1. Unlink any TelegramSession
+    await tx.telegramSession.updateMany({
+      where: { productId: id },
+      data: { productId: null },
+    });
+
+    // 2. Delete partner product assignations
+    await tx.partnerProduct.deleteMany({
+      where: { productId: id },
+    });
+
+    // 3. Delete marketing assets and media
+    await tx.productMarketingAsset.deleteMany({
+      where: { productId: id },
+    });
+    await tx.productMedia.deleteMany({
+      where: { productId: id },
+    });
+
+    // 4. Delete order items referencing this product
+    await tx.orderItem.deleteMany({
+      where: { productId: id },
+    });
+
+    // 5. Record audit
+    await recordAudit(tx, {
+      actorId,
+      action: "PRODUCT_DELETED",
+      entityType: "Product",
+      entityId: id,
+      before: {
+        name: product.name,
+        slug: product.slug,
+        status: product.status,
+      },
+    });
+
+    // 6. Delete product
+    await tx.product.delete({
+      where: { id },
+    });
+
+    return product;
+  });
+}

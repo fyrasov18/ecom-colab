@@ -14,17 +14,25 @@ import {
   AlertCircle,
   ArrowRight,
   ArrowLeft,
+  Mail,
+  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { EcomPartnerLogo } from "@/components/brand/logo";
+import { DynamicBrandLogo } from "@/components/brand/dynamic-brand-logo";
 import { useAuthLanguage } from "@/components/auth/auth-language-context";
+import type { AuthPagesDesign } from "@/modules/branding/defaults";
 import { cn } from "@/lib/utils";
 
 /** Only ever populated on the server, and only outside production builds. */
 export type DevAccount = { role: string; email: string; password: string };
 
-export function LoginForm({ devAccounts }: { devAccounts?: DevAccount[] }) {
+interface LoginFormProps {
+  devAccounts?: DevAccount[];
+  authDesign?: AuthPagesDesign | null;
+}
+
+export function LoginForm({ devAccounts, authDesign }: LoginFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t, isRtl } = useAuthLanguage();
@@ -36,6 +44,10 @@ export function LoginForm({ devAccounts }: { devAccounts?: DevAccount[] }) {
   const [authError, setAuthError] = useState<string | null>(null);
 
   const pendingNotice = searchParams.get("error") === "pending";
+
+  const buttonBg = authDesign?.colors?.buttonBg || "#10B981";
+  const buttonText = authDesign?.colors?.buttonText || "#FFFFFF";
+  const lightLogoUrl = authDesign?.branding?.logoLightUrl || null;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -82,7 +94,12 @@ export function LoginForm({ devAccounts }: { devAccounts?: DevAccount[] }) {
       {/* Brand Header */}
       <div className="mb-8 space-y-3">
         <div dir="ltr" className="hidden lg:inline-flex">
-          <EcomPartnerLogo variant="horizontal" theme="auto" showTagline={true} />
+          <DynamicBrandLogo
+            variant="horizontal"
+            theme="auto"
+            showTagline={true}
+            customLogoUrl={lightLogoUrl}
+          />
         </div>
         <div className="pt-0 lg:pt-2">
           <h1 className="text-2xl font-bold tracking-tight text-foreground">
@@ -133,21 +150,34 @@ export function LoginForm({ devAccounts }: { devAccounts?: DevAccount[] }) {
             >
               {t.login.emailLabel}
             </label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              aria-required="true"
-              dir="ltr"
-              placeholder={t.login.emailPlaceholder}
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setAuthError(null);
-              }}
-              className="text-left font-sans"
-            />
+            <div className="relative">
+              <div
+                className={cn(
+                  "pointer-events-none absolute inset-y-0 flex items-center text-muted-foreground",
+                  isRtl ? "right-3" : "left-3"
+                )}
+              >
+                <Mail className="h-4 w-4" aria-hidden="true" />
+              </div>
+              <Input
+                id="email"
+                type="email"
+                autoComplete="email"
+                required
+                aria-required="true"
+                dir="ltr"
+                placeholder={t.login.emailPlaceholder}
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setAuthError(null);
+                }}
+                className={cn(
+                  "text-left font-sans transition-all",
+                  isRtl ? "pr-9 pl-3" : "pl-9 pr-3"
+                )}
+              />
+            </div>
           </div>
 
           {/* Password input */}
@@ -159,6 +189,14 @@ export function LoginForm({ devAccounts }: { devAccounts?: DevAccount[] }) {
               {t.login.passwordLabel}
             </label>
             <div className="relative">
+              <div
+                className={cn(
+                  "pointer-events-none absolute inset-y-0 flex items-center text-muted-foreground",
+                  isRtl ? "right-3" : "left-3"
+                )}
+              >
+                <Lock className="h-4 w-4" aria-hidden="true" />
+              </div>
               <Input
                 id="password"
                 type={showPassword ? "text" : "password"}
@@ -172,7 +210,10 @@ export function LoginForm({ devAccounts }: { devAccounts?: DevAccount[] }) {
                   setPassword(e.target.value);
                   setAuthError(null);
                 }}
-                className={cn("text-left font-sans", isRtl ? "pl-10 pr-3" : "pr-10 pl-3")}
+                className={cn(
+                  "text-left font-sans transition-all",
+                  isRtl ? "pr-9 pl-10" : "pl-9 pr-10"
+                )}
               />
               <Button
                 type="button"
@@ -199,9 +240,10 @@ export function LoginForm({ devAccounts }: { devAccounts?: DevAccount[] }) {
             type="submit"
             disabled={loading}
             aria-busy={loading}
-            className="w-full h-11 gap-2 font-semibold text-white shadow-soft transition-all duration-200"
+            className="w-full h-11 gap-2 font-semibold shadow-soft transition-all duration-200 hover:opacity-95 cursor-pointer"
             style={{
-              background: "linear-gradient(135deg, #059669 0%, #10b981 100%)",
+              backgroundColor: buttonBg,
+              color: buttonText,
             }}
           >
             {loading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}

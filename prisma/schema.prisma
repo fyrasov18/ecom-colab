@@ -59,6 +59,17 @@ model Partner {
   /// client-supplied id. NULL for accounts provisioned before registration.
   invitedByUserId        String?
   invitedBy              User?                  @relation("PartnerInvitedBy", fields: [invitedByUserId], references: [id], onDelete: SetNull)
+  /// Partner company branding (tenant-specific white-labeling)
+  companyName            String?
+  companyLogoUrl         String?
+  companyLogoDarkUrl     String?
+  companyMarkUrl         String?
+  brandColorPrimary      String?
+  brandColorSecondary    String?
+  companyDescription     String?
+  supportEmail           String?
+  supportPhone           String?
+  websiteUrl             String?
   customers              Customer[]
   transactions           FinancialTransaction[]
   orders                 Order[]

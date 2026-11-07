@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { SETTING_KEYS } from "./defaults";
 import { welcomeSettingsSchema, levelUpSettingsSchema } from "@/modules/announcements/schemas";
+import { platformBrandingSchema, dashboardDesignSchema } from "@/modules/branding/schemas";
+import { authPagesDesignSchema } from "@/modules/branding/auth-design-schemas";
+import { deliveryPartnersConfigSchema } from "@/modules/branding/delivery-partners-schemas";
 
 /** Fallback commission applied when no more specific rule exists. */
 export type GlobalCommission = {
@@ -64,4 +67,8 @@ export const SETTING_VALUE_SCHEMAS: Record<string, z.ZodTypeAny> = {
   [SETTING_KEYS.ANNOUNCEMENT_WELCOME_SETTINGS]: welcomeSettingsSchema,
   [SETTING_KEYS.ANNOUNCEMENT_LEVEL_UP_SETTINGS]: levelUpSettingsSchema,
   [SETTING_KEYS.ADMIN_PERMISSION_GRANTS]: z.record(z.string(), z.array(z.string())),
+  [SETTING_KEYS.PLATFORM_BRANDING]: platformBrandingSchema,
+  [SETTING_KEYS.DASHBOARD_DESIGN]: dashboardDesignSchema,
+  [SETTING_KEYS.AUTH_DESIGN]: authPagesDesignSchema,
+  [SETTING_KEYS.DELIVERY_PARTNERS]: deliveryPartnersConfigSchema,
 };
