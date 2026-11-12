@@ -4,6 +4,7 @@ import { PackageCheck } from "lucide-react";
 import { getProductAdmin } from "@/modules/products/service";
 import { listPartnerOptions } from "@/modules/partners/service";
 import { listActiveCategories } from "@/modules/categories/service";
+import { listPerformanceLevels } from "@/modules/finance/performance-service";
 import { requireSession } from "@/lib/rbac";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,10 +32,11 @@ export default async function ProductDetailPage({
 }) {
   const { id } = await params;
   const user = await requireSession(["SUPER_ADMIN", "ADMIN"]);
-  const [product, partnerRows, categories] = await Promise.all([
+  const [product, partnerRows, categories, levelRows] = await Promise.all([
     getProductAdmin(id),
     listPartnerOptions(),
     listActiveCategories(),
+    listPerformanceLevels({ includeInactive: false }),
   ]);
   if (!product) notFound();
 
@@ -46,6 +48,13 @@ export default async function ProductDetailPage({
   const partners = partnerRows.map((p) => ({
     id: p.id,
     displayName: `${p.displayName} (${p.code})`,
+    performanceLevelId: p.performanceLevelId ?? null,
+  }));
+
+  const levels = levelRows.map((l) => ({
+    id: l.id,
+    name: l.name,
+    sharePercentage: l.sharePercentage.toString(),
   }));
 
   const statusLabel = dict.statuses?.product?.[product.status as keyof typeof dict.statuses.product] ?? product.status;
@@ -124,6 +133,7 @@ export default async function ProductDetailPage({
           <AssignmentsSection
             productId={product.id}
             partners={partners}
+            levels={levels}
             canEditCommission={user.role === "SUPER_ADMIN"}
             assigned={product.partnerAssignations
               .filter((a) => a.status === "ACTIVE")

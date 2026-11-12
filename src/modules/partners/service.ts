@@ -52,6 +52,15 @@ export async function listPartnerOptions() {
   const partners = await prisma.partner.findMany({
     where: { status: "ACTIVE" },
     orderBy: { displayName: "asc" },
+    select: { id: true, displayName: true, code: true, performanceLevelId: true },
+  });
+  return partners;
+}
+
+export async function listPartnersWithoutLevel() {
+  const partners = await prisma.partner.findMany({
+    where: { status: "ACTIVE", performanceLevelId: null },
+    orderBy: { displayName: "asc" },
     select: { id: true, displayName: true, code: true },
   });
   return partners;
@@ -251,6 +260,129 @@ export async function assignProductToPartner(
 
     return assignment;
   });
+}
+
+export type AssignmentTargetType = "ALL" | "BY_LEVEL" | "INDIVIDUAL" | "NO_LEVEL";
+
+export async function assignProductWithTarget(
+  input: {
+    productId: string;
+    targetType: AssignmentTargetType;
+    partnerId?: string | null;
+    performanceLevelId?: string | null;
+    commissionType?: "PERCENTAGE" | "FIXED" | null;
+    commissionValue?: number | null;
+  },
+  actorId: string,
+  opts: { allowCommission: boolean },
+) {
+  const { productId, targetType, partnerId, performanceLevelId, commissionType, commissionValue } = input;
+
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    select: { id: true, name: true },
+  });
+  if (!product) {
+    throw new Error("Produit introuvable.");
+  }
+
+  // 1. Resolve eligible active partners server-side based on targetType
+  let eligiblePartners: { id: string; userId: string | null }[] = [];
+
+  if (targetType === "INDIVIDUAL") {
+    if (!partnerId) {
+      throw new Error("Veuillez sélectionner un partenaire.");
+    }
+    const partner = await prisma.partner.findFirst({
+      where: { id: partnerId, status: "ACTIVE" },
+      select: { id: true, userId: true },
+    });
+    if (!partner) {
+      throw new Error("Partenaire introuvable ou inactif.");
+    }
+    eligiblePartners = [partner];
+  } else if (targetType === "ALL") {
+    eligiblePartners = await prisma.partner.findMany({
+      where: { status: "ACTIVE" },
+      select: { id: true, userId: true },
+    });
+  } else if (targetType === "BY_LEVEL") {
+    if (!performanceLevelId) {
+      throw new Error("Veuillez sélectionner un niveau de performance.");
+    }
+    eligiblePartners = await prisma.partner.findMany({
+      where: { status: "ACTIVE", performanceLevelId },
+      select: { id: true, userId: true },
+    });
+  } else if (targetType === "NO_LEVEL") {
+    // Explicitly target only partners whose performance level is NULL / not defined
+    eligiblePartners = await prisma.partner.findMany({
+      where: { status: "ACTIVE", performanceLevelId: null },
+      select: { id: true, userId: true },
+    });
+  } else {
+    throw new Error("Type de ciblage non valide.");
+  }
+
+  if (eligiblePartners.length === 0) {
+    return {
+      assignedCount: 0,
+      alreadyAssignedCount: 0,
+      totalEligible: 0,
+    };
+  }
+
+  // 2. Identify partners who already have an ACTIVE assignment for this product
+  const existingActive = await prisma.partnerProduct.findMany({
+    where: {
+      productId,
+      partnerId: { in: eligiblePartners.map((p) => p.id) },
+      status: "ACTIVE",
+    },
+    select: { partnerId: true },
+  });
+  const alreadyAssignedSet = new Set(existingActive.map((e) => e.partnerId));
+
+  // 3. For individual target with commission modification, allow updating existing assignment
+  if (targetType === "INDIVIDUAL" && alreadyAssignedSet.has(eligiblePartners[0].id)) {
+    await assignProductToPartner(
+      {
+        partnerId: eligiblePartners[0].id,
+        productId,
+        commissionType: commissionType ?? null,
+        commissionValue: commissionValue ?? null,
+      },
+      actorId,
+      opts,
+    );
+    return {
+      assignedCount: 1,
+      alreadyAssignedCount: 1,
+      totalEligible: 1,
+    };
+  }
+
+  // 4. Assign only unassigned partners to prevent duplicates and spam
+  const toAssign = eligiblePartners.filter((p) => !alreadyAssignedSet.has(p.id));
+
+  for (const p of toAssign) {
+    await assignProductToPartner(
+      {
+        partnerId: p.id,
+        productId,
+        commissionType: targetType === "INDIVIDUAL" ? (commissionType ?? null) : null,
+        commissionValue: targetType === "INDIVIDUAL" ? (commissionValue ?? null) : null,
+      },
+      actorId,
+      opts,
+    );
+  }
+
+  return {
+    assignedCount: toAssign.length,
+    alreadyAssignedCount: alreadyAssignedSet.size,
+    totalEligible: eligiblePartners.length,
+  };
 }
 
 export async function deactivateAssignment(

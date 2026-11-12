@@ -7,10 +7,12 @@ import { partnerStatusSchema } from "@/modules/partners/schemas";
 import {
   addSocialAccount,
   assignProductToPartner,
+  assignProductWithTarget,
   deactivateAssignment,
   deletePartner,
   removeSocialAccount,
   setPartnerStatus,
+  type AssignmentTargetType,
 } from "@/modules/partners/service";
 
 function str(v: FormDataEntryValue | null): string {
@@ -60,12 +62,16 @@ export async function removePartnerSocial(formData: FormData): Promise<void> {
 
 export type ActionState = { ok: boolean; error?: string; message?: string };
 
-/** Assign a product to a partner (commission override requires MANAGE_CONTRIBUTION_SETTINGS). */
+/** Assign a product to partner(s) (by individual, level, all, or without level). */
 export async function assignProduct(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
   const user = await requireSession(["SUPER_ADMIN", "ADMIN"]);
+  const targetTypeRaw = (str(formData.get("targetType")) as AssignmentTargetType) || "INDIVIDUAL";
+  const partnerId = str(formData.get("partnerId"));
+  const productId = str(formData.get("productId"));
+  const performanceLevelId = str(formData.get("performanceLevelId"));
   const commissionTypeRaw = str(formData.get("commissionType"));
   const commissionValueRaw = str(formData.get("commissionValue"));
   const hasCommissionOverride = commissionTypeRaw !== "" || commissionValueRaw !== "";
@@ -79,20 +85,57 @@ export async function assignProduct(
   }
 
   try {
-    await assignProductToPartner(
+    if (targetTypeRaw === "INDIVIDUAL") {
+      await assignProductToPartner(
+        {
+          partnerId,
+          productId,
+          commissionType: commissionTypeRaw === "" ? null : (commissionTypeRaw as never),
+          commissionValue: commissionValueRaw === "" ? null : Number(commissionValueRaw),
+        },
+        user.id,
+        { allowCommission: canManageContribution },
+      );
+      if (partnerId) {
+        revalidatePath(`/partenaires/${partnerId}`);
+      }
+      revalidatePath(`/produits/${productId}`);
+      revalidatePath("/partenaires");
+      revalidatePath("/catalogue");
+      revalidatePath("/dashboard");
+      return { ok: true, message: "Produit assigné." };
+    }
+
+    const result = await assignProductWithTarget(
       {
-        partnerId: str(formData.get("partnerId")),
-        productId: str(formData.get("productId")),
+        productId,
+        targetType: targetTypeRaw,
+        partnerId: partnerId || null,
+        performanceLevelId: performanceLevelId || null,
         commissionType: commissionTypeRaw === "" ? null : (commissionTypeRaw as never),
         commissionValue: commissionValueRaw === "" ? null : Number(commissionValueRaw),
       },
       user.id,
       { allowCommission: canManageContribution },
     );
-    const partnerId = str(formData.get("partnerId"));
-    revalidatePath(`/partenaires/${partnerId}`);
+
+    revalidatePath(`/produits/${productId}`);
     revalidatePath("/partenaires");
-    return { ok: true, message: "Produit assigné." };
+    revalidatePath("/catalogue");
+    revalidatePath("/dashboard");
+
+    if (result.totalEligible === 0) {
+      return { ok: true, message: "Aucun partenaire éligible trouvé pour ce ciblage." };
+    }
+    if (result.assignedCount === 0 && result.alreadyAssignedCount > 0) {
+      return { ok: true, message: "Tous les partenaires ciblés ont déjà ce produit assigné." };
+    }
+
+    const count = result.assignedCount;
+    return {
+      ok: true,
+      message: count === 1 ? "1 partenaire assigné avec succès." : `${count} partenaires assignés avec succès.`,
+    };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Erreur." };
   }
