@@ -21,10 +21,10 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { deriveGoogleDriveUrls } from "@/lib/google-drive";
 import { CATEGORY_ICONS } from "@/app/(admin)/produits/categories/category-modal";
 import { getServerLocale } from "@/lib/i18n/server";
 import { getDictionary } from "@/lib/i18n/dictionaries";
+import { PartnerProductCard } from "@/components/catalogue/partner-product-card";
 
 export const metadata: Metadata = { title: "Catalogue Produits" };
 
@@ -257,104 +257,36 @@ export default async function CataloguePage({
           />
         )
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {assignments.map(({ product }) => {
-            const cover =
-              product.media.find((m) => m.type === "THUMBNAIL") ??
-              product.media.find((m) => m.type === "IMAGE");
-            const coverDrive = cover ? deriveGoogleDriveUrls(cover.googleDriveUrl) : null;
-
-            return (
-              <Link key={product.id} href={`/catalogue/${product.id}`} className="group">
-                <Card className="h-full flex flex-col justify-between transition-all duration-200 group-hover:shadow-md group-hover:border-primary/40 overflow-hidden">
-                  <div>
-                    {/* Image & Top Badges */}
-                    <div className="relative h-44 overflow-hidden rounded-t-xl bg-muted">
-                      {coverDrive ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={coverDrive.previewUrl}
-                          alt={product.name}
-                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        />
-                      ) : (
-                        <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
-                          {locale === "ar" ? "لا توجد صورة" : locale === "en" ? "No image" : "Aucune image"}
-                        </div>
-                      )}
-
-                      {/* Status Badges Overlay */}
-                      <div className="absolute left-2.5 top-2.5 flex flex-wrap gap-1.5 max-w-[85%]">
-                        {product.status === "OUT_OF_STOCK" && (
-                          <Badge variant="warning" className="shadow-xs text-[11px]">
-                            {t.outOfStock}
-                          </Badge>
-                        )}
-                        {product.isWinning && (
-                          <span className="inline-flex items-center gap-1 rounded-md bg-amber-500 text-white font-semibold px-2 py-0.5 text-[11px] shadow-xs">
-                            ⭐ {locale === "ar" ? "منتج رابح" : locale === "en" ? "Winner" : "Produit gagnant"}
-                          </span>
-                        )}
-                        {product.isRecommended && (
-                          <span className="inline-flex items-center gap-1 rounded-md bg-rose-500 text-white font-semibold px-2 py-0.5 text-[11px] shadow-xs">
-                            🔥 {t.recommended}
-                          </span>
-                        )}
-                        {product.isNew && (
-                          <span className="inline-flex items-center gap-1 rounded-md bg-sky-500 text-white font-semibold px-2 py-0.5 text-[11px] shadow-xs">
-                            🆕 {dict.products.isNew}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Content */}
-                    <CardContent className="space-y-2.5 p-4">
-                      {/* Category tag */}
-                      {product.categoryRef && (
-                        <div className="flex items-center gap-1.5 text-xs text-primary font-medium">
-                          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                          <span>{product.categoryRef.name}</span>
-                          {product.categoryRef.nameAr && (
-                            <span dir="rtl" className="text-[11px] text-muted-foreground font-arabic">
-                              ({product.categoryRef.nameAr})
-                            </span>
-                          )}
-                        </div>
-                      )}
-
-                      <div className="flex items-start justify-between gap-2">
-                        <h2 className="font-semibold text-base leading-snug group-hover:text-primary transition-colors">
-                          {product.name}
-                        </h2>
-                        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
-                      </div>
-
-                      {product.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                          {product.description}
-                        </p>
-                      )}
-                    </CardContent>
-                  </div>
-
-                  {/* Bottom details */}
-                  <div className="px-4 pb-4 pt-1 flex items-center justify-between border-t mt-2">
-                    <div>
-                      <span className="text-xs text-muted-foreground block">{t.catalogPrice}</span>
-                      <span className="text-base font-bold text-foreground">
-                        {formatPrice(product.sellingPrice)} {currencySymbol}
-                      </span>
-                    </div>
-
-                    <Badge variant="info" className="text-xs">
-                      {product.marketingAssets.length} {locale === "ar" ? "ملفات تسويقية" : locale === "en" ? "marketing kit(s)" : "kit(s) média"}
-                    </Badge>
-                  </div>
-                </Card>
-              </Link>
-            );
-          })}
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {assignments.map(({ product }) => (
+            <PartnerProductCard
+              key={product.id}
+              product={{
+                id: product.id,
+                name: product.name,
+                description: product.description,
+                sellingPrice: product.sellingPrice.toString(),
+                purchaseCost: product.purchaseCost ? product.purchaseCost.toString() : null,
+                status: product.status,
+                isWinning: product.isWinning,
+                isRecommended: product.isRecommended,
+                isNew: product.isNew,
+                categoryRef: product.categoryRef,
+                media: product.media.map((m) => ({
+                  id: m.id,
+                  type: m.type,
+                  googleDriveUrl: m.googleDriveUrl,
+                  title: m.title,
+                  sortOrder: m.sortOrder,
+                })),
+                marketingAssets: product.marketingAssets.map((a) => ({
+                  id: a.id,
+                  kind: a.kind,
+                  title: a.title,
+                })),
+              }}
+            />
+          ))}
         </div>
       )}
     </div>

@@ -130,4 +130,72 @@ describe("Partner Catalogue Service", () => {
     const cuisineCat = stats.categories.find((c) => c.id === "cat-2");
     expect(cuisineCat?.productCount).toBe(1);
   });
+
+  it("retrieves product purchaseCost alongside sellingPrice for partner margin calculation", async () => {
+    vi.spyOn(prisma.partnerProduct, "findMany").mockResolvedValue([
+      {
+        partnerId: mockPartnerId,
+        productId: "p1",
+        status: "ACTIVE",
+        assignedAt: new Date(),
+        product: {
+          id: "p1",
+          name: "Casque Audio Bluetooth",
+          sellingPrice: 89.0,
+          purchaseCost: 35.5,
+          status: "ACTIVE",
+          media: [
+            {
+              id: "m1",
+              type: "THUMBNAIL",
+              googleDriveUrl: "https://drive.google.com/file/d/1a2b3c4d5e6f7g8h9i0j/view",
+              title: "Vue principale",
+              sortOrder: 0,
+            },
+            {
+              id: "m2",
+              type: "IMAGE",
+              googleDriveUrl: "https://drive.google.com/file/d/0j9i8h7g6f5e4d3c2b1a/view",
+              title: "Vue latérale",
+              sortOrder: 1,
+            },
+          ],
+          marketingAssets: [
+            { id: "a1", kind: "AD_COPY", title: "Argumentaire de vente" },
+          ],
+        },
+      },
+      {
+        partnerId: mockPartnerId,
+        productId: "p2",
+        status: "ACTIVE",
+        assignedAt: new Date(),
+        product: {
+          id: "p2",
+          name: "Produit Sans Coût d'Achat",
+          sellingPrice: 45.0,
+          purchaseCost: null, // Graceful null handling
+          status: "ACTIVE",
+          media: [],
+          marketingAssets: [],
+        },
+      },
+    ] as unknown as PartnerProduct[]);
+
+    const assignments = await listAssignedProducts(mockPartnerId);
+
+    expect(assignments).toHaveLength(2);
+
+    // Product 1: Complete pricing and multiple media
+    const prod1 = assignments[0].product;
+    expect(prod1.sellingPrice).toBe(89.0);
+    expect(prod1.purchaseCost).toBe(35.5);
+    expect(prod1.media).toHaveLength(2);
+    expect(prod1.marketingAssets).toHaveLength(1);
+
+    // Product 2: Gracefully handles missing purchaseCost
+    const prod2 = assignments[1].product;
+    expect(prod2.sellingPrice).toBe(45.0);
+    expect(prod2.purchaseCost).toBeNull();
+  });
 });
