@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
+import { useI18n } from "@/lib/i18n";
 import { Sliders, Save, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,7 @@ export function ReferralSettingsForm({
     requiredOrdersToQualify: number;
   };
 }) {
+  const { dict, locale } = useI18n();
   const [state, formAction, pending] = useActionState(
     saveReferralSettingsAction,
     initialState,
@@ -40,10 +42,10 @@ export function ReferralSettingsForm({
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2 text-foreground">
           <Sliders className="h-4 w-4 text-primary" />
-          Configuration dynamique des 5 Niveaux & Qualification
+          {locale === "ar" ? "الإعدادات الديناميكية للمستويات الخمسة والتأهيل" : locale === "en" ? "Dynamic 5-Tier & Qualification Configuration" : "Configuration dynamique des 5 Niveaux & Qualification"}
         </CardTitle>
         <CardDescription>
-          Ajustez les seuils de progression et le nombre de commandes nécessaires pour qualifier un filleul sans modifier le code.
+          {locale === "ar" ? "تعديل عتبات التقدم وعدد الطلبيات اللازمة لتأهيل الفيلول." : locale === "en" ? "Adjust tier thresholds and the required number of orders to qualify referrals." : "Ajustez les seuils de progression et le nombre de commandes nécessaires pour qualifier un filleul."}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -51,7 +53,7 @@ export function ReferralSettingsForm({
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 text-xs">
             <div className="space-y-1.5">
               <Label htmlFor="requiredOrdersToQualify" className="text-xs">
-                Commandes / qualification
+                {locale === "ar" ? "طلبيات التأهيل" : locale === "en" ? "Orders to Qualify" : "Commandes / qualification"}
               </Label>
               <Input
                 id="requiredOrdersToQualify"
@@ -63,12 +65,12 @@ export function ReferralSettingsForm({
                 className="h-8 text-xs font-mono"
                 required
               />
-              <p className="text-[10px] text-muted-foreground">Ex: 3 commandes livrées</p>
+              <p className="text-[10px] text-muted-foreground">{locale === "ar" ? "مثال: 3 طلبيات مسلّمة" : locale === "en" ? "e.g. 3 delivered orders" : "Ex: 3 commandes livrées"}</p>
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="level2Threshold" className="text-xs">
-                Seuil Niveau 2 (7%)
+                {locale === "ar" ? "عتبة المستوى 2 (7%)" : locale === "en" ? "Tier 2 Threshold (7%)" : "Seuil Niveau 2 (7%)"}
               </Label>
               <Input
                 id="level2Threshold"
@@ -79,12 +81,12 @@ export function ReferralSettingsForm({
                 className="h-8 text-xs font-mono"
                 required
               />
-              <p className="text-[10px] text-muted-foreground">Filleuls qualifiés (défaut : 10)</p>
+              <p className="text-[10px] text-muted-foreground">{locale === "ar" ? "شريك مؤهل (الافتراضي: 10)" : locale === "en" ? "Qualified referrals (default: 10)" : "Filleuls qualifiés (défaut : 10)"}</p>
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="level3Threshold" className="text-xs">
-                Seuil Niveau 3 (15%)
+                {locale === "ar" ? "عتبة المستوى 3 (15%)" : locale === "en" ? "Tier 3 Threshold (15%)" : "Seuil Niveau 3 (15%)"}
               </Label>
               <Input
                 id="level3Threshold"
@@ -95,12 +97,12 @@ export function ReferralSettingsForm({
                 className="h-8 text-xs font-mono"
                 required
               />
-              <p className="text-[10px] text-muted-foreground">Filleuls qualifiés (défaut : 100)</p>
+              <p className="text-[10px] text-muted-foreground">{locale === "ar" ? "شريك مؤهل (الافتراضي: 100)" : locale === "en" ? "Qualified referrals (default: 100)" : "Filleuls qualifiés (défaut : 100)"}</p>
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="level4Threshold" className="text-xs">
-                Seuil Niveau 4 (20%)
+                {locale === "ar" ? "عتبة المستوى 4 (20%)" : locale === "en" ? "Tier 4 Threshold (20%)" : "Seuil Niveau 4 (20%)"}
               </Label>
               <Input
                 id="level4Threshold"
@@ -111,12 +113,12 @@ export function ReferralSettingsForm({
                 className="h-8 text-xs font-mono"
                 required
               />
-              <p className="text-[10px] text-muted-foreground">Filleuls qualifiés (défaut : 300)</p>
+              <p className="text-[10px] text-muted-foreground">{locale === "ar" ? "شريك مؤهل (الافتراضي: 300)" : locale === "en" ? "Qualified referrals (default: 300)" : "Filleuls qualifiés (défaut : 300)"}</p>
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="level5Threshold" className="text-xs">
-                Seuil Niveau 5 (30%)
+                {locale === "ar" ? "عتبة المستوى 5 (30%)" : locale === "en" ? "Tier 5 Threshold (30%)" : "Seuil Niveau 5 (30%)"}
               </Label>
               <Input
                 id="level5Threshold"
@@ -127,7 +129,7 @@ export function ReferralSettingsForm({
                 className="h-8 text-xs font-mono"
                 required
               />
-              <p className="text-[10px] text-muted-foreground">Filleuls qualifiés (défaut : 900)</p>
+              <p className="text-[10px] text-muted-foreground">{locale === "ar" ? "شريك مؤهل (الافتراضي: 900)" : locale === "en" ? "Qualified referrals (default: 900)" : "Filleuls qualifiés (défaut : 900)"}</p>
             </div>
           </div>
 
@@ -143,7 +145,7 @@ export function ReferralSettingsForm({
               ) : (
                 <Save className="h-3.5 w-3.5" />
               )}
-              Enregistrer les paramètres
+              {dict.common.save}
             </Button>
           </div>
         </form>

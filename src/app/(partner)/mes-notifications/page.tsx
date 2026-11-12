@@ -9,15 +9,11 @@ import { Pagination } from "@/components/ui/pagination";
 import { NotificationFeed, type NotificationRow } from "@/components/notifications/notification-feed";
 import { BellRing } from "lucide-react";
 import type { NotificationType } from "@prisma/client";
+import { getServerLocale } from "@/lib/i18n/server";
+import { getDictionary } from "@/lib/i18n/dictionaries";
 
 export const metadata: Metadata = { title: "Mes notifications" };
 export const dynamic = "force-dynamic";
-
-const VIEWS = [
-  { key: "all", label: "Toutes" },
-  { key: "unread", label: "Non lues" },
-  { key: "read", label: "Lues" },
-] as const;
 
 const TYPES = Object.keys(NOTIFICATION_TYPE_LABELS) as NotificationType[];
 
@@ -28,6 +24,11 @@ export default async function MesNotificationsPage({
 }) {
   const user = await requireSession(["PARTNER"]);
   const sp = await searchParams;
+
+  const locale = await getServerLocale();
+  const dict = getDictionary(locale);
+  const t = dict.notifications;
+  const c = dict.common;
 
   const page = typeof sp.page === "string" ? Math.max(1, parseInt(sp.page, 10) || 1) : 1;
   const rawView = typeof sp.view === "string" ? sp.view : "all";
@@ -52,12 +53,22 @@ export default async function MesNotificationsPage({
     createdAt: n.createdAt.toISOString(),
   }));
 
+  const views = [
+    { key: "all", label: locale === "ar" ? "الكل" : locale === "en" ? "All" : "Toutes" },
+    { key: "unread", label: locale === "ar" ? "غير مقروءة" : locale === "en" ? "Unread" : "Non lues" },
+    { key: "read", label: locale === "ar" ? "مقروءة" : locale === "en" ? "Read" : "Lues" },
+  ];
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Mes notifications</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{dict.nav.myNotifications}</h1>
         <p className="text-sm text-muted-foreground">
-          Suivi de vos commandes, de vos gains et de vos retraits.
+          {locale === "ar"
+            ? "متابعة طلباتك، أرباحك وعمليات السحب."
+            : locale === "en"
+            ? "Tracking your orders, earnings and withdrawals."
+            : "Suivi de vos commandes, de vos gains et de vos retraits."}
         </p>
       </div>
 
@@ -65,23 +76,23 @@ export default async function MesNotificationsPage({
         <CardContent className="pt-6">
           <form method="GET" className="flex flex-wrap items-end gap-3">
             <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Affichage</label>
+              <label className="text-xs font-medium text-muted-foreground">{locale === "ar" ? "العرض" : locale === "en" ? "View" : "Affichage"}</label>
               <NativeSelect name="view" defaultValue={view}>
-                {VIEWS.map((v) => (
+                {views.map((v) => (
                   <option key={v.key} value={v.key}>{v.label}</option>
                 ))}
               </NativeSelect>
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Type</label>
+              <label className="text-xs font-medium text-muted-foreground">{locale === "ar" ? "النوع" : locale === "en" ? "Type" : "Type"}</label>
               <NativeSelect name="type" defaultValue={type}>
-                <option value="ALL">Tous les types</option>
-                {TYPES.map((t) => (
-                  <option key={t} value={t}>{NOTIFICATION_TYPE_LABELS[t]}</option>
+                <option value="ALL">{locale === "ar" ? "جميع الأنواع" : locale === "en" ? "All types" : "Tous les types"}</option>
+                {TYPES.map((tp) => (
+                  <option key={tp} value={tp}>{NOTIFICATION_TYPE_LABELS[tp]}</option>
                 ))}
               </NativeSelect>
             </div>
-            <Button type="submit" variant="secondary" size="sm">Filtrer</Button>
+            <Button type="submit" variant="secondary" size="sm">{c.filter}</Button>
           </form>
         </CardContent>
       </Card>
@@ -89,7 +100,7 @@ export default async function MesNotificationsPage({
       {data.unread > 0 && (
         <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
           <BellRing className="h-4 w-4 text-primary" />
-          {data.unread} notification(s) non lue(s)
+          {data.unread} {locale === "ar" ? "إشعارات غير مقروءة" : locale === "en" ? "unread notification(s)" : "notification(s) non lue(s)"}
         </p>
       )}
 
@@ -101,4 +112,3 @@ export default async function MesNotificationsPage({
     </div>
   );
 }
-

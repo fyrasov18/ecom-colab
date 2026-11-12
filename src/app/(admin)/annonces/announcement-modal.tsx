@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Eye, Megaphone, Pencil, Plus, X } from "lucide-react";
 import { toast } from "sonner";
+import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,6 +35,9 @@ type Props = {
 const initialState: AdminAnnouncementActionState = { ok: false };
 
 export function AnnouncementModal({ announcement, trigger }: Props) {
+  const { dict, locale } = useI18n();
+  const t = dict.announcements;
+  const c = dict.common;
   const [open, setOpen] = useState(false);
   const [, formAction, isPending] = useActionState(
     async (prev: AdminAnnouncementActionState, formData: FormData) => {
@@ -84,11 +88,11 @@ export function AnnouncementModal({ announcement, trigger }: Props) {
           <Button size="sm" className="gap-2">
             {isEditing ? (
               <>
-                <Pencil className="h-4 w-4" /> Modifier
+                <Pencil className="h-4 w-4" /> {c.edit}
               </>
             ) : (
               <>
-                <Plus className="h-4 w-4" /> Nouvelle annonce
+                <Plus className="h-4 w-4" /> {t.newAnnouncement}
               </>
             )}
           </Button>
@@ -104,20 +108,20 @@ export function AnnouncementModal({ announcement, trigger }: Props) {
             <div>
               <Dialog.Title className="text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
                 <Megaphone className="h-5 w-5 text-primary" />
-                {isEditing ? "Modifier l'annonce" : "Nouvelle annonce partenaire"}
+                {isEditing ? t.editAnnouncement : t.newAnnouncement}
               </Dialog.Title>
               <Dialog.Description
                 id="announcement-modal-description"
                 className="mt-1 text-xs text-muted-foreground"
               >
-                Diffusez une actualité, une offre ou une mise en avant produit auprès de vos partenaires.
+                {t.subtitle}
               </Dialog.Description>
             </div>
             <Dialog.Close asChild>
               <button
                 type="button"
                 className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-                aria-label="Fermer"
+                aria-label={c.close}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -129,7 +133,7 @@ export function AnnouncementModal({ announcement, trigger }: Props) {
             <input type="hidden" name="isFullScreen" value={isFullScreen ? "true" : "false"} />
 
             <div className="space-y-1.5">
-              <Label htmlFor="ann-title">Titre de l&apos;annonce *</Label>
+              <Label htmlFor="ann-title">{locale === "ar" ? "عنوان الإعلان *" : locale === "en" ? "Announcement Title *" : "Titre de l'annonce *"}</Label>
               <Input
                 id="ann-title"
                 name="title"
@@ -141,7 +145,7 @@ export function AnnouncementModal({ announcement, trigger }: Props) {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="ann-content">Message / Contenu *</Label>
+              <Label htmlFor="ann-content">{locale === "ar" ? "الرسالة / المحتوى *" : locale === "en" ? "Message / Content *" : "Message / Contenu *"}</Label>
               <textarea
                 id="ann-content"
                 name="content"
@@ -156,30 +160,30 @@ export function AnnouncementModal({ announcement, trigger }: Props) {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="ann-type">Catégorie d&apos;annonce</Label>
+                <Label htmlFor="ann-type">{locale === "ar" ? "نوع الإعلان" : locale === "en" ? "Category" : "Catégorie d'annonce"}</Label>
                 <NativeSelect id="ann-type" name="type" defaultValue={announcement?.type ?? "INFO"}>
-                  <option value="PRODUCT">⭐ Produit du catalogue</option>
-                  <option value="PROMO">🔥 Opportunité / Promotion</option>
-                  <option value="INFO">📢 Actualité plateforme</option>
-                  <option value="FEATURE">✨ Nouvelle fonctionnalité</option>
-                  <option value="TRAINING">🎓 Formation &amp; Conseils</option>
+                  <option value="PRODUCT">⭐ {locale === "ar" ? "منتج من الكتالوج" : locale === "en" ? "Catalogue Product" : "Produit du catalogue"}</option>
+                  <option value="PROMO">🔥 {locale === "ar" ? "فرصة / عرض ترويجي" : locale === "en" ? "Opportunity / Promo" : "Opportunité / Promotion"}</option>
+                  <option value="INFO">📢 {locale === "ar" ? "أخبار المنصة" : locale === "en" ? "Platform News" : "Actualité plateforme"}</option>
+                  <option value="FEATURE">✨ {locale === "ar" ? "ميزة جديدة" : locale === "en" ? "New Feature" : "Nouvelle fonctionnalité"}</option>
+                  <option value="TRAINING">🎓 {locale === "ar" ? "تدريب ونصائح" : locale === "en" ? "Training & Advice" : "Formation & Conseils"}</option>
                 </NativeSelect>
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="ann-audience">Ciblage des partenaires</Label>
+                <Label htmlFor="ann-audience">{t.targetPartners}</Label>
                 <NativeSelect
                   id="ann-audience"
                   name="targetAudience"
                   defaultValue={announcement?.targetAudience ?? "ALL"}
                 >
-                  <option value="ALL">Tous les partenaires</option>
-                  <option value="ACTIVE_ONLY">Partenaires actifs uniquement</option>
-                  <option value="LEVEL_1">Partenaires Niveau 1 uniquement</option>
-                  <option value="LEVEL_2">Partenaires Niveau 2 uniquement</option>
-                  <option value="LEVEL_3">Partenaires Niveau 3 uniquement</option>
-                  <option value="LEVEL_4">Partenaires Niveau 4 uniquement</option>
-                  <option value="LEVEL_5">Partenaires Niveau 5 uniquement</option>
+                  <option value="ALL">{t.allPartners}</option>
+                  <option value="ACTIVE_ONLY">{locale === "ar" ? "الشركاء النشطون فقط" : locale === "en" ? "Active Partners Only" : "Partenaires actifs uniquement"}</option>
+                  <option value="LEVEL_1">{t.levelNumber.replace("{level}", "1")}</option>
+                  <option value="LEVEL_2">{t.levelNumber.replace("{level}", "2")}</option>
+                  <option value="LEVEL_3">{t.levelNumber.replace("{level}", "3")}</option>
+                  <option value="LEVEL_4">{t.levelNumber.replace("{level}", "4")}</option>
+                  <option value="LEVEL_5">{t.levelNumber.replace("{level}", "5")}</option>
                 </NativeSelect>
               </div>
 
@@ -287,14 +291,14 @@ export function AnnouncementModal({ announcement, trigger }: Props) {
                   onClick={() => setOpen(false)}
                   disabled={isPending}
                 >
-                  Annuler
+                  {c.cancel}
                 </Button>
                 <Button type="submit" disabled={isPending}>
                   {isPending
-                    ? "Enregistrement..."
+                    ? c.saving
                     : isEditing
-                    ? "Mettre à jour"
-                    : "Créer l'annonce"}
+                    ? c.save
+                    : c.create}
                 </Button>
               </div>
             </div>

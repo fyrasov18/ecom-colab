@@ -21,6 +21,8 @@ import { Badge } from "@/components/ui/badge";
 import { getPartnerReferralDashboardData } from "@/modules/referrals/service";
 import { ReferralLinkCard } from "./referral-link-card";
 import { PartnerBreakdownModal } from "./partner-breakdown-modal";
+import { getServerLocale } from "@/lib/i18n/server";
+import { getDictionary } from "@/lib/i18n/dictionaries";
 
 export const metadata: Metadata = {
   title: "Mon Réseau de Parrainage | Espace Partenaire",
@@ -35,6 +37,9 @@ export default async function PartnerReferralDashboardPage() {
     redirect("/tableau-de-bord");
   }
 
+  const locale = await getServerLocale();
+  const dict = getDictionary(locale);
+  const t = dict.partnerPortal.referrals;
   const partnerId = sessionUser.partnerId;
 
   // 3. Fetch all dashboard data via domain service (encapsulates Prisma queries)

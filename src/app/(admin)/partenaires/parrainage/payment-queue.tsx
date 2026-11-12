@@ -1,14 +1,14 @@
 "use client";
 
 import type { Prisma } from "@prisma/client";
-
 import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
-import { Send, Loader2, CheckCircle2, Wallet, DollarSign } from "lucide-react";
+import { Send, Loader2, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { formatMoney } from "@/lib/money";
+import { useI18n } from "@/lib/i18n";
 import {
   payCommissionAction,
   type AdminCommissionActionState,
@@ -47,6 +47,7 @@ export type PaymentQueueItem = {
 };
 
 function PaymentRow({ item }: { item: PaymentQueueItem }) {
+  const { dict, formatDate } = useI18n();
   const [payState, payAction, payPending] = useActionState(
     payCommissionAction,
     initialState,
@@ -79,11 +80,11 @@ function PaymentRow({ item }: { item: PaymentQueueItem }) {
 
       <td className="p-3">
         <Badge variant="outline" className="border-info-300 bg-info-50 text-info-700 text-[11px] font-normal">
-          Approuvé pour paiement
+          {dict.common.approved}
         </Badge>
         {item.approvedAt && (
           <p className="mt-0.5 text-[10px] text-muted-foreground">
-            le {new Date(item.approvedAt).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })}
+            {formatDate(item.approvedAt)}
           </p>
         )}
       </td>
@@ -108,7 +109,7 @@ function PaymentRow({ item }: { item: PaymentQueueItem }) {
             name="transactionReference"
             required
             maxLength={100}
-            placeholder="Réf. virement / reçu (obligatoire)"
+            placeholder={dict.finance.ribD17}
             className="h-8 w-52 text-xs"
           />
           <Button
@@ -123,7 +124,7 @@ function PaymentRow({ item }: { item: PaymentQueueItem }) {
             ) : (
               <Send className="h-3 w-3" />
             )}
-            Enregistrer le paiement
+            {dict.finance.markAsPaid}
           </Button>
         </form>
       </td>
@@ -132,13 +133,17 @@ function PaymentRow({ item }: { item: PaymentQueueItem }) {
 }
 
 export function PaymentQueueTable({ items }: { items: PaymentQueueItem[] }) {
+  const { dict, locale } = useI18n();
+
   if (items.length === 0) {
     return (
       <div className="rounded-xl border border-dashed p-8 text-center text-muted-foreground">
         <Wallet className="mx-auto h-8 w-8 text-muted-foreground/60 mb-2" />
-        <p className="text-sm font-medium">Aucun paiement en attente</p>
+        <p className="text-sm font-medium">
+          {locale === "ar" ? "لا توجد مدفوعات قيد الانتظار" : locale === "en" ? "No payments pending" : "Aucun paiement en attente"}
+        </p>
         <p className="text-xs text-muted-foreground mt-1">
-          Toutes les commissions approuvées ont été payées et enregistrées.
+          {locale === "ar" ? "تم دفع وتسجيل جميع العمولات المعتمدة." : locale === "en" ? "All approved commissions have been paid and settled." : "Toutes les commissions approuvées ont été payées et enregistrées."}
         </p>
       </div>
     );
@@ -149,12 +154,12 @@ export function PaymentQueueTable({ items }: { items: PaymentQueueItem[] }) {
       <table className="w-full text-left">
         <thead className="bg-muted/50 border-b text-xs font-semibold text-muted-foreground">
           <tr>
-            <th className="p-3">Bénéficiaire</th>
-            <th className="p-3">Filleul</th>
-            <th className="p-3">Montant net</th>
-            <th className="p-3">Statut & Date</th>
-            <th className="p-3">Calcul</th>
-            <th className="p-3 min-w-[340px]">Enregistrement du paiement</th>
+            <th className="p-3">{dict.nav.referrals}</th>
+            <th className="p-3">{dict.partnerPortal.referrals.activeReferrals}</th>
+            <th className="p-3">{dict.common.total}</th>
+            <th className="p-3">{dict.common.status} & {dict.common.date}</th>
+            <th className="p-3">{dict.common.details}</th>
+            <th className="p-3 min-w-[340px]">{dict.finance.markAsPaid}</th>
           </tr>
         </thead>
         <tbody className="divide-y">

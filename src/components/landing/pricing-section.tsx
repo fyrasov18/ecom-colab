@@ -3,8 +3,11 @@
 import Link from "next/link";
 import { Check, HelpCircle, Wallet, Users2, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/lib/i18n";
 
 export function PricingSection() {
+  const { dict } = useI18n();
+
   return (
     <section id="pricing" className="relative py-20 bg-slate-950 text-white border-t border-white/[0.08]">
       {/* Background ambient glow */}
@@ -22,18 +25,16 @@ export function PricingSection() {
         <div className="mx-auto max-w-3xl text-center mb-12">
           <div className="inline-flex items-center gap-1.5 rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-400 mb-4">
             <Zap className="h-3.5 w-3.5" />
-            Modèle de collaboration
+            {dict.landing.pricingBadge}
           </div>
           <h2 className="text-3xl font-bold tracking-tight sm:text-5xl">
-            Une rémunération sur vos ventes,{" "}
+            {dict.landing.pricingTitle}{" "}
             <span className="bg-gradient-to-r from-blue-400 via-sky-300 to-indigo-300 bg-clip-text text-transparent">
-              sans abonnement
+              {dict.landing.pricingTitleGradient}
             </span>
           </h2>
           <p className="mt-4 text-base sm:text-lg text-slate-400">
-            L&apos;inscription partenaire est gratuite. Vous percevez une commission
-            sur chaque vente générée via votre activité sur la plateforme.
-            Aucun frais mensuel, aucun engagement annuel.
+            {dict.landing.pricingDesc}
           </p>
         </div>
 
@@ -46,28 +47,27 @@ export function PricingSection() {
                 <Zap className="h-6 w-6" />
               </div>
               <div className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                1. Inscription
+                {dict.landing.step1Title}
               </div>
               <h3 className="text-xl font-bold text-white mb-3">
-                Gratuite et sans engagement
+                {dict.landing.step1Subtitle}
               </h3>
               <p className="text-sm text-slate-400 leading-relaxed mb-6">
-                Créez votre compte partenaire. Votre demande est ensuite
-                soumise à validation administrative avant activation.
+                {dict.landing.step1Desc}
               </p>
 
               <ul className="space-y-3 text-sm text-slate-400">
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-emerald-400 shrink-0" />
-                  Aucun frais d&apos;inscription
+                  {dict.landing.noSignupFee}
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-emerald-400 shrink-0" />
-                  Aucun abonnement mensuel
+                  {dict.landing.noMonthlySub}
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-emerald-400 shrink-0" />
-                  Validation par l&apos;équipe admin
+                  {dict.landing.adminValidation}
                 </li>
               </ul>
             </div>
@@ -82,7 +82,7 @@ export function PricingSection() {
               }}
             >
               <Link href="/register">
-                Créer mon compte
+                {dict.landing.createMyAccount}
               </Link>
             </Button>
           </div>
@@ -94,29 +94,27 @@ export function PricingSection() {
                 <Wallet className="h-6 w-6" />
               </div>
               <div className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                2. Rémunération
+                {dict.landing.step2Title}
               </div>
               <h3 className="text-xl font-bold text-white mb-3">
-                Commission sur vos ventes
+                {dict.landing.step2Subtitle}
               </h3>
               <p className="text-sm text-slate-400 leading-relaxed mb-6">
-                Vous gagnez un pourcentage sur chaque commande livrée via votre
-                activité partenaire. Les commissions sont suivies dans votre
-                portefeuille et disponibles pour retrait.
+                {dict.landing.step2Desc}
               </p>
 
               <ul className="space-y-3 text-sm text-slate-400">
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-emerald-400 shrink-0" />
-                  Commission calculée sur chaque vente
+                  {dict.landing.commPerSale}
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-emerald-400 shrink-0" />
-                  Suivi dans votre portefeuille partenaire
+                  {dict.landing.walletTracking}
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-emerald-400 shrink-0" />
-                  Retrait sur demande
+                  {dict.landing.withdrawOnDemand}
                 </li>
               </ul>
             </div>
@@ -128,7 +126,7 @@ export function PricingSection() {
               className="mt-auto w-full h-12 text-base font-medium border-white/15 bg-white/[0.04] text-white hover:bg-white/[0.08] hover:border-white/30"
             >
               <a href="#how-it-works">
-                Voir le processus
+                {dict.landing.viewProcess}
               </a>
             </Button>
           </div>
@@ -140,29 +138,27 @@ export function PricingSection() {
                 <Users2 className="h-6 w-6" />
               </div>
               <div className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                3. Parrainage
+                {dict.landing.step3Title}
               </div>
               <h3 className="text-xl font-bold text-white mb-3">
-                Gagnez en parrainant
+                {dict.landing.step3Subtitle}
               </h3>
               <p className="text-sm text-slate-400 leading-relaxed mb-6">
-                Invitez d&apos;autres partenaires à rejoindre la plateforme et
-                percevez des commissions sur leur activité, sur plusieurs
-                niveaux.
+                {dict.landing.step3Desc}
               </p>
 
               <ul className="space-y-3 text-sm text-slate-400">
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-emerald-400 shrink-0" />
-                  Code d&apos;invitation unique par partenaire
+                  {dict.landing.uniqueInviteCode}
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-emerald-400 shrink-0" />
-                  Commissions sur plusieurs niveaux
+                  {dict.landing.multiLevelComm}
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-emerald-400 shrink-0" />
-                  Attribution vérifiée et traçable
+                  {dict.landing.traceableAttribution}
                 </li>
               </ul>
             </div>
@@ -174,7 +170,7 @@ export function PricingSection() {
               className="mt-auto w-full h-12 text-base font-medium border-white/15 bg-white/[0.04] text-white hover:bg-white/[0.08] hover:border-white/30"
             >
               <a href="#features">
-                Découvrir les fonctionnalités
+                {dict.landing.discoverFeatures}
               </a>
             </Button>
           </div>
@@ -183,43 +179,35 @@ export function PricingSection() {
         {/* Mini FAQ Section */}
         <div id="faq" className="mt-20 max-w-4xl mx-auto pt-12 border-t border-white/[0.08]">
           <h3 className="text-xl font-bold text-center text-white mb-8 flex items-center justify-center gap-2">
-            <HelpCircle className="h-5 w-5 text-blue-400" /> Questions Fréquentes
+            <HelpCircle className="h-5 w-5 text-blue-400" /> {dict.landing.faqTitle}
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
             <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-              <h4 className="font-semibold text-white">Combien coûte l&apos;inscription ?</h4>
+              <h4 className="font-semibold text-white">{dict.landing.faq1Q}</h4>
               <p className="mt-2 text-slate-400 leading-relaxed">
-                L&apos;inscription partenaire est gratuite. Aucun frais mensuel ni
-                abonnement n&apos;est requis.
+                {dict.landing.faq1A}
               </p>
             </div>
 
             <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-              <h4 className="font-semibold text-white">Comment suis-je rémunéré ?</h4>
+              <h4 className="font-semibold text-white">{dict.landing.faq2Q}</h4>
               <p className="mt-2 text-slate-400 leading-relaxed">
-                Vous percevez une commission sur chaque commande livrée via
-                votre activité partenaire. Les commissions sont suivies dans
-                votre portefeuille et disponibles pour retrait.
+                {dict.landing.faq2A}
               </p>
             </div>
 
             <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-              <h4 className="font-semibold text-white">Dois-je gérer le stock ou la livraison ?</h4>
+              <h4 className="font-semibold text-white">{dict.landing.faq3Q}</h4>
               <p className="mt-2 text-slate-400 leading-relaxed">
-                Non. Vous vous concentrez sur la promotion des produits.
-                L&apos;expédition et la logistique sont gérées par les partenaires
-                logistiques de la plateforme.
+                {dict.landing.faq3A}
               </p>
             </div>
 
             <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-              <h4 className="font-semibold text-white">Comment fonctionne le parrainage ?</h4>
+              <h4 className="font-semibold text-white">{dict.landing.faq4Q}</h4>
               <p className="mt-2 text-slate-400 leading-relaxed">
-                Chaque partenaire dispose d&apos;un code d&apos;invitation unique.
-                Lorsqu&apos;un nouveau membre s&apos;inscrit via votre code, vous
-                percevez des commissions sur son activité, sur plusieurs
-                niveaux.
+                {dict.landing.faq4A}
               </p>
             </div>
           </div>

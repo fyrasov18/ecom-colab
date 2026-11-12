@@ -3,6 +3,7 @@
 import * as React from "react";
 import Image from "next/image";
 import { toast } from "sonner";
+import { useI18n } from "@/lib/i18n";
 import {
   Truck,
   Plus,
@@ -51,6 +52,7 @@ export function DeliveryPartnersManager({
   onChange,
   canEdit,
 }: DeliveryPartnersManagerProps) {
+  const { dict } = useI18n();
   // Section settings state
   const [enabled, setEnabled] = React.useState(config.enabled);
   const [titleFr, setTitleFr] = React.useState(config.title.fr);
@@ -382,10 +384,10 @@ export function DeliveryPartnersManager({
             <div>
               <CardTitle className="text-base font-bold flex items-center gap-2">
                 <Truck className="h-4 w-4 text-primary" />
-                <span>Section Partenaires de Livraison (Pages d&apos;Authentification)</span>
+                <span>{dict.authDesign.deliveryPartnersSection}</span>
               </CardTitle>
               <CardDescription className="text-xs">
-                Activez ou désactivez la section sur /login et /register, et personnalisez les titres et sous-titres en français, arabe et anglais.
+                {dict.authDesign.deliveryPartnersDesc}
               </CardDescription>
             </div>
 
@@ -399,7 +401,7 @@ export function DeliveryPartnersManager({
                 className="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
               />
               <span className="text-xs font-semibold text-foreground">
-                {enabled ? "Section Visible" : "Section Masquée"}
+                {enabled ? dict.authDesign.sectionVisible : dict.authDesign.sectionHidden}
               </span>
             </label>
           </div>
@@ -548,7 +550,7 @@ export function DeliveryPartnersManager({
               className="gap-1.5"
             >
               <Check className="h-3.5 w-3.5" />
-              <span>{isSavingSection ? "Enregistrement..." : "Enregistrer les paramètres de section"}</span>
+              <span>{isSavingSection ? dict.authDesign.saving : dict.authDesign.saveConfig}</span>
             </Button>
           </div>
         </CardContent>
@@ -560,13 +562,13 @@ export function DeliveryPartnersManager({
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <CardTitle className="text-base font-bold">Sociétés de Livraison Répertoriées</CardTitle>
+                <CardTitle className="text-base font-bold">{dict.authDesign.carrierList}</CardTitle>
                 <Badge variant="outline" className="text-[11px] font-mono">
                   {sortedPartners.length} transporteur{sortedPartners.length > 1 ? "s" : ""}
                 </Badge>
               </div>
               <CardDescription className="text-xs mt-1">
-                Gérez la liste ordonnée des transporteurs compatibles. Seules les entrées marquées comme actives sont affichées publiquement.
+                {dict.authDesign.carrierListDesc}
               </CardDescription>
             </div>
 
@@ -586,7 +588,7 @@ export function DeliveryPartnersManager({
               className="gap-1.5"
             >
               <Plus className="h-4 w-4" />
-              <span>Ajouter un transporteur</span>
+              <span>{dict.authDesign.addCarrier}</span>
             </Button>
           </div>
         </CardHeader>
@@ -596,7 +598,7 @@ export function DeliveryPartnersManager({
           <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-800 dark:text-amber-300">
             <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
             <div className="leading-relaxed">
-              <span className="font-semibold">Transparence des partenariats :</span> Ces transporteurs sont configurés comme solutions logistiques compatibles avec la plateforme EcomPartner pour faciliter l&apos;expédition et le suivi. Seules les sociétés marquées comme actives apparaissent publiquement.
+              {dict.authDesign.transparencyNotice}
             </div>
           </div>
 
@@ -606,9 +608,9 @@ export function DeliveryPartnersManager({
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground mb-3">
                 <Truck className="h-6 w-6" />
               </div>
-              <div className="text-sm font-semibold text-foreground">Aucun transporteur configuré</div>
+              <div className="text-sm font-semibold text-foreground">{dict.authDesign.noCarriers}</div>
               <p className="mt-1 text-xs text-muted-foreground max-w-sm">
-                Ajoutez les sociétés de livraison disponibles (ex. Aramex, First Delivery, etc.) avec leurs logos pour les afficher sur les pages de connexion et d&apos;inscription.
+                {dict.authDesign.noCarriersDesc}
               </p>
               <Button
                 type="button"
@@ -619,7 +621,7 @@ export function DeliveryPartnersManager({
                 disabled={!canEdit}
               >
                 <Plus className="h-3.5 w-3.5" />
-                <span>Ajouter le premier transporteur</span>
+                <span>{dict.authDesign.addCarrier}</span>
               </Button>
             </div>
           ) : (
@@ -627,11 +629,11 @@ export function DeliveryPartnersManager({
               <table className="w-full text-left text-xs">
                 <thead className="bg-muted/50 border-b border-border text-muted-foreground font-semibold">
                   <tr>
-                    <th className="py-2.5 px-3 w-16 text-center">Ordre</th>
-                    <th className="py-2.5 px-4 w-36">Logo</th>
-                    <th className="py-2.5 px-4">Société & Site Web</th>
-                    <th className="py-2.5 px-4 w-28 text-center">Statut</th>
-                    <th className="py-2.5 px-4 w-44 text-right">Actions</th>
+                    <th className="py-2.5 px-3 w-16 text-center">{dict.authDesign.order}</th>
+                    <th className="py-2.5 px-4 w-36">{dict.authDesign.logo}</th>
+                    <th className="py-2.5 px-4">{dict.authDesign.carrierAndWeb}</th>
+                    <th className="py-2.5 px-4 w-28 text-center">{dict.authDesign.status}</th>
+                    <th className="py-2.5 px-4 w-44 text-right">{dict.authDesign.actions}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">

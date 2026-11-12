@@ -4,6 +4,7 @@ import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { UserPlus } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,6 +33,7 @@ export function AssignmentsSection({
   partners: PartnerOption[];
   canEditCommission: boolean;
 }) {
+  const { dict } = useI18n();
   const [state, formAction] = useActionState(assignProduct, initialState);
 
   useEffect(() => {
@@ -45,13 +47,13 @@ export function AssignmentsSection({
 
   return (
     <section className="space-y-4" id="partenaires">
-      <h2 className="text-base font-semibold">Partenaires assignés</h2>
+      <h2 className="text-base font-semibold">{dict.products.assignments}</h2>
 
       {available.length > 0 ? (
         <form action={formAction} className="flex flex-wrap items-end gap-3 rounded-lg border p-4">
           <input type="hidden" name="productId" value={productId} />
           <div className="min-w-52 flex-1 space-y-1.5">
-            <Label htmlFor="as-partner">Partenaire</Label>
+            <Label htmlFor="as-partner">{dict.nav.partnerList}</Label>
             <NativeSelect id="as-partner" name="partnerId">
               {available.map((p) => (
                 <option key={p.id} value={p.id}>{p.displayName}</option>
@@ -59,32 +61,32 @@ export function AssignmentsSection({
             </NativeSelect>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="as-ctype">Commission</Label>
+            <Label htmlFor="as-ctype">{dict.partners.commissionType}</Label>
             <NativeSelect id="as-ctype" name="commissionType" defaultValue="" className="w-44">
-              <option value="">Règle par défaut</option>
-              <option value="PERCENTAGE">Pourcentage (%)</option>
-              <option value="FIXED">Fixe (DT)</option>
+              <option value="">{dict.common.status}</option>
+              <option value="PERCENTAGE">{dict.partners.percentage}</option>
+              <option value="FIXED">{dict.partners.fixed}</option>
             </NativeSelect>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="as-cvalue">Valeur</Label>
+            <Label htmlFor="as-cvalue">{dict.partners.commissionValue}</Label>
             <Input id="as-cvalue" name="commissionValue" type="number" step="0.001" min="0" className="w-32" placeholder="—" />
           </div>
           <Button type="submit" variant="outline">
-            <UserPlus className="h-4 w-4" /> Assigner
+            <UserPlus className="h-4 w-4" /> {dict.products.assignToPartner}
           </Button>
           {!canEditCommission && (
             <p className="w-full text-xs text-muted-foreground">
-              La commission par défaut s&apos;applique : la surcharge nécessite un Super Admin.
+              {dict.products.allPartnersAssigned}
             </p>
           )}
         </form>
       ) : (
-        <p className="text-sm text-muted-foreground">Tous les partenaires sont déjà assignés.</p>
+        <p className="text-sm text-muted-foreground">{dict.products.allPartnersAssigned}</p>
       )}
 
       {assigned.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Aucun partenaire assigné à ce produit.</p>
+        <p className="text-sm text-muted-foreground">{dict.products.allPartnersAssigned}</p>
       ) : (
         <ul className="divide-y rounded-lg border">
           {assigned.map((a) => (
@@ -98,8 +100,8 @@ export function AssignmentsSection({
                 </Link>
                 <div className="text-xs text-muted-foreground">
                   {a.commissionType
-                    ? `Commission personnalisée : ${a.commissionType === "PERCENTAGE" ? `${a.commissionValue} %` : `${a.commissionValue} DT`}`
-                    : "Règle par défaut (partenaire/global)"}
+                    ? `${dict.partners.customCommission} : ${a.commissionType === "PERCENTAGE" ? `${a.commissionValue} %` : `${a.commissionValue} DT`}`
+                    : dict.nav.commissionRules}
                 </div>
               </div>
               <form action={removeAssignment}>
@@ -109,9 +111,9 @@ export function AssignmentsSection({
                   variant="ghost"
                   size="sm"
                   className="text-destructive"
-                  confirmMessage="Désassigner ce produit de ce partenaire ?"
+                  confirmMessage={dict.common.delete}
                 >
-                  Désassigner
+                  {dict.common.delete}
                 </ConfirmSubmit>
               </form>
             </li>

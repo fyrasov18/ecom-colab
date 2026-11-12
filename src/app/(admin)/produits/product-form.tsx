@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
+import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,6 +42,7 @@ type Props = {
 const initialState: ActionState = { ok: false };
 
 export function ProductForm({ product, categories = [] }: Props) {
+  const { dict, locale } = useI18n();
   const [state, formAction] = useActionState(saveProduct, initialState);
 
   useEffect(() => {
@@ -56,32 +58,32 @@ export function ProductForm({ product, categories = [] }: Props) {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2 sm:col-span-2">
-          <Label htmlFor="name">Nom du produit *</Label>
+          <Label htmlFor="name">{dict.products.productName} *</Label>
           <Input id="name" name="name" required defaultValue={product?.name ?? ""} />
         </div>
 
         <div className="space-y-2 sm:col-span-2">
-          <Label htmlFor="categoryId">Catégorie du produit *</Label>
+          <Label htmlFor="categoryId">{dict.products.category} *</Label>
           <NativeSelect
             id="categoryId"
             name="categoryId"
             required
             defaultValue={product?.categoryId ?? ""}
           >
-            <option value="">— Sélectionner une catégorie obligatoire —</option>
+            <option value="">— {dict.products.allCategories} —</option>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.name} {c.nameAr ? `(${c.nameAr})` : ""}
+                {locale === "ar" && c.nameAr ? c.nameAr : c.name}
               </option>
             ))}
           </NativeSelect>
           <p className="text-[11px] text-muted-foreground">
-            Requis pour organiser le catalogue partenaire et faciliter la découverte.
+            {dict.products.subtitle}
           </p>
         </div>
 
         <div className="space-y-2 sm:col-span-2">
-          <Label htmlFor="description">Description</Label>
+          <Label htmlFor="description">{dict.products.description}</Label>
           <textarea
             id="description"
             name="description"
@@ -92,59 +94,59 @@ export function ProductForm({ product, categories = [] }: Props) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="purchaseCost">Prix d&apos;achat (DT) *</Label>
+          <Label htmlFor="purchaseCost">{dict.products.purchaseCost} *</Label>
           <Input id="purchaseCost" name="purchaseCost" type="number" step="0.001" min="0" required defaultValue={val(product?.purchaseCost)} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="packagingCost">Emballage (DT) *</Label>
+          <Label htmlFor="packagingCost">{dict.products.packagingCost} *</Label>
           <Input id="packagingCost" name="packagingCost" type="number" step="0.001" min="0" required defaultValue={val(product?.packagingCost)} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="deliveryCost">Livraison (DT) *</Label>
+          <Label htmlFor="deliveryCost">{dict.products.deliveryCost} *</Label>
           <Input id="deliveryCost" name="deliveryCost" type="number" step="0.001" min="0" required defaultValue={val(product?.deliveryCost)} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="sellingPrice">Prix de vente conseillé (DT) *</Label>
+          <Label htmlFor="sellingPrice">{dict.products.sellingPrice} *</Label>
           <Input id="sellingPrice" name="sellingPrice" type="number" step="0.001" min="0.001" required defaultValue={val(product?.sellingPrice)} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="stockQuantity">Stock *</Label>
+          <Label htmlFor="stockQuantity">{dict.products.stock} *</Label>
           <Input id="stockQuantity" name="stockQuantity" type="number" step="1" min="0" required defaultValue={product?.stockQuantity ?? 0} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="lowStockThreshold">Seuil stock faible *</Label>
+          <Label htmlFor="lowStockThreshold">{dict.products.lowStockThreshold} *</Label>
           <Input id="lowStockThreshold" name="lowStockThreshold" type="number" step="1" min="0" required defaultValue={product?.lowStockThreshold ?? 5} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="status">Statut</Label>
+          <Label htmlFor="status">{dict.products.status}</Label>
           <NativeSelect id="status" name="status" defaultValue={product?.status ?? "ACTIVE"}>
-            <option value="ACTIVE">Actif</option>
-            <option value="INACTIVE">Inactif</option>
-            <option value="OUT_OF_STOCK">Rupture de stock</option>
-            <option value="ARCHIVED">Archivé</option>
+            <option value="ACTIVE">{dict.statuses.product.ACTIVE}</option>
+            <option value="INACTIVE">{dict.statuses.product.INACTIVE}</option>
+            <option value="OUT_OF_STOCK">{dict.statuses.product.OUT_OF_STOCK}</option>
+            <option value="ARCHIVED">{dict.statuses.product.ARCHIVED}</option>
           </NativeSelect>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="commissionType">Commission produit (optionnel)</Label>
+          <Label htmlFor="commissionType">{dict.partners.commissionType}</Label>
           <NativeSelect id="commissionType" name="commissionType" defaultValue={product?.commissionType ?? ""}>
-            <option value="">— Règle globale / partenaire —</option>
-            <option value="PERCENTAGE">Pourcentage (%)</option>
-            <option value="FIXED">Montant fixe (DT)</option>
+            <option value="">— {dict.nav.commissionRules} —</option>
+            <option value="PERCENTAGE">{dict.partners.percentage}</option>
+            <option value="FIXED">{dict.partners.fixed}</option>
           </NativeSelect>
         </div>
         <div className="space-y-2 sm:col-span-2">
-          <Label htmlFor="commissionValue">Valeur de la commission</Label>
-          <Input id="commissionValue" name="commissionValue" type="number" step="0.001" min="0" defaultValue={val(product?.commissionValue)} placeholder="vide = règle globale" />
+          <Label htmlFor="commissionValue">{dict.partners.commissionValue}</Label>
+          <Input id="commissionValue" name="commissionValue" type="number" step="0.001" min="0" defaultValue={val(product?.commissionValue)} placeholder="—" />
         </div>
 
         {/* Discovery & Promotion Flags */}
         <div className="space-y-3 sm:col-span-2 pt-4 border-t">
           <div>
             <Label className="text-sm font-semibold text-foreground">
-              Badges & Découverte Catalogue
+              {dict.products.title}
             </Label>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Ces indicateurs aident les partenaires à identifier les opportunités de vente à fort potentiel.
+              {dict.products.subtitle}
             </p>
           </div>
 
@@ -159,11 +161,8 @@ export function ProductForm({ product, categories = [] }: Props) {
               />
               <div className="space-y-0.5">
                 <div className="text-sm font-medium flex items-center gap-1.5 text-foreground">
-                  <span>⭐</span> Produit gagnant
+                  <span>⭐</span> {dict.products.isWinning}
                 </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Best-seller à fort taux de conversion et marge éprouvée.
-                </p>
               </div>
             </label>
 
@@ -177,11 +176,8 @@ export function ProductForm({ product, categories = [] }: Props) {
               />
               <div className="space-y-0.5">
                 <div className="text-sm font-medium flex items-center gap-1.5 text-foreground">
-                  <span>🆕</span> Nouveau produit
+                  <span>🆕</span> {dict.products.isNew}
                 </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Nouveauté récemment arrivée en stock à tester rapidement.
-                </p>
               </div>
             </label>
 
@@ -195,11 +191,8 @@ export function ProductForm({ product, categories = [] }: Props) {
               />
               <div className="space-y-0.5">
                 <div className="text-sm font-medium flex items-center gap-1.5 text-foreground">
-                  <span>🔥</span> Recommandé
+                  <span>🔥</span> {dict.products.isRecommended}
                 </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Recommandé par l&apos;équipe pour la tendance actuelle.
-                </p>
               </div>
             </label>
           </div>
@@ -208,7 +201,7 @@ export function ProductForm({ product, categories = [] }: Props) {
 
       <div className="flex justify-end gap-2 pt-2">
         <Button type="submit">
-          {product ? "Enregistrer les modifications" : "Créer le produit"}
+          {product ? dict.common.save : dict.common.create}
         </Button>
       </div>
     </form>

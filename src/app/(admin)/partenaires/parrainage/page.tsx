@@ -22,6 +22,8 @@ import { PaymentQueueTable, type PaymentQueueItem } from "./payment-queue";
 import { PromotionQueueTable, type PromotionCandidate } from "./promotion-queue";
 import { CalculationBreakdownModal } from "./breakdown-modal";
 import { ReferralSettingsForm } from "./referral-settings-form";
+import { getServerLocale } from "@/lib/i18n/server";
+import { getDictionary } from "@/lib/i18n/dictionaries";
 
 export const metadata: Metadata = {
   title: "Hub Parrainage & Commissions | Administration",
@@ -30,6 +32,9 @@ export const metadata: Metadata = {
 export default async function AdminReferralHubPage() {
   // 1. Strictly enforce SUPER_ADMIN or ADMIN role
   await requireSession(["SUPER_ADMIN", "ADMIN"]);
+  const locale = await getServerLocale();
+  const dict = getDictionary(locale);
+  const t = dict.partnerPortal.referrals;
 
   // 2. Fetch all hub data via domain service (encapsulates Prisma queries)
   const {

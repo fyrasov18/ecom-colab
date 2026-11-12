@@ -1,15 +1,17 @@
+"use client";
+
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
-  dayBucket,
   NOTIFICATION_TYPE_LABELS,
   NOTIFICATION_TYPE_TONES,
 } from "@/modules/notifications/labels";
 import { cn } from "@/lib/utils";
 import { MarkAllReadButton, MarkReadButton } from "./actions-buttons";
 import type { NotificationType } from "@prisma/client";
+import { useI18n } from "@/lib/i18n";
 
 export type NotificationRow = {
   id: string;
@@ -20,9 +22,6 @@ export type NotificationRow = {
   readAt: string | null;
   createdAt: string;
 };
-
-const time = (iso: string) =>
-  new Date(iso).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 
 /**
  * Shared by /notifications and /mes-notifications — the two pages only differ
@@ -37,25 +36,52 @@ export function NotificationFeed({
   now: string;
   unread: number;
 }) {
+  const { dict, formatDate, locale } = useI18n();
+
   if (items.length === 0) {
     return (
       <EmptyState
-        title="Aucune notification"
-        description="Vous serez informé ici de chaque événement important (commandes, gains, retraits)."
+        title={dict.notifications.emptyTitle}
+        description={dict.notifications.emptyDesc}
       />
     );
   }
 
   const nowDate = new Date(now);
-  // Buckets are precomputed rather than tracked by a mutable render variable:
-  // React 19 forbids reassigning a render-scope variable while rendering, and a
-  // day heading is simply the first row of that day group.
-  const buckets = items.map((n) => dayBucket(new Date(n.createdAt), nowDate));
+
+  const getBucketLabel = (date: Date) => {
+    const startOf = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const days = Math.round((startOf(nowDate) - startOf(date)) / 86_400_000);
+    if (days <= 0) return dict.notifications.today;
+    if (days === 1) return dict.notifications.yesterday;
+    return formatDate(date, {
+      day: "2-digit",
+      month: "long",
+      year: date.getFullYear() === nowDate.getFullYear() ? undefined : "numeric",
+    });
+  };
+
+  const buckets = items.map((n) => getBucketLabel(new Date(n.createdAt)));
   const rows = items.map((item, i) => ({
     item,
     bucket: buckets[i],
     showHeading: i === 0 || buckets[i - 1] !== buckets[i],
   }));
+
+  const formatTime = (iso: string) => {
+    const intlLocale = locale === "ar" ? "ar-TN" : locale === "en" ? "en-US" : "fr-FR";
+    return new Date(iso).toLocaleTimeString(intlLocale, { hour: "2-digit", minute: "2-digit" });
+  };
+
+  const typeMap: Record<NotificationType, keyof typeof dict.notifications.types> = {
+    ANNOUNCEMENT: "announcement",
+    ORDER_STATUS: "orderStatus",
+    EARNING: "earning",
+    SETTLEMENT: "settlement",
+    WITHDRAWAL: "withdrawal",
+    STOCK: "stock",
+    SYSTEM: "system",
+  };
 
   return (
     <div className="space-y-6">
@@ -68,6 +94,8 @@ export function NotificationFeed({
       <ul className="space-y-2">
         {rows.map(({ item: n, bucket, showHeading }) => {
           const isUnread = n.readAt === null;
+          const mappedKey = typeMap[n.type];
+          const typeLabel = (mappedKey && dict.notifications.types[mappedKey]) || NOTIFICATION_TYPE_LABELS[n.type] || n.type;
 
           return (
             <li key={n.id}>
@@ -83,7 +111,7 @@ export function NotificationFeed({
                 )}
               >
                 <Badge variant={NOTIFICATION_TYPE_TONES[n.type]} className="mt-0.5 shrink-0">
-                  {NOTIFICATION_TYPE_LABELS[n.type] ?? n.type}
+                  {typeLabel}
                 </Badge>
 
                 <div className="min-w-0 flex-1">
@@ -91,13 +119,13 @@ export function NotificationFeed({
                     {n.title}
                   </p>
                   <p className="mt-0.5 text-sm text-muted-foreground">{n.body}</p>
-                  <p className="mt-1 text-[11px] text-muted-foreground">{time(n.createdAt)}</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">{formatTime(n.createdAt)}</p>
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2">
                   {n.link && (
                     <Button asChild variant="outline" size="sm">
-                      <Link href={n.link}>Ouvrir</Link>
+                      <Link href={n.link}>{dict.common.view}</Link>
                     </Button>
                   )}
                   {isUnread && <MarkReadButton notificationId={n.id} />}

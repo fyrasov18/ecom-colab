@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { toast } from "sonner";
+import { useI18n } from "@/lib/i18n";
 import {
   Palette,
   Image as ImageIcon,
@@ -57,6 +58,7 @@ export function DesignForm({
   initialDesign,
   canEdit,
 }: DesignFormProps) {
+  const { dict } = useI18n();
   const [activeTab, setActiveTab] = React.useState<"branding" | "design">("branding");
 
   // Branding state
@@ -770,15 +772,15 @@ export function DesignForm({
                         style={{ backgroundColor: `${primaryColor}33`, color: primaryColor }}
                       >
                         <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: primaryColor }} />
-                        <span>Tableau de bord</span>
+                        <span>{dict.nav.dashboard}</span>
                       </div>
                       <div className="flex items-center gap-1.5 px-2 py-1.5 rounded text-white/60">
                         <div className="h-1.5 w-1.5 rounded-full bg-white/20" />
-                        <span>Commandes</span>
+                        <span>{dict.orders.title}</span>
                       </div>
                       <div className="flex items-center gap-1.5 px-2 py-1.5 rounded text-white/60">
                         <div className="h-1.5 w-1.5 rounded-full bg-white/20" />
-                        <span>Partenaires</span>
+                        <span>{dict.nav.partnerList}</span>
                       </div>
                     </div>
                   </div>

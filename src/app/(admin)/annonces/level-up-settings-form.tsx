@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useI18n } from "@/lib/i18n";
 import { Eye, PartyPopper, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,8 @@ import type { LevelUpSettings } from "@/modules/announcements/schemas";
 const initialState: AdminAnnouncementActionState = { ok: false };
 
 export function LevelUpSettingsForm({ initialSettings }: { initialSettings: LevelUpSettings }) {
+  const { dict } = useI18n();
+  const t = dict.announcements;
   const [state, formAction, isPending] = useActionState(saveLevelUpSettingsAction, initialState);
 
   const [isEnabled, setIsEnabled] = useState(initialSettings.isEnabled);
@@ -41,10 +44,10 @@ export function LevelUpSettingsForm({ initialSettings }: { initialSettings: Leve
           <div>
             <CardTitle className="text-lg flex items-center gap-2">
               <PartyPopper className="h-5 w-5 text-amber-500" />
-              Notification de changement de niveau (Level Up)
+              {t.newLevelUpAlert}
             </CardTitle>
             <CardDescription className="mt-1">
-              Affichée en plein écran avec animation de confettis uniquement lorsqu&apos;un partenaire passe à un niveau supérieur après confirmation officielle de l&apos;Admin.
+              {t.newLevelUpDesc}
             </CardDescription>
           </div>
           <NotificationPreviewModal
@@ -57,7 +60,7 @@ export function LevelUpSettingsForm({ initialSettings }: { initialSettings: Leve
             metadata={{ oldLevel: 1, newLevel: 2, newRate: 0.07 }}
             trigger={
               <Button type="button" variant="outline" size="sm" className="gap-1.5 shrink-0">
-                <Eye className="h-4 w-4" /> Prévisualiser
+                <Eye className="h-4 w-4" /> {t.previewButton}
               </Button>
             }
           />
@@ -75,17 +78,14 @@ export function LevelUpSettingsForm({ initialSettings }: { initialSettings: Leve
                 onCheckedChange={(checked) => setIsEnabled(Boolean(checked))}
               />
               <Label htmlFor="levelup-enabled" className="font-semibold cursor-pointer">
-                Activer la célébration de montée de niveau (Level Up)
+                {t.levelUpCelebrationActive}
               </Label>
             </div>
-            <p className="text-xs text-muted-foreground mt-1 ml-6">
-              Ne se déclenche jamais pour une simple demande en attente. Uniquement après validation effective de la promotion.
-            </p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="levelup-title">Titre de félicitations</Label>
+              <Label htmlFor="levelup-title">{t.congratsTitle}</Label>
               <Input
                 id="levelup-title"
                 name="title"
@@ -99,7 +99,7 @@ export function LevelUpSettingsForm({ initialSettings }: { initialSettings: Leve
             </div>
 
             <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="levelup-message">Message de célébration</Label>
+              <Label htmlFor="levelup-message">{t.celebrationMessage}</Label>
               <textarea
                 id="levelup-message"
                 name="message"
@@ -112,7 +112,7 @@ export function LevelUpSettingsForm({ initialSettings }: { initialSettings: Leve
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="levelup-btnText">Texte du bouton (CTA)</Label>
+              <Label htmlFor="levelup-btnText">{t.ctaButton}</Label>
               <Input
                 id="levelup-btnText"
                 name="buttonText"
@@ -123,7 +123,7 @@ export function LevelUpSettingsForm({ initialSettings }: { initialSettings: Leve
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="levelup-btnUrl">Lien de destination</Label>
+              <Label htmlFor="levelup-btnUrl">{t.ctaUrl}</Label>
               <Input
                 id="levelup-btnUrl"
                 name="buttonUrl"
@@ -141,16 +141,16 @@ export function LevelUpSettingsForm({ initialSettings }: { initialSettings: Leve
                 value={themeColor}
                 onChange={(e) => setThemeColor(e.target.value as LevelUpSettings["themeColor"])}
               >
-                <option value="amber">Ambre / Festif doré</option>
-                <option value="indigo">Indigo / Bleu prestige</option>
-                <option value="emerald">Émeraude / Réussite</option>
-                <option value="purple">Violet / VIP</option>
-                <option value="rose">Rose / Rubis</option>
+                <option value="amber">Ambre</option>
+                <option value="indigo">Indigo</option>
+                <option value="emerald">Émeraude</option>
+                <option value="purple">Violet</option>
+                <option value="rose">Rose</option>
               </NativeSelect>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="levelup-img">URL de l&apos;image / bannière (optionnel)</Label>
+              <Label htmlFor="levelup-img">URL de l&apos;image (optionnel)</Label>
               <Input
                 id="levelup-img"
                 name="imageUrl"
@@ -159,16 +159,13 @@ export function LevelUpSettingsForm({ initialSettings }: { initialSettings: Leve
                 onChange={(e) => setImageUrl(e.target.value)}
                 placeholder="https://..."
               />
-              <p className="text-[11px] text-muted-foreground">
-                Lien direct d&apos;image (.png, .jpg, .webp). Les liens de partage (Kommodo, etc.) sont convertis automatiquement.
-              </p>
             </div>
           </div>
 
           <div className="flex justify-end pt-2">
             <Button type="submit" disabled={isPending} className="gap-2">
               <Save className="h-4 w-4" />
-              {isPending ? "Enregistrement..." : "Enregistrer les paramètres"}
+              {isPending ? dict.common.saving : dict.common.save}
             </Button>
           </div>
         </form>

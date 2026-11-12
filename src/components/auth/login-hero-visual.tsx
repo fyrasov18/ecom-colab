@@ -46,7 +46,7 @@ export function LoginHeroVisual() {
           </div>
           <div className="flex items-center gap-1.5 text-[11px] text-emerald-400 font-medium">
             <Lock className="h-3 w-3" />
-            <span>Accès Authentifié</span>
+            <span>{t.hero.authenticatedAccess}</span>
           </div>
         </div>
 
@@ -58,8 +58,8 @@ export function LoginHeroVisual() {
                 <Boxes className="h-4 w-4" />
               </div>
               <div>
-                <p className="font-semibold text-white">Catalogue &amp; Produits</p>
-                <p className="text-[11px] text-slate-400">Articles assignés et tarification partenaire</p>
+                <p className="font-semibold text-white">{t.hero.catalogTitle}</p>
+                <p className="text-[11px] text-slate-400">{t.hero.catalogDesc}</p>
               </div>
             </div>
           </div>
@@ -70,8 +70,8 @@ export function LoginHeroVisual() {
                 <Truck className="h-4 w-4" />
               </div>
               <div>
-                <p className="font-semibold text-white">Gestion des Commandes</p>
-                <p className="text-[11px] text-slate-400">Suivi des statuts d&apos;expédition et livraisons</p>
+                <p className="font-semibold text-white">{t.hero.ordersTitle}</p>
+                <p className="text-[11px] text-slate-400">{t.hero.ordersDesc}</p>
               </div>
             </div>
           </div>
@@ -82,8 +82,8 @@ export function LoginHeroVisual() {
                 <Wallet className="h-4 w-4" />
               </div>
               <div>
-                <p className="font-semibold text-white">Portefeuille &amp; Retraits</p>
-                <p className="text-[11px] text-slate-400">Consultation des soldes et demandes de retrait</p>
+                <p className="font-semibold text-white">{t.hero.walletTitle}</p>
+                <p className="text-[11px] text-slate-400">{t.hero.walletDesc}</p>
               </div>
             </div>
           </div>

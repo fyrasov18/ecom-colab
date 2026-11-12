@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight, Palette, ShieldCheck } from "lucide-react";
+import { ChevronRight, Palette, ShieldCheck, User, Users } from "lucide-react";
 import { requireSession } from "@/lib/rbac";
 import { hasPermission } from "@/lib/permissions";
 import { listFinanceSettings } from "@/modules/settings/service";
 import { listPerformanceLevels } from "@/modules/finance/performance-service";
+import { getServerLocale } from "@/lib/i18n/server";
+import { getDictionary } from "@/lib/i18n";
 import { FinanceSettingsForm } from "./settings-form";
 import { PerformanceLevelsSection } from "./performance-levels-section";
 
@@ -12,7 +14,11 @@ export const metadata: Metadata = { title: "Paramètres" };
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const user = await requireSession(["SUPER_ADMIN", "ADMIN"]);
+  const [user, locale] = await Promise.all([
+    requireSession(["SUPER_ADMIN", "ADMIN"]),
+    getServerLocale(),
+  ]);
+  const dict = getDictionary(locale);
   const [settings, levels, canEdit] = await Promise.all([
     listFinanceSettings(),
     listPerformanceLevels({ includeInactive: true }),
@@ -22,14 +28,52 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Paramètres</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{dict.settingsHub.title}</h1>
         <p className="text-sm text-muted-foreground">
-          Configuration globale de la plateforme.
+          {dict.settingsHub.subtitle}
         </p>
       </div>
 
-      {/* Quick link to Design & Branding */}
+      {/* Quick navigation to Admin Management, Account Settings & Design */}
       <div className="grid gap-4 sm:grid-cols-2">
+        {user.role === "SUPER_ADMIN" && (
+          <Link
+            href="/parametres/administrateurs"
+            className="flex items-center justify-between rounded-lg border border-border bg-card p-4 shadow-soft transition-colors hover:border-primary/50 hover:bg-muted/40"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                <Users className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="font-semibold text-foreground">{dict.settingsHub.adminManagementTitle}</div>
+                <div className="text-xs text-muted-foreground">
+                  {dict.settingsHub.adminManagementDesc}
+                </div>
+              </div>
+            </div>
+            <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
+          </Link>
+        )}
+
+        <Link
+          href="/parametres/compte"
+          className="flex items-center justify-between rounded-lg border border-border bg-card p-4 shadow-soft transition-colors hover:border-primary/50 hover:bg-muted/40"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
+              <User className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="font-semibold text-foreground">{dict.settingsHub.myAccountTitle}</div>
+              <div className="text-xs text-muted-foreground">
+                {dict.settingsHub.myAccountDesc}
+              </div>
+            </div>
+          </div>
+          <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
+        </Link>
+
         <Link
           href="/parametres/design"
           className="flex items-center justify-between rounded-lg border border-border bg-card p-4 shadow-soft transition-colors hover:border-primary/50 hover:bg-muted/40"
@@ -39,9 +83,9 @@ export default async function SettingsPage() {
               <Palette className="h-5 w-5" />
             </div>
             <div>
-              <div className="font-semibold text-foreground">Design & Marque de la Plateforme</div>
+              <div className="font-semibold text-foreground">{dict.settingsHub.brandDesignTitle}</div>
               <div className="text-xs text-muted-foreground">
-                Logos, nom de la plateforme, couleurs et style visuel du tableau de bord.
+                {dict.settingsHub.brandDesignDesc}
               </div>
             </div>
           </div>
@@ -57,9 +101,9 @@ export default async function SettingsPage() {
               <ShieldCheck className="h-5 w-5" />
             </div>
             <div>
-              <div className="font-semibold text-foreground">Design Pages d&apos;Authentification</div>
+              <div className="font-semibold text-foreground">{dict.settingsHub.authDesignTitle}</div>
               <div className="text-xs text-muted-foreground">
-                Inspiration Shipper : volet marketing, textes multilingues, mockup et couleurs CTA.
+                {dict.settingsHub.authDesignDesc}
               </div>
             </div>
           </div>

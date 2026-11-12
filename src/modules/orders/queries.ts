@@ -126,3 +126,17 @@ export async function getPartnerOrder(partnerId: string, id: string) {
     include: detailInclude,
   });
 }
+
+
+/** Dedicated tracking query for partner shipment & logistics tracking. */
+export async function listPartnerTrackingOrders(partnerId: string) {
+  return prisma.order.findMany({
+    where: { partnerId },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    include: {
+      customer: { select: { fullName: true, phone: true, city: true, governorate: true } },
+      items: { select: { productName: true, quantity: true } },
+      shipment: true,
+    },
+  });
+}

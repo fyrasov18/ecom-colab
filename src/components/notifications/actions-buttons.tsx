@@ -4,6 +4,7 @@ import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
 import { CheckCheck, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/lib/i18n";
 import {
   markEveryNotificationRead,
   markNotificationRead,
@@ -14,6 +15,7 @@ const initialState: NotificationActionState = { ok: false };
 
 /** Mark a single notification read. Mounted inside the server-rendered feed. */
 export function MarkReadButton({ notificationId }: { notificationId: string }) {
+  const { t } = useI18n();
   const [state, formAction, pending] = useActionState(
     markNotificationRead,
     initialState,
@@ -28,7 +30,7 @@ export function MarkReadButton({ notificationId }: { notificationId: string }) {
       <input type="hidden" name="notificationId" value={notificationId} />
       <Button type="submit" variant="ghost" size="sm" disabled={pending} className="text-xs">
         {pending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-        Marquer lu
+        {t("notifications.markRead")}
       </Button>
     </form>
   );
@@ -36,6 +38,7 @@ export function MarkReadButton({ notificationId }: { notificationId: string }) {
 
 /** Clear the whole unread queue for the current user. */
 export function MarkAllReadButton() {
+  const { t } = useI18n();
   const [state, formAction, pending] = useActionState(
     markEveryNotificationRead,
     initialState,
@@ -54,7 +57,7 @@ export function MarkAllReadButton() {
         ) : (
           <CheckCheck className="mr-1.5 h-4 w-4" />
         )}
-        Tout marquer comme lu
+        {t("notifications.markAllRead")}
       </Button>
     </form>
   );

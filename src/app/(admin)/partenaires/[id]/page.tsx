@@ -45,6 +45,8 @@ import {
 } from "../actions";
 import { changePartnerLevel } from "../../parametres/performance-actions";
 import { AssignProductForm } from "./assign-product-form";
+import { getServerLocale } from "@/lib/i18n/server";
+import { getDictionary } from "@/lib/i18n/dictionaries";
 
 export const metadata: Metadata = { title: "Partenaire" };
 
@@ -107,6 +109,12 @@ export default async function PartnerDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const locale = await getServerLocale();
+  const dict = getDictionary(locale);
+  const t = dict.partners;
+  const cDict = dict.common;
+  const currencySymbol = locale === "ar" ? "د.ت" : locale === "en" ? "TND" : "DT";
+  const intlLocale = locale === "ar" ? "ar-TN" : locale === "en" ? "en-US" : "fr-FR";
   const user = await requireSession(["SUPER_ADMIN", "ADMIN"]);
   const [partner, productOptions, finance, levels] = await Promise.all([
     getPartnerAdmin(id),
@@ -152,7 +160,7 @@ export default async function PartnerDetailPage({
               <span>·</span>
               <Calendar className="h-3.5 w-3.5" aria-hidden="true" />
               <span>
-                Inscrit le {partner.createdAt.toLocaleDateString("fr-FR")}
+                {locale === "ar" ? "تاريخ التسجيل: " : locale === "en" ? "Registered on " : "Inscrit le "}{partner.createdAt.toLocaleDateString(intlLocale)}
               </span>
             </span>
           </span>

@@ -12,6 +12,7 @@ import {
   PAYMENT_METHODS,
 } from "@/modules/finance/schemas";
 import { submitWithdrawalRequest, type WalletActionState } from "./actions";
+import { useI18n } from "@/lib/i18n";
 
 const initialState: WalletActionState = { ok: false };
 
@@ -28,6 +29,10 @@ export function WithdrawForm({
   minAmount: string;
   hasActiveRequest: boolean;
 }) {
+  const { dict, locale } = useI18n();
+  const t = dict.partnerPortal.wallet;
+  const currencySymbol = locale === "ar" ? "د.ت" : locale === "en" ? "TND" : "DT";
+
   const [state, formAction, pending] = useActionState(
     submitWithdrawalRequest,
     initialState,
@@ -45,8 +50,11 @@ export function WithdrawForm({
   if (hasActiveRequest) {
     return (
       <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-        Une demande de retrait est déjà en cours de traitement. Vous pourrez en
-        créer une nouvelle dès qu&apos;elle sera payée ou rejetée.
+        {locale === "ar"
+          ? "طلب سحب قيد المعالجة حالياً. يمكنك تقديم طلب جديد فور معالجة طلبك السابق."
+          : locale === "en"
+          ? "A withdrawal request is already pending. You can submit a new one once it is processed."
+          : "Une demande de retrait est déjà en cours de traitement. Vous pourrez en créer une nouvelle dès qu'elle sera payée ou rejetée."}
       </div>
     );
   }
@@ -58,16 +66,17 @@ export function WithdrawForm({
       className="space-y-4 rounded-xl border bg-card p-4"
     >
       <div>
-        <h2 className="font-semibold">Demander un retrait</h2>
+        <h2 className="font-semibold">{t.requestWithdrawal}</h2>
         <p className="text-sm text-muted-foreground">
-          Retirable maintenant : <strong>{drawable} DT</strong> — minimum{" "}
-          {minAmount} DT. Les gains en attente ne sont pas retirables.
+          {locale === "ar" ? "قابل للسحب الآن: " : locale === "en" ? "Withdrawable now: " : "Retirable maintenant : "}
+          <strong>{drawable} {currencySymbol}</strong> — {locale === "ar" ? "الحد الأدنى " : locale === "en" ? "minimum " : "minimum "}
+          {minAmount} {currencySymbol}. {locale === "ar" ? "الأرباح المعلقة لا يمكن سحبها حالياً." : locale === "en" ? "Pending earnings cannot be withdrawn yet." : "Les gains en attente ne sont pas retirables."}
         </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="space-y-1.5">
-          <Label htmlFor="amount">Montant (DT)</Label>
+          <Label htmlFor="amount">{t.amountToWithdraw}</Label>
           <Input
             id="amount"
             name="amount"
@@ -81,7 +90,7 @@ export function WithdrawForm({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="paymentMethod">Moyen de paiement</Label>
+          <Label htmlFor="paymentMethod">{t.payoutMethod}</Label>
           <NativeSelect id="paymentMethod" name="paymentMethod" required>
             {PAYMENT_METHODS.map((m) => (
               <option key={m} value={m}>
@@ -92,20 +101,20 @@ export function WithdrawForm({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="paymentAccount">Coordonnées de paiement</Label>
+          <Label htmlFor="paymentAccount">{t.enterRib}</Label>
           <Input
             id="paymentAccount"
             name="paymentAccount"
             required
             maxLength={120}
-            placeholder="RIB / n° de téléphone"
+            placeholder="RIB / D17"
           />
         </div>
       </div>
 
       <Button type="submit" disabled={pending}>
         {pending && <Loader2 className="h-4 w-4 animate-spin" />}
-        Envoyer la demande
+        {t.submitRequest}
       </Button>
     </form>
   );

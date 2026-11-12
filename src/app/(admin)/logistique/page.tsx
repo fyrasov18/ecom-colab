@@ -19,6 +19,8 @@ import {
 } from "@/components/ui/table";
 import { BulkLaneForm, SelectAllCheckbox } from "./lane-actions";
 import { ResumeButton } from "./resume-button";
+import { getServerLocale } from "@/lib/i18n/server";
+import { getDictionary } from "@/lib/i18n/dictionaries";
 
 export const metadata: Metadata = { title: "Logistique" };
 export const dynamic = "force-dynamic";
@@ -31,11 +33,30 @@ const TONE_CLASS: Record<string, string> = {
   muted: "bg-muted border-border text-foreground",
 };
 
+const LANE_LABELS_I18N: Record<string, { fr: string; en: string; ar: string }> = {
+  CONFIRMED: { fr: "À valider", en: "To Validate", ar: "بانتظار التحقق" },
+  VALIDATED: { fr: "À préparer", en: "To Prepare", ar: "بانتظار التحضير" },
+  PREPARING: { fr: "En préparation", en: "Preparing", ar: "قيد التحضير" },
+  PACKAGED: { fr: "À expédier", en: "To Ship", ar: "بانتظار الشحن" },
+  SHIPPED: { fr: "Expédiées", en: "Shipped", ar: "تم الشحن" },
+  IN_DELIVERY: { fr: "En livraison", en: "In Delivery", ar: "قيد التوصيل" },
+  DELIVERED: { fr: "Livrées", en: "Delivered", ar: "تم التوصيل" },
+  RETURNS: { fr: "Retours & Refus", en: "Returns & Refusals", ar: "الإرجاع والرفض" },
+  ON_HOLD: { fr: "En attente (Hold)", en: "On Hold", ar: "معلق (Hold)" },
+};
+
 export default async function LogisticsPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const locale = await getServerLocale();
+  const dict = getDictionary(locale);
+  const t = dict.logistics;
+  const oDict = dict.orders;
+  const c = dict.common;
+  const intlLocale = locale === "ar" ? "ar-TN" : locale === "en" ? "en-US" : "fr-FR";
+
   const sp = await searchParams;
   const lane = getLane(typeof sp.lane === "string" ? sp.lane : "");
   const q = typeof sp.q === "string" ? sp.q : "";
@@ -49,6 +70,7 @@ export default async function LogisticsPage({
   ]);
 
   const isBulkLane = lane.next !== null;
+  const currentLaneLabel = LANE_LABELS_I18N[lane.key]?.[locale] ?? lane.label;
 
   const table = (
     <div className="rounded-xl border bg-card">
@@ -60,16 +82,16 @@ export default async function LogisticsPage({
                 <SelectAllCheckbox />
               </TableHead>
             )}
-            <TableHead>N°</TableHead>
-            <TableHead>Client</TableHead>
-            <TableHead>Localité</TableHead>
-            <TableHead>Produit</TableHead>
-            <TableHead>Partenaire</TableHead>
+            <TableHead>{oDict.orderNumber}</TableHead>
+            <TableHead>{oDict.customer}</TableHead>
+            <TableHead>{locale === "ar" ? "المنطقة" : locale === "en" ? "Location" : "Localité"}</TableHead>
+            <TableHead>{dict.products.productName}</TableHead>
+            <TableHead>{oDict.partner}</TableHead>
             {lane.key === "SHIPPED" || lane.key === "IN_DELIVERY" ? (
-              <TableHead>Suivi</TableHead>
+              <TableHead>{oDict.trackingNumber}</TableHead>
             ) : null}
-            {lane.key === "RETURNS" ? <TableHead>Motif</TableHead> : null}
-            {lane.key === "DELIVERED" ? <TableHead>Settlement</TableHead> : null}
+            {lane.key === "RETURNS" ? <TableHead>{locale === "ar" ? "السبب" : locale === "en" ? "Reason" : "Motif"}</TableHead> : null}
+            {lane.key === "DELIVERED" ? <TableHead>{locale === "ar" ? "التسوية" : locale === "en" ? "Settlement" : "Settlement"}</TableHead> : null}
             <TableHead />
           </TableRow>
         </TableHeader>
@@ -120,10 +142,10 @@ export default async function LogisticsPage({
               {lane.key === "DELIVERED" ? (
                 <TableCell className="text-xs text-muted-foreground">
                   {o.deliveredAt
-                    ? `Livrée ${o.deliveredAt.toLocaleDateString("fr-FR")}`
+                    ? `${locale === "ar" ? "تم التسليم" : locale === "en" ? "Delivered" : "Livrée"} ${o.deliveredAt.toLocaleDateString(intlLocale)}`
                     : ""}
                   {o.settlementDueAt
-                    ? ` · dispo. ${o.settlementDueAt.toLocaleDateString("fr-FR")}`
+                    ? ` · ${locale === "ar" ? "متاح" : locale === "en" ? "avail." : "dispo."} ${o.settlementDueAt.toLocaleDateString(intlLocale)}`
                     : ""}
                 </TableCell>
               ) : null}
@@ -135,7 +157,7 @@ export default async function LogisticsPage({
                     href={`/commandes/${o.id}`}
                     className="rounded-md px-2 py-1 text-sm font-medium text-primary hover:bg-accent"
                   >
-                    Ouvrir
+                    {c.view}
                   </Link>
                 )}
               </TableCell>
@@ -149,17 +171,17 @@ export default async function LogisticsPage({
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Logistique</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
         <p className="text-sm text-muted-foreground">
-          Opérations quotidiennes — avancez les commandes directement depuis les
-          files, sans ouvrir chaque fiche.
+          {t.subtitle}
         </p>
       </div>
 
       {/* Lane pills with live counts */}
-      <nav className="flex flex-wrap gap-2" aria-label="Files logistiques">
+      <nav className="flex flex-wrap gap-2" aria-label={t.title}>
         {LANES.map((l) => {
           const active = l.key === lane.key;
+          const translatedLabel = LANE_LABELS_I18N[l.key]?.[locale] ?? l.label;
           return (
             <Link
               key={l.key}
@@ -171,7 +193,7 @@ export default async function LogisticsPage({
                   : "bg-card text-muted-foreground hover:bg-accent hover:text-accent-foreground",
               )}
             >
-              {l.label}
+              {translatedLabel}
               <span
                 className={cn(
                   "rounded-full px-1.5 py-0.5 text-xs font-semibold",
@@ -193,12 +215,12 @@ export default async function LogisticsPage({
             type="search"
             name="q"
             defaultValue={q}
-            placeholder="N° de commande ou téléphone…"
+            placeholder={locale === "ar" ? "رقم الطلب أو الهاتف..." : locale === "en" ? "Order # or phone..." : "N° de commande ou téléphone…"}
             className="flex h-9 w-full rounded-md border border-input bg-card px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
         <NativeSelect name="partnerId" defaultValue={partnerId} className="w-48">
-          <option value="">Tous les partenaires</option>
+          <option value="">{t.allPartners}</option>
           {partners.map((p) => (
             <option key={p.id} value={p.id}>
               {p.displayName}
@@ -209,19 +231,19 @@ export default async function LogisticsPage({
           type="submit"
           className="inline-flex h-9 rounded-md border border-input bg-card px-3 text-sm font-medium shadow-sm hover:bg-accent"
         >
-          Filtrer
+          {c.filter}
         </button>
       </form>
 
       {data.items.length === 0 ? (
         <EmptyState
-          title={`Aucune commande dans « ${lane.label} »`}
-          description="File vide — les commandes apparaîtront ici automatiquement."
+          title={`${locale === "ar" ? "لا توجد طلبات في" : locale === "en" ? "No orders in" : "Aucune commande dans"} « ${currentLaneLabel} »`}
+          description={locale === "ar" ? "قائمة فارغة — ستظهر الطلبات هنا تلقائياً." : locale === "en" ? "Empty lane — orders will appear here automatically." : "File vide — les commandes apparaîtront ici automatiquement."}
         />
       ) : isBulkLane ? (
         <BulkLaneForm
           to={lane.next!}
-          toLabel={`Marquer « ${ORDER_STATUS_LABELS[lane.next!]} »`}
+          toLabel={`${locale === "ar" ? "تحديد كـ" : locale === "en" ? "Mark as" : "Marquer"} « ${dict.statuses.order[lane.next!] ?? ORDER_STATUS_LABELS[lane.next!]} »`}
         >
           {table}
         </BulkLaneForm>
@@ -237,12 +259,12 @@ export default async function LogisticsPage({
 
       <div className="flex items-center gap-3 rounded-xl border bg-muted/40 p-4 text-sm text-muted-foreground">
         <Truck className="h-4 w-4 shrink-0 text-primary" />
-        Les refus et retours exigent un motif individuel (pas de lot) — ouvrez la
-        commande pour l&apos;enregistrer. Le volet financier des retours arrive en
-        Phase 5.
+        {locale === "ar"
+          ? "تتطلب حالات الرفض والإرجاع سبباً فردياً — افتح تفاصيل الطلب لتسجيله."
+          : locale === "en"
+          ? "Refusals and returns require an individual reason — open order details to record it."
+          : "Les refus et retours exigent un motif individuel (pas de lot) — ouvrez la commande pour l'enregistrer."}
       </div>
     </div>
   );
 }
-
-

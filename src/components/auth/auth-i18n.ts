@@ -66,6 +66,21 @@ export interface AuthDictionary {
     registerTitle: string;
     registerSubtitle: string;
     registerPoints: [string, string, string];
+    authenticatedAccess: string;
+    catalogTitle: string;
+    catalogDesc: string;
+    ordersTitle: string;
+    ordersDesc: string;
+    walletTitle: string;
+    walletDesc: string;
+    onboardingProcess: string;
+    verificationRequired: string;
+    step1Title: string;
+    step1Desc: string;
+    step2Title: string;
+    step2Desc: string;
+    step3Title: string;
+    step3Desc: string;
   };
 }
 
@@ -151,6 +166,21 @@ export const AUTH_DICTIONARY: Record<AuthLang, AuthDictionary> = {
         "Programme de parrainage et attribution de commissions",
         "Validation de chaque compte par l'administration",
       ],
+      authenticatedAccess: "Accès Authentifié",
+      catalogTitle: "Catalogue & Produits",
+      catalogDesc: "Articles assignés et tarification partenaire",
+      ordersTitle: "Gestion des Commandes",
+      ordersDesc: "Suivi des statuts d'expédition et livraisons",
+      walletTitle: "Portefeuille & Retraits",
+      walletDesc: "Consultation des soldes et demandes de retrait",
+      onboardingProcess: "Processus d'adhésion partenaire",
+      verificationRequired: "Vérification requise",
+      step1Title: "1. Formulaire d'inscription",
+      step1Desc: "Saisie des informations de contact et d'expérience",
+      step2Title: "2. Validation par l'administrateur",
+      step2Desc: "Activation manuelle après vérification du profil",
+      step3Title: "3. Accès au catalogue & parrainage",
+      step3Desc: "Vente de produits et suivi des commissions associées",
     },
   },
   ar: {
@@ -234,6 +264,21 @@ export const AUTH_DICTIONARY: Record<AuthLang, AuthDictionary> = {
         "برنامج الإحالة واحتساب العمولات المستحقة",
         "مراجعة وتفعيل الحسابات يدوياً من طرف الإدارة",
       ],
+      authenticatedAccess: "دخول موثّق",
+      catalogTitle: "الكتالوج والمنتجات",
+      catalogDesc: "المنتجات المخصصة وأسعار الشركاء",
+      ordersTitle: "إدارة الطلبات",
+      ordersDesc: "متابعة حالات الشحن والتسليم",
+      walletTitle: "المحفظة والسحوبات",
+      walletDesc: "الاطلاع على الأرصدة وطلبات السحب",
+      onboardingProcess: "مسار انضمام الشركاء",
+      verificationRequired: "مراجعة مطلوبة",
+      step1Title: "1. استمارة التسجيل",
+      step1Desc: "إدخال بيانات الاتصال والخبرة التجارية",
+      step2Title: "2. مراجعة وتفعيل الإدارة",
+      step2Desc: "تفعيل الحساب بعد التحقق من الملف الشخصي",
+      step3Title: "3. فتح الكتالوج ونظام الإحالة",
+      step3Desc: "بدء بيع المنتجات وتحصيل العمولات المستحقة",
     },
   },
   en: {
@@ -317,6 +362,21 @@ export const AUTH_DICTIONARY: Record<AuthLang, AuthDictionary> = {
         "Referral attribution and commission tracking",
         "Account approval process verified by administrators",
       ],
+      authenticatedAccess: "Authenticated Access",
+      catalogTitle: "Catalog & Products",
+      catalogDesc: "Assigned items and partner pricing",
+      ordersTitle: "Order Management",
+      ordersDesc: "Shipment status and delivery tracking",
+      walletTitle: "Wallet & Withdrawals",
+      walletDesc: "Balance overview and withdrawal requests",
+      onboardingProcess: "Partner Onboarding Process",
+      verificationRequired: "Verification Required",
+      step1Title: "1. Registration Form",
+      step1Desc: "Enter contact details and commercial experience",
+      step2Title: "2. Admin Review & Activation",
+      step2Desc: "Manual account activation upon profile review",
+      step3Title: "3. Catalog Access & Referral",
+      step3Desc: "Sell exclusive products and collect commissions",
     },
   },
 };

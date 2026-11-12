@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { CelebrationConfetti } from "./confetti";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n";
 
 export interface WelcomeOnboardingModalProps {
   isOpen: boolean;
@@ -91,6 +92,7 @@ export function WelcomeOnboardingModal({
   isClosing = false,
   isPreview = false,
 }: WelcomeOnboardingModalProps) {
+  const { t, isRtl } = useI18n();
   const isClient = React.useSyncExternalStore(
     emptySubscribe,
     () => true,
@@ -99,29 +101,40 @@ export function WelcomeOnboardingModal({
 
   if (!isOpen || !isClient) return null;
 
-  // Resolve content dynamically from props with defaults matching the visual reference
+  // Resolve content dynamically from props with defaults matching the visual reference & active locale
+  const defaultTitle = t("welcomeModal.headline");
+  const defaultSubtitle = t("welcomeModal.subtitle");
+  const defaultButtonText = t("welcomeModal.ctaButton");
+  const defaultBannerText = t("welcomeModal.banner");
+
   const resolvedTitle =
-    title && title.trim().length > 0 ? title.trim() : "Bienvenue chez Ecom Partner ! 🎉";
+    title && title.trim().length > 0 && title.trim() !== "Bienvenue chez Ecom Partner ! 🎉"
+      ? title.trim()
+      : defaultTitle;
 
   const resolvedSubtitle =
-    subtitle && subtitle.trim().length > 0
+    subtitle &&
+    subtitle.trim().length > 0 &&
+    subtitle.trim() !== "Votre compte partenaire a été validé avec succès. Félicitations !"
       ? subtitle.trim()
-      : "Votre compte partenaire a été validé avec succès. Félicitations !";
+      : defaultSubtitle;
 
   const resolvedButtonText =
-    buttonText && buttonText.trim().length > 0
+    buttonText && buttonText.trim().length > 0 && buttonText.trim() !== "On est ensemble ! 🚀"
       ? buttonText.trim()
-      : "On est ensemble ! 🚀";
+      : defaultButtonText;
 
   const resolvedBannerText =
-    bannerText && bannerText.trim().length > 0
+    bannerText &&
+    bannerText.trim().length > 0 &&
+    bannerText.trim() !== "🚀 Bien plus qu’une simple plateforme de dropshipping !"
       ? bannerText.trim()
       : badgeText &&
         badgeText.trim().length > 0 &&
         badgeText !== "Compte partenaire activé" &&
         badgeText !== "Compte validé"
       ? badgeText.trim()
-      : "🚀 Bien plus qu’une simple plateforme de dropshipping !";
+      : defaultBannerText;
 
   const bannerTheme =
     (themeColor && THEME_BANNER_STYLES[themeColor]) || THEME_BANNER_STYLES.purple;
@@ -139,6 +152,7 @@ export function WelcomeOnboardingModal({
       aria-modal="true"
       aria-labelledby="welcome-onboarding-title"
       aria-describedby="welcome-onboarding-desc"
+      dir={isRtl ? "rtl" : "ltr"}
     >
       {/* Dynamic Celebration Confetti on Open (plays once for 3.5s) */}
       {!isPreview && <CelebrationConfetti duration={3500} />}
@@ -157,12 +171,15 @@ export function WelcomeOnboardingModal({
           isClosing ? "scale-95 opacity-0" : "scale-100 opacity-100 animate-in fade-in zoom-in-95"
         )}
       >
-        {/* Top Right Close Button */}
+        {/* Close Button */}
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-4 top-4 sm:right-6 sm:top-6 rounded-full p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
-          aria-label="Fermer"
+          className={cn(
+            "absolute top-4 sm:top-6 rounded-full p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500",
+            isRtl ? "left-4 sm:left-6" : "right-4 sm:right-6"
+          )}
+          aria-label={t("common.close")}
         >
           <X className="h-5 w-5" />
         </button>
@@ -234,8 +251,8 @@ export function WelcomeOnboardingModal({
 
         {/* ── Section Header ── */}
         <div className="mt-4 sm:mt-5">
-          <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 text-left">
-            Avec Ecom Partner, vous bénéficiez de :
+          <h3 className={cn("text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100", isRtl ? "text-right" : "text-left")}>
+            {t("welcomeModal.benefitsHeader")}
           </h3>
 
           {/* ── 2x2 Benefits Grid (1-col on mobile, 2-col on desktop) ── */}
@@ -247,10 +264,10 @@ export function WelcomeOnboardingModal({
               </div>
               <div className="text-xs sm:text-[13px] leading-snug">
                 <span className="font-bold text-slate-900 dark:text-slate-100 block sm:inline">
-                  Un catalogue exclusif{" "}
+                  {t("welcomeModal.benefit1Title")}{" "}
                 </span>
                 <span className="text-slate-600 dark:text-slate-300">
-                  de produits sélectionnés et testés.
+                  {t("welcomeModal.benefit1Desc")}
                 </span>
               </div>
             </div>
@@ -262,10 +279,10 @@ export function WelcomeOnboardingModal({
               </div>
               <div className="text-xs sm:text-[13px] leading-snug">
                 <span className="font-bold text-slate-900 dark:text-slate-100 block sm:inline">
-                  Un kit marketing prêt{" "}
+                  {t("welcomeModal.benefit2Title")}{" "}
                 </span>
                 <span className="text-slate-600 dark:text-slate-300">
-                  à l&apos;emploi avec chaque produit.
+                  {t("welcomeModal.benefit2Desc")}
                 </span>
               </div>
             </div>
@@ -277,10 +294,10 @@ export function WelcomeOnboardingModal({
               </div>
               <div className="text-xs sm:text-[13px] leading-snug">
                 <span className="font-bold text-slate-900 dark:text-slate-100 block sm:inline">
-                  Un accompagnement{" "}
+                  {t("welcomeModal.benefit3Title")}{" "}
                 </span>
                 <span className="text-slate-600 dark:text-slate-300">
-                  à chaque étape de votre parcours commercial.
+                  {t("welcomeModal.benefit3Desc")}
                 </span>
               </div>
             </div>
@@ -292,10 +309,10 @@ export function WelcomeOnboardingModal({
               </div>
               <div className="text-xs sm:text-[13px] leading-snug">
                 <span className="font-bold text-slate-900 dark:text-slate-100 block sm:inline">
-                  Un système de commission{" "}
+                  {t("welcomeModal.benefit4Title")}{" "}
                 </span>
                 <span className="text-slate-600 dark:text-slate-300">
-                  transparent.
+                  {t("welcomeModal.benefit4Desc")}
                 </span>
               </div>
             </div>
@@ -308,9 +325,9 @@ export function WelcomeOnboardingModal({
             </div>
             <p className="text-xs sm:text-[13px] text-slate-800 dark:text-slate-200 leading-snug">
               <strong className="font-bold text-slate-900 dark:text-white">
-                Notre mission :
+                {t("welcomeModal.missionLabel")}
               </strong>{" "}
-              vous fournir les produits, les outils et le soutien nécessaires pour développer votre activité en ligne.
+              {t("welcomeModal.missionText")}
             </p>
           </div>
         </div>

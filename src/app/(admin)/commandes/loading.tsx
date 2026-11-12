@@ -1,13 +1,17 @@
+"use client";
+
 import { Skeleton } from "@/components/ui/skeleton";
+import { useI18n } from "@/lib/i18n";
 
 /**
  * Orders list loading state. Mirrors the real table + filter bar so the layout
  * does not jump when rows arrive.
  */
 export default function Loading() {
+  const { dict } = useI18n();
   return (
     <div className="space-y-5" aria-busy="true" aria-live="polite">
-      <span className="sr-only">Chargement des commandes…</span>
+      <span className="sr-only">{dict.common?.loading ?? "Chargement…"}</span>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-2">

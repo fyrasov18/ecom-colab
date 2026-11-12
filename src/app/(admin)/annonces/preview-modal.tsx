@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
+import { useI18n } from "@/lib/i18n";
 import {
   ArrowRight,
   Eye,
@@ -46,6 +47,8 @@ export function NotificationPreviewModal({
   metadata = { oldLevel: 1, newLevel: 2, newRate: 0.07 },
   trigger,
 }: PreviewProps) {
+  const { dict } = useI18n();
+  const t = dict.announcements;
   const [open, setOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
 
@@ -85,7 +88,7 @@ export function NotificationPreviewModal({
             className="gap-1.5 text-xs"
             onClick={() => setOpen(true)}
           >
-            <Eye className="h-3.5 w-3.5" /> Prévisualiser
+            <Eye className="h-3.5 w-3.5" /> {t.previewButton}
           </Button>
         )}
         <WelcomeOnboardingModal
@@ -108,7 +111,7 @@ export function NotificationPreviewModal({
       <Dialog.Trigger asChild>
         {trigger ?? (
           <Button variant="outline" size="sm" className="gap-1.5 text-xs">
-            <Eye className="h-3.5 w-3.5" /> Prévisualiser
+            <Eye className="h-3.5 w-3.5" /> {t.previewButton}
           </Button>
         )}
       </Dialog.Trigger>
@@ -124,13 +127,13 @@ export function NotificationPreviewModal({
         >
           <div className="absolute right-4 top-4 flex items-center gap-2">
             <span className="rounded-md bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-              Aperçu partenaire
+              {t.partnerPreview}
             </span>
             <Dialog.Close asChild>
               <button
                 type="button"
                 className="rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-                aria-label="Fermer"
+                aria-label={dict.common.close}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -153,11 +156,11 @@ export function NotificationPreviewModal({
 
             {isLevelUp ? (
               <Badge className="mb-3 bg-amber-500/15 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 border-amber-500/30 gap-1.5 px-3 py-1 font-semibold text-xs uppercase tracking-wider">
-                <TrendingUp className="h-3.5 w-3.5" /> Promotion de niveau
+                <TrendingUp className="h-3.5 w-3.5" /> {t.levelPromotionBadge}
               </Badge>
             ) : (
               <Badge variant="outline" className="mb-3 px-3 py-1 text-xs uppercase tracking-wider">
-                Annonce
+                {t.title}
               </Badge>
             )}
 
@@ -168,27 +171,27 @@ export function NotificationPreviewModal({
             {isLevelUp && (
               <div className="my-5 w-full rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-left">
                 <div className="flex items-center justify-between text-xs font-medium text-muted-foreground mb-2">
-                  <span>Progression officielle</span>
-                  <span className="text-amber-600 dark:text-amber-400 font-semibold">Validé par l&apos;Admin</span>
+                  <span>{t.officialProgression}</span>
+                  <span className="text-amber-600 dark:text-amber-400 font-semibold">{t.validatedByAdmin}</span>
                 </div>
                 <div className="flex items-center justify-around gap-2 py-2">
                   <div className="text-center">
-                    <div className="text-xs text-muted-foreground">Ancien niveau</div>
+                    <div className="text-xs text-muted-foreground">{t.oldLevel}</div>
                     <div className="mt-1 text-lg font-bold text-muted-foreground line-through">
-                      Niveau {oldLevel}
+                      {t.levelNumber.replace("{level}", String(oldLevel))}
                     </div>
                   </div>
                   <div className="text-amber-500 font-bold text-xl">➔</div>
                   <div className="text-center">
-                    <div className="text-xs text-amber-600 dark:text-amber-400 font-semibold">Nouveau statut</div>
+                    <div className="text-xs text-amber-600 dark:text-amber-400 font-semibold">{t.newLevelStatus}</div>
                     <div className="mt-1 text-2xl font-black text-amber-600 dark:text-amber-400">
-                      Niveau {newLevel}
+                      {t.levelNumber.replace("{level}", String(newLevel))}
                     </div>
                   </div>
                 </div>
 
                 <div className="mt-3 pt-3 border-t border-amber-500/20 flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Nouveau taux de commission :</span>
+                  <span className="text-muted-foreground">{t.newCommissionRate}</span>
                   <span className="font-bold text-foreground text-base bg-amber-500/20 px-2.5 py-0.5 rounded-md text-amber-700 dark:text-amber-300">
                     {ratePercent} %
                   </span>

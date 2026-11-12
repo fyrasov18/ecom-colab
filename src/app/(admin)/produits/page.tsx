@@ -19,6 +19,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { getServerLocale } from "@/lib/i18n/server";
+import { getDictionary } from "@/lib/i18n/dictionaries";
 
 export const metadata: Metadata = { title: "Produits" };
 
@@ -29,18 +31,17 @@ const STATUS_BADGE: Record<string, "success" | "secondary" | "warning" | "destru
   ARCHIVED: "destructive",
 };
 
-const STATUS_LABEL: Record<string, string> = {
-  ACTIVE: "Actif",
-  INACTIVE: "Inactif",
-  OUT_OF_STOCK: "Rupture",
-  ARCHIVED: "Archivé",
-};
-
 export default async function ProductsPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const locale = await getServerLocale();
+  const dict = getDictionary(locale);
+  const t = dict.products;
+  const c = dict.common;
+  const currencySymbol = locale === "ar" ? "د.ت" : locale === "en" ? "TND" : "DT";
+
   const sp = await searchParams;
   const search = typeof sp.q === "string" ? sp.q : "";
   const categoryId = typeof sp.category === "string" && sp.category !== "" ? sp.category : undefined;
@@ -58,22 +59,29 @@ export default async function ProductsPage({
     listActiveCategories(),
   ]);
 
+  const countSuffix = locale === "ar" ? "منتج" : locale === "en" ? "product(s)" : "produit(s)";
+  const searchPlaceholder = locale === "ar" ? "البحث بالاسم..." : locale === "en" ? "Search by name..." : "Rechercher par nom…";
+  const allStatusesLabel = locale === "ar" ? "جميع الحالات" : locale === "en" ? "All statuses" : "Tous les statuts";
+  const costsHeader = locale === "ar" ? "التكاليف (شراء + تغليف + شحن)" : locale === "en" ? "Costs (purchase+pack+ship)" : "Coûts (achat+emball.+livr.)";
+  const manageLabel = locale === "ar" ? "إدارة" : locale === "en" ? "Manage" : "Gérer";
+  const lowBadge = locale === "ar" ? "منخفض" : locale === "en" ? "Low" : "Faible";
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Produits</h1>
-          <p className="text-sm text-muted-foreground">{total} produit(s)</p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
+          <p className="text-sm text-muted-foreground">{total} {countSuffix}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button asChild variant="outline">
             <Link href="/produits/categories">
-              <FolderTree className="h-4 w-4 mr-1.5" /> Catégories
+              <FolderTree className="h-4 w-4 mr-1.5" /> {dict.nav.categories}
             </Link>
           </Button>
           <Button asChild>
             <Link href="/produits/nouveau">
-              <Plus className="h-4 w-4 mr-1.5" /> Ajouter un produit
+              <Plus className="h-4 w-4 mr-1.5" /> {t.addProduct}
             </Link>
           </Button>
         </div>
@@ -86,37 +94,37 @@ export default async function ProductsPage({
             type="search"
             name="q"
             defaultValue={search}
-            placeholder="Rechercher par nom…"
+            placeholder={searchPlaceholder}
             className="flex h-9 w-full rounded-md border border-input bg-card pl-8 pr-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
         <NativeSelect name="category" defaultValue={categoryId ?? ""} className="w-52">
-          <option value="">Toutes les catégories</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
+          <option value="">{t.allCategories}</option>
+          {categories.map((cat) => (
+            <option key={cat.id} value={cat.id}>
+              {cat.name}
             </option>
           ))}
         </NativeSelect>
         <NativeSelect name="status" defaultValue={status ?? ""} className="w-44">
-          <option value="">Tous les statuts</option>
-          <option value="ACTIVE">Actif</option>
-          <option value="INACTIVE">Inactif</option>
-          <option value="OUT_OF_STOCK">Rupture de stock</option>
-          <option value="ARCHIVED">Archivé</option>
+          <option value="">{allStatusesLabel}</option>
+          <option value="ACTIVE">{dict.statuses.product.ACTIVE}</option>
+          <option value="INACTIVE">{dict.statuses.product.INACTIVE}</option>
+          <option value="OUT_OF_STOCK">{dict.statuses.product.OUT_OF_STOCK}</option>
+          <option value="ARCHIVED">{dict.statuses.product.ARCHIVED}</option>
         </NativeSelect>
         <Button type="submit" variant="outline" size="sm">
-          Filtrer
+          {c.filter}
         </Button>
       </form>
 
       {items.length === 0 ? (
         <EmptyState
-          title="Aucun produit trouvé"
-          description="Modifiez vos filtres ou ajoutez votre premier produit."
+          title={t.noProductsFound}
+          description={t.noProductsDesc}
           action={
             <Button asChild variant="outline">
-              <Link href="/produits/nouveau">Ajouter un produit</Link>
+              <Link href="/produits/nouveau">{t.addProduct}</Link>
             </Button>
           }
         />
@@ -125,96 +133,97 @@ export default async function ProductsPage({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Produit</TableHead>
-                <TableHead>Catégorie</TableHead>
-                <TableHead>Prix vente</TableHead>
-                <TableHead>Coûts (achat+emball.+livr.)</TableHead>
-                <TableHead>Stock</TableHead>
-                <TableHead>Partenaires</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead className="w-[100px] text-right">Actions</TableHead>
+                <TableHead>{t.productName}</TableHead>
+                <TableHead>{t.category}</TableHead>
+                <TableHead>{t.sellingPrice}</TableHead>
+                <TableHead>{costsHeader}</TableHead>
+                <TableHead>{t.stock}</TableHead>
+                <TableHead>{dict.nav.partnerList}</TableHead>
+                <TableHead>{c.status}</TableHead>
+                <TableHead className="w-[100px] text-right">{c.actions}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.map((p) => {
+              {items.map((prod) => {
                 const costs =
-                  Number(p.purchaseCost) + Number(p.packagingCost) + Number(p.deliveryCost);
-                const lowStock = p.stockQuantity <= p.lowStockThreshold;
+                  Number(prod.purchaseCost) + Number(prod.packagingCost) + Number(prod.deliveryCost);
+                const lowStock = prod.stockQuantity <= prod.lowStockThreshold;
+                const statusText = dict.statuses.product[prod.status as keyof typeof dict.statuses.product] ?? prod.status;
                 return (
-                  <TableRow key={p.id}>
+                  <TableRow key={prod.id}>
                     <TableCell>
                       <div className="font-medium flex items-center gap-1.5 flex-wrap">
-                        <span>{p.name}</span>
-                        {p.isWinning && (
+                        <span>{prod.name}</span>
+                        {prod.isWinning && (
                           <span
                             className="inline-flex items-center text-[11px] font-semibold text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded"
-                            title="Produit gagnant"
+                            title={t.isWinning}
                           >
-                            ⭐ Gagnant
+                            ⭐ {locale === "ar" ? "رابح" : locale === "en" ? "Winner" : "Gagnant"}
                           </span>
                         )}
-                        {p.isNew && (
+                        {prod.isNew && (
                           <span
                             className="inline-flex items-center text-[11px] font-semibold text-sky-600 bg-sky-500/10 px-1.5 py-0.5 rounded"
-                            title="Nouveau produit"
+                            title={t.isNew}
                           >
-                            🆕 Nouveau
+                            🆕 {locale === "ar" ? "جديد" : locale === "en" ? "New" : "Nouveau"}
                           </span>
                         )}
-                        {p.isRecommended && (
+                        {prod.isRecommended && (
                           <span
                             className="inline-flex items-center text-[11px] font-semibold text-rose-600 bg-rose-500/10 px-1.5 py-0.5 rounded"
-                            title="Produit recommandé"
+                            title={t.isRecommended}
                           >
-                            🔥 Recommandé
+                            🔥 {locale === "ar" ? "موصى به" : locale === "en" ? "Recommended" : "Recommandé"}
                           </span>
                         )}
                       </div>
-                      <div className="text-xs text-muted-foreground">/{p.slug}</div>
+                      <div className="text-xs text-muted-foreground">/{prod.slug}</div>
                     </TableCell>
                     <TableCell>
-                      {p.categoryRef ? (
+                      {prod.categoryRef ? (
                         <Badge variant="outline" className="text-xs">
-                          {p.categoryRef.name}
+                          {prod.categoryRef.name}
                         </Badge>
                       ) : (
                         <span className="text-xs text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="font-medium">{formatPrice(p.sellingPrice)} DT</TableCell>
-                    <TableCell className="text-muted-foreground">{formatPrice(costs)} DT</TableCell>
+                    <TableCell className="font-medium">{formatPrice(prod.sellingPrice)} {currencySymbol}</TableCell>
+                    <TableCell className="text-muted-foreground">{formatPrice(costs)} {currencySymbol}</TableCell>
                     <TableCell>
                       <span className={lowStock ? "font-semibold text-amber-600" : ""}>
-                        {p.stockQuantity}
+                        {prod.stockQuantity}
                       </span>
                       {lowStock && (
                         <Badge variant="warning" className="ml-2">
-                          Faible
+                          {lowBadge}
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell>{p._count.partnerAssignations}</TableCell>
+                    <TableCell>{prod._count.partnerAssignations}</TableCell>
                     <TableCell>
-                      <Badge variant={STATUS_BADGE[p.status] ?? "secondary"}>
-                        {STATUS_LABEL[p.status] ?? p.status}
+                      <Badge variant={STATUS_BADGE[prod.status] ?? "secondary"}>
+                        {statusText}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Button asChild variant="ghost" size="sm">
-                          <Link href={`/produits/${p.id}`}>Gérer</Link>
+                          <Link href={`/produits/${prod.id}`}>{manageLabel}</Link>
                         </Button>
                         <form action={deleteProductAction}>
-                          <input type="hidden" name="productId" value={p.id} />
+                          <input type="hidden" name="productId" value={prod.id} />
                           <ConfirmSubmit
                             variant="ghost"
                             size="sm"
                             className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive h-8 w-8 p-0"
-                            confirmMessage={`Supprimer définitivement le produit "${p.name}" ?`}
-                            title="Supprimer ce produit"
+                            confirmMessage={locale === "ar" ? `حذف المنتج "${prod.name}" نهائياً؟` : locale === "en" ? `Permanently delete product "${prod.name}"?` : `Supprimer définitivement le produit "${prod.name}" ?`}
+                            title={locale === "ar" ? "حذف هذا المنتج" : locale === "en" ? "Delete this product" : "Supprimer ce produit"}
                           >
                             <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Supprimer</span>
+                            <span className="sr-only">{c.delete}</span>
                           </ConfirmSubmit>
                         </form>
                       </div>

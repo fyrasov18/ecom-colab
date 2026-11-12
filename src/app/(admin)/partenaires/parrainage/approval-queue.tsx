@@ -1,21 +1,19 @@
 "use client";
 
 import type { Prisma } from "@prisma/client";
-
 import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   CheckCircle2,
   XCircle,
   Loader2,
-  AlertCircle,
   Clock,
-  ArrowRight,
   ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatMoney } from "@/lib/money";
+import { useI18n } from "@/lib/i18n";
 import {
   approveCommissionAction,
   rejectCommissionAction,
@@ -55,6 +53,7 @@ export type QueueCommissionItem = {
 };
 
 function ApprovalRow({ item }: { item: QueueCommissionItem }) {
+  const { dict, formatDate } = useI18n();
   const [approveState, approveAction, approvePending] = useActionState<
     AdminCommissionActionState,
     FormData
@@ -114,16 +113,12 @@ function ApprovalRow({ item }: { item: QueueCommissionItem }) {
           className="text-[11px] gap-1 font-normal"
         >
           <Clock className="h-3 w-3" />
-          {isPendingVerification ? "En vérification" : "Éligible"}
+          {isPendingVerification ? dict.common.pending : dict.common.validated}
         </Badge>
       </td>
 
       <td className="p-3 text-muted-foreground">
-        {new Date(item.createdAt).toLocaleDateString("fr-FR", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        })}
+        {formatDate(item.createdAt)}
       </td>
 
       <td className="p-3">
@@ -155,7 +150,7 @@ function ApprovalRow({ item }: { item: QueueCommissionItem }) {
                 ) : (
                   <CheckCircle2 className="h-3 w-3" />
                 )}
-                Approuver
+                {dict.finance.approveWithdrawal}
               </Button>
             </form>
 
@@ -169,7 +164,7 @@ function ApprovalRow({ item }: { item: QueueCommissionItem }) {
               className="text-danger-600 hover:text-danger-700 hover:bg-danger-50 border-danger/20 text-xs"
             >
               <XCircle className="h-3 w-3" />
-              Rejeter
+              {dict.finance.rejectWithdrawal}
             </Button>
           </div>
 
@@ -184,7 +179,7 @@ function ApprovalRow({ item }: { item: QueueCommissionItem }) {
             >
               <input type="hidden" name="commissionId" value={item.id} />
               <label className="block text-[11px] font-semibold text-danger-800">
-                Motif obligatoire du rejet :
+                {dict.finance.rejectionReason} :
               </label>
               <textarea
                 name="reason"
@@ -192,7 +187,7 @@ function ApprovalRow({ item }: { item: QueueCommissionItem }) {
                 minLength={3}
                 maxLength={500}
                 rows={2}
-                placeholder="Indiquez la raison du rejet (ex: Commande annulée, suspicion de fraude...)"
+                placeholder={dict.finance.rejectionReason}
                 className="w-full rounded border border-danger/30 bg-white p-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-danger-500"
               />
               <div className="flex items-center justify-end gap-2">
@@ -203,7 +198,7 @@ function ApprovalRow({ item }: { item: QueueCommissionItem }) {
                   onClick={() => setShowRejectForm(false)}
                   className="text-xs"
                 >
-                  Annuler
+                  {dict.common.cancel}
                 </Button>
                 <Button
                   type="submit"
@@ -213,7 +208,7 @@ function ApprovalRow({ item }: { item: QueueCommissionItem }) {
                   className="text-xs"
                 >
                   {rejectPending ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-                  Confirmer le rejet
+                  {dict.finance.rejectWithdrawal}
                 </Button>
               </div>
             </form>
@@ -225,13 +220,17 @@ function ApprovalRow({ item }: { item: QueueCommissionItem }) {
 }
 
 export function ApprovalQueueTable({ items }: { items: QueueCommissionItem[] }) {
+  const { dict, locale } = useI18n();
+
   if (items.length === 0) {
     return (
       <div className="rounded-xl border border-dashed p-8 text-center text-muted-foreground">
         <ShieldCheck className="mx-auto h-8 w-8 text-muted-foreground/60 mb-2" />
-        <p className="text-sm font-medium">Aucune commission en attente d&apos;approbation</p>
+        <p className="text-sm font-medium">
+          {locale === "ar" ? "لا توجد عمولات قيد انتظار الموافقة" : locale === "en" ? "No commissions pending approval" : "Aucune commission en attente d'approbation"}
+        </p>
         <p className="text-xs text-muted-foreground mt-1">
-          Toutes les commissions éligibles ont été traitées.
+          {locale === "ar" ? "تمت معالجة كافة العمولات المؤهلة." : locale === "en" ? "All eligible commissions have been processed." : "Toutes les commissions éligibles ont été traitées."}
         </p>
       </div>
     );
@@ -242,13 +241,13 @@ export function ApprovalQueueTable({ items }: { items: QueueCommissionItem[] }) 
       <table className="w-full text-left">
         <thead className="bg-muted/50 border-b text-xs font-semibold text-muted-foreground">
           <tr>
-            <th className="p-3">Parrain</th>
-            <th className="p-3">Filleul</th>
-            <th className="p-3">Commande</th>
-            <th className="p-3">Montant</th>
-            <th className="p-3">Statut</th>
-            <th className="p-3">Date</th>
-            <th className="p-3 min-w-[280px]">Actions</th>
+            <th className="p-3">{dict.nav.referrals}</th>
+            <th className="p-3">{dict.partnerPortal.referrals.activeReferrals}</th>
+            <th className="p-3">{dict.orders.title}</th>
+            <th className="p-3">{dict.common.total}</th>
+            <th className="p-3">{dict.common.status}</th>
+            <th className="p-3">{dict.common.date}</th>
+            <th className="p-3 min-w-[280px]">{dict.common.actions}</th>
           </tr>
         </thead>
         <tbody className="divide-y">

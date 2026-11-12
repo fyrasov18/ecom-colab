@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { toast } from "sonner";
+import { useI18n } from "@/lib/i18n";
 import {
   Building2,
   Check,
@@ -33,6 +34,8 @@ interface CompanyFormProps {
 }
 
 export function CompanyForm({ initialBranding }: CompanyFormProps) {
+  const { dict } = useI18n();
+  const c = dict.partnerPortal.myCompany;
   const [companyName, setCompanyName] = React.useState(initialBranding?.companyName || "");
   const [companyDescription, setCompanyDescription] = React.useState(initialBranding?.companyDescription || "");
   const [brandColorPrimary, setBrandColorPrimary] = React.useState(initialBranding?.brandColorPrimary || "#10B981");
@@ -128,35 +131,35 @@ export function CompanyForm({ initialBranding }: CompanyFormProps) {
           {/* Identity Card */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Informations Commerciales</CardTitle>
+              <CardTitle className="text-lg">{c.commercialInfo}</CardTitle>
               <CardDescription>
-                Ces informations identifient votre boutique et apparaissent sur vos bons de commande et exports.
+                {c.commercialInfoDesc}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="companyName">Nom Commercial / Raison Sociale *</Label>
+                <Label htmlFor="companyName">{c.brandName} *</Label>
                 <Input
                   id="companyName"
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
-                  placeholder="Ex: Horizon Boutique"
+                  placeholder={c.brandNamePlaceholder}
                   required
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="companyDescription">Description ou Slogan</Label>
+                <Label htmlFor="companyDescription">{c.companyDescription}</Label>
                 <Input
                   id="companyDescription"
                   value={companyDescription}
                   onChange={(e) => setCompanyDescription(e.target.value)}
-                  placeholder="Ex: Mode & Accessoires de qualité supérieure"
+                  placeholder="Ex: Mode & Accessoires"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="websiteUrl">Site Web</Label>
+                <Label htmlFor="websiteUrl">{c.websiteUrl}</Label>
                 <div className="relative">
                   <Globe className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -174,14 +177,14 @@ export function CompanyForm({ initialBranding }: CompanyFormProps) {
           {/* Contact Details Card */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Coordonnées du Service Client</CardTitle>
+              <CardTitle className="text-lg">{c.customerService}</CardTitle>
               <CardDescription>
-                Points de contact transmis aux clients pour le suivi des commandes et le SAV.
+                {c.customerServiceDesc}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="supportEmail">E-mail de support</Label>
+                <Label htmlFor="supportEmail">{c.supportEmail}</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -196,7 +199,7 @@ export function CompanyForm({ initialBranding }: CompanyFormProps) {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="supportPhone">Téléphone de contact</Label>
+                <Label htmlFor="supportPhone">{c.supportPhone}</Label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -215,9 +218,9 @@ export function CompanyForm({ initialBranding }: CompanyFormProps) {
           {/* Logo & Colors Card */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Logos & Couleurs de la Marque</CardTitle>
+              <CardTitle className="text-lg">{c.brandColors}</CardTitle>
               <CardDescription>
-                Téléchargez votre logo pour personnaliser votre espace de travail.
+                {c.brandColorsDesc}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -373,7 +376,7 @@ export function CompanyForm({ initialBranding }: CompanyFormProps) {
           <div className="flex justify-end pt-2">
             <Button type="submit" disabled={isSubmitting}>
               <Check className="h-4 w-4 mr-2" />
-              {isSubmitting ? "Enregistrement..." : "Enregistrer mon entreprise"}
+              {isSubmitting ? dict.common.saving : c.saveChanges}
             </Button>
           </div>
         </form>
@@ -385,10 +388,10 @@ export function CompanyForm({ initialBranding }: CompanyFormProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Eye className="h-4 w-4 text-primary" />
-              <h3 className="font-semibold text-sm text-foreground">Aperçu Entreprise</h3>
+              <h3 className="font-semibold text-sm text-foreground">{c.previewTitle}</h3>
             </div>
             <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-500 border border-emerald-500/20">
-              Isolation Partenaire
+              {c.partnerIsolation}
             </span>
           </div>
 
@@ -411,10 +414,10 @@ export function CompanyForm({ initialBranding }: CompanyFormProps) {
               </div>
               <div className="min-w-0 flex-1">
                 <h4 className="font-bold text-base text-foreground truncate">
-                  {companyName || "Nom de votre boutique"}
+                  {companyName || c.brandNamePlaceholder}
                 </h4>
                 <p className="text-xs text-muted-foreground truncate">
-                  {companyDescription || "Slogan ou description de votre activité"}
+                  {companyDescription || c.companyDescription}
                 </p>
               </div>
               <div
@@ -427,7 +430,7 @@ export function CompanyForm({ initialBranding }: CompanyFormProps) {
             <div className="space-y-2 text-xs">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Mail className="h-3.5 w-3.5 text-primary" />
-                <span className="truncate">{supportEmail || "support@votre-boutique.com"}</span>
+                <span className="truncate">{supportEmail || "support@example.com"}</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Phone className="h-3.5 w-3.5 text-primary" />
@@ -447,7 +450,7 @@ export function CompanyForm({ initialBranding }: CompanyFormProps) {
                 className="flex items-center justify-center gap-2 rounded-lg py-2 px-3 text-xs font-semibold text-white shadow-xs"
                 style={{ backgroundColor: brandColorPrimary }}
               >
-                <span>Boutique Partenaire Agréée</span>
+                <span>{c.partnerIsolation}</span>
               </div>
             </div>
           </div>
@@ -456,11 +459,10 @@ export function CompanyForm({ initialBranding }: CompanyFormProps) {
           <div className="rounded-lg border border-border p-3 bg-muted/30 space-y-1.5 text-xs">
             <div className="flex items-center gap-1.5 font-medium text-foreground">
               <Info className="h-3.5 w-3.5 text-primary" />
-              <span>Garantie de Confidentialité</span>
+              <span>{c.privacyGuarantee}</span>
             </div>
             <p className="text-muted-foreground text-[11px] leading-relaxed">
-              Votre identité commerciale et vos logos sont strictement isolés de ceux des autres partenaires
-              et ne sont visibles que sur votre espace et sur les documents liés à vos commandes.
+              {c.privacyNotice}
             </p>
           </div>
         </div>

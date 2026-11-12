@@ -1,6 +1,7 @@
 import { Prisma, PartnerStatus, SocialPlatform } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/modules/audit/service";
+import { notify } from "@/modules/notifications/service";
 import { assignProductSchema, socialAccountSchema } from "./schemas";
 
 const PAGE_SIZE = 20;
@@ -198,6 +199,56 @@ export async function assignProductToPartner(
         commissionValue: assignment.commissionValue,
       },
     });
+
+    // ── Automatic Notification upon Assignment (Requirement 1) ──
+    // Notify the partner when a product is assigned or reactivated.
+    // Avoid duplicate notifications if already active or if an unread notification for this product exists.
+    const isNewOrReactivated = !existing || existing.status !== "ACTIVE";
+    const txNotification = (tx as unknown as { notification?: { create?: unknown } }).notification;
+    if (isNewOrReactivated && typeof txNotification?.create === "function") {
+      const partner = await tx.partner.findUnique({
+        where: { id: parsed.partnerId },
+        select: { id: true, userId: true },
+      });
+      const product = await tx.product.findUnique({
+        where: { id: parsed.productId },
+        select: { id: true, name: true },
+      });
+
+      if (partner?.userId && product) {
+        const targetLink = `/catalogue/${product.id}`;
+        const existingUnread = await tx.notification.findFirst({
+          where: {
+            userId: partner.userId,
+            link: targetLink,
+            readAt: null,
+          },
+        });
+
+        if (!existingUnread) {
+          const now = new Date();
+          const formattedDate = now.toLocaleDateString("fr-FR", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          });
+          const formattedTime = now.toLocaleTimeString("fr-FR", {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+          const timestampStr = `le ${formattedDate} à ${formattedTime}`;
+
+          await notify(tx, {
+            userId: partner.userId,
+            type: "SYSTEM",
+            title: `Nouveau produit assigné : ${product.name}`,
+            body: `Un nouveau produit vous a été assigné (${timestampStr}) ! Découvrez "${product.name}" dès maintenant dans votre catalogue.`,
+            link: targetLink,
+          });
+        }
+      }
+    }
+
     return assignment;
   });
 }

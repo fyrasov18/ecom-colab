@@ -14,6 +14,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { getServerLocale } from "@/lib/i18n/server";
+import { getDictionary } from "@/lib/i18n/dictionaries";
 
 export const metadata: Metadata = { title: "Fiche client" };
 export const dynamic = "force-dynamic";
@@ -27,17 +29,32 @@ export default async function CustomerDetailPage({
   const customer = await getCustomerDetail(id);
   if (!customer) notFound();
 
+  const locale = await getServerLocale();
+  const dict = getDictionary(locale);
+  const t = dict.clients;
+  const o = dict.orders;
+  const c = dict.common;
+  const currencySymbol = locale === "ar" ? "د.ت" : locale === "en" ? "TND" : "DT";
+  const intlLocale = locale === "ar" ? "ar-TN" : locale === "en" ? "en-US" : "fr-FR";
+
   return (
     <div className="space-y-6">
       <div>
-        <ButtonBack />
+        <div className="mb-2">
+          <Link
+            href="/clients"
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" /> {t.title}
+          </Link>
+        </div>
         <h1 className="text-2xl font-semibold tracking-tight">{customer.fullName}</h1>
         <p className="text-sm text-muted-foreground">
           {customer.phone} · {customer.address}, {customer.city},{" "}
           {customer.governorate}
         </p>
         <p className="text-xs text-muted-foreground">
-          Propriétaire :{" "}
+          {locale === "ar" ? "الشريك المالك: " : locale === "en" ? "Owner Partner: " : "Propriétaire : "}
           <Link
             href={`/partenaires/${customer.ownerPartner.id}`}
             className="text-primary underline-offset-2 hover:underline"
@@ -51,47 +68,47 @@ export default async function CustomerDetailPage({
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">
-            Commandes ({customer.orders.length})
+            {o.title} ({customer.orders.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
           {customer.orders.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Aucune commande.</p>
+            <p className="text-sm text-muted-foreground">{locale === "ar" ? "لا توجد طلبات." : locale === "en" ? "No orders." : "Aucune commande."}</p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>N°</TableHead>
-                  <TableHead>Produit</TableHead>
-                  <TableHead>Montant</TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead>Date</TableHead>
+                  <TableHead>{o.orderNumber}</TableHead>
+                  <TableHead>{dict.products.productName}</TableHead>
+                  <TableHead>{c.total}</TableHead>
+                  <TableHead>{c.status}</TableHead>
+                  <TableHead>{c.date}</TableHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {customer.orders.map((o) => (
-                  <TableRow key={o.id}>
-                    <TableCell className="font-medium">#{o.orderNumber}</TableCell>
+                {customer.orders.map((orderItem) => (
+                  <TableRow key={orderItem.id}>
+                    <TableCell className="font-medium">#{orderItem.orderNumber}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {o.items[0]?.productName}
-                      {o.quantity > 1 ? ` ×${o.quantity}` : ""}
+                      {orderItem.items[0]?.productName}
+                      {orderItem.quantity > 1 ? ` ×${orderItem.quantity}` : ""}
                     </TableCell>
                     <TableCell>
-                      {formatPrice(Number(o.unitSellingPrice) * o.quantity)} DT
+                      {formatPrice(Number(orderItem.unitSellingPrice) * orderItem.quantity)} {currencySymbol}
                     </TableCell>
                     <TableCell>
-                      <OrderStatusBadge status={o.status} />
+                      <OrderStatusBadge status={orderItem.status} />
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
-                      {o.createdAt.toLocaleDateString("fr-FR")}
+                      {orderItem.createdAt.toLocaleDateString(intlLocale)}
                     </TableCell>
                     <TableCell>
                       <Link
-                        href={`/commandes/${o.id}`}
+                        href={`/commandes/${orderItem.id}`}
                         className="text-sm text-primary underline-offset-2 hover:underline"
                       >
-                        Ouvrir
+                        {c.view}
                       </Link>
                     </TableCell>
                   </TableRow>
@@ -102,16 +119,5 @@ export default async function CustomerDetailPage({
         </CardContent>
       </Card>
     </div>
-  );
-}
-
-function ButtonBack() {
-  return (
-    <Link
-      href="/clients"
-      className="mb-2 inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-accent"
-    >
-      <ArrowLeft className="h-4 w-4" /> Clients
-    </Link>
   );
 }

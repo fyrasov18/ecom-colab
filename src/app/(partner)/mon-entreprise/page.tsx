@@ -4,6 +4,8 @@ import { requireSession } from "@/lib/rbac";
 import { PageHeader } from "@/components/ui/page-header";
 import { getPartnerBranding } from "@/modules/branding/service";
 import { CompanyForm } from "./company-form";
+import { getServerLocale } from "@/lib/i18n/server";
+import { getDictionary } from "@/lib/i18n/dictionaries";
 
 export const metadata: Metadata = {
   title: "Mon entreprise",
@@ -19,13 +21,17 @@ export default async function PartnerCompanyPage() {
     redirect("/tableau-de-bord");
   }
 
+  const locale = await getServerLocale();
+  const dict = getDictionary(locale);
+  const t = dict.partnerPortal.myCompany;
+
   const branding = await getPartnerBranding(user.partnerId);
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Mon entreprise"
-        description="Gérez la raison sociale, les logos, la couleur de marque et les coordonnées de contact de votre boutique."
+        title={t.title}
+        description={t.subtitle}
       />
 
       <CompanyForm initialBranding={branding} />

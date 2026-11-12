@@ -1,15 +1,9 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import {
-  Bell,
-  CheckCircle2,
-  Clock,
-  Eye,
   Megaphone,
   PartyPopper,
-  Sparkles,
   Star,
-  Users,
 } from "lucide-react";
 import { requireSession } from "@/lib/rbac";
 import {
@@ -18,7 +12,6 @@ import {
   listAnnouncementsAdmin,
 } from "@/modules/announcements/service";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   Table,
@@ -32,7 +25,8 @@ import { AnnouncementModal } from "./announcement-modal";
 import { AnnouncementRowActions } from "./announcement-row-actions";
 import { WelcomeSettingsForm } from "./welcome-settings-form";
 import { LevelUpSettingsForm } from "./level-up-settings-form";
-import { NotificationPreviewModal } from "./preview-modal";
+import { getServerLocale } from "@/lib/i18n/server";
+import { getDictionary } from "@/lib/i18n/dictionaries";
 
 export const metadata: Metadata = { title: "Notifications & Annonces Partenaires" };
 
@@ -47,31 +41,6 @@ const STATUS_BADGE: Record<string, "secondary" | "success" | "warning" | "outlin
   ARCHIVED: "outline",
 };
 
-const STATUS_LABEL: Record<string, string> = {
-  DRAFT: "Brouillon",
-  PUBLISHED: "Publiée",
-  SCHEDULED: "Programmée",
-  ARCHIVED: "Archivée",
-};
-
-const TYPE_LABEL: Record<string, { label: string; icon: string }> = {
-  PRODUCT: { label: "Produit", icon: "⭐" },
-  PROMO: { label: "Offre / Promo", icon: "🔥" },
-  INFO: { label: "Information", icon: "📢" },
-  FEATURE: { label: "Nouveauté", icon: "✨" },
-  TRAINING: { label: "Conseil", icon: "🎓" },
-};
-
-const AUDIENCE_LABEL: Record<string, string> = {
-  ALL: "Tous les partenaires",
-  ACTIVE_ONLY: "Partenaires actifs",
-  LEVEL_1: "Niveau 1 uniquement",
-  LEVEL_2: "Niveau 2 uniquement",
-  LEVEL_3: "Niveau 3 uniquement",
-  LEVEL_4: "Niveau 4 uniquement",
-  LEVEL_5: "Niveau 5 uniquement",
-};
-
 export default async function AnnouncementsAdminPage({
   searchParams,
 }: {
@@ -80,6 +49,11 @@ export default async function AnnouncementsAdminPage({
   await requireSession(["SUPER_ADMIN", "ADMIN"]);
   const params = await searchParams;
   const activeTab = params.tab || "announcements";
+
+  const locale = await getServerLocale();
+  const dict = getDictionary(locale);
+  const t = dict.announcements;
+  const c = dict.common;
 
   const [announcements, welcomeSettings, levelUpSettings] = await Promise.all([
     listAnnouncementsAdmin(),
@@ -94,6 +68,31 @@ export default async function AnnouncementsAdminPage({
   const totalClicks = announcements.reduce((sum, a) => sum + a.stats.totalClicked, 0);
   const averageCtr = totalImpressions > 0 ? Math.round((totalClicks / totalImpressions) * 100) : 0;
 
+  const statusLabel: Record<string, string> = {
+    DRAFT: locale === "ar" ? "مسودة" : locale === "en" ? "Draft" : "Brouillon",
+    PUBLISHED: locale === "ar" ? "منشور" : locale === "en" ? "Published" : "Publiée",
+    SCHEDULED: locale === "ar" ? "مجدول" : locale === "en" ? "Scheduled" : "Programmée",
+    ARCHIVED: locale === "ar" ? "مؤرشف" : locale === "en" ? "Archived" : "Archivée",
+  };
+
+  const typeLabel: Record<string, { label: string; icon: string }> = {
+    PRODUCT: { label: locale === "ar" ? "منتج" : locale === "en" ? "Product" : "Produit", icon: "⭐" },
+    PROMO: { label: locale === "ar" ? "عرض ترويجي" : locale === "en" ? "Promo / Offer" : "Offre / Promo", icon: "🔥" },
+    INFO: { label: locale === "ar" ? "معلومات" : locale === "en" ? "Information" : "Information", icon: "📢" },
+    FEATURE: { label: locale === "ar" ? "ميزة جديدة" : locale === "en" ? "New Feature" : "Nouveauté", icon: "✨" },
+    TRAINING: { label: locale === "ar" ? "نصيحة وتدريب" : locale === "en" ? "Advice & Training" : "Conseil", icon: "🎓" },
+  };
+
+  const audienceLabel: Record<string, string> = {
+    ALL: t.allPartners,
+    ACTIVE_ONLY: locale === "ar" ? "الشركاء النشطون فقط" : locale === "en" ? "Active partners only" : "Partenaires actifs",
+    LEVEL_1: locale === "ar" ? "المستوى 1 فقط" : locale === "en" ? "Level 1 only" : "Niveau 1 uniquement",
+    LEVEL_2: locale === "ar" ? "المستوى 2 فقط" : locale === "en" ? "Level 2 only" : "Niveau 2 uniquement",
+    LEVEL_3: locale === "ar" ? "المستوى 3 فقط" : locale === "en" ? "Level 3 only" : "Niveau 3 uniquement",
+    LEVEL_4: locale === "ar" ? "المستوى 4 فقط" : locale === "en" ? "Level 4 only" : "Niveau 4 uniquement",
+    LEVEL_5: locale === "ar" ? "المستوى 5 فقط" : locale === "en" ? "Level 5 only" : "Niveau 5 uniquement",
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -101,10 +100,10 @@ export default async function AnnouncementsAdminPage({
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <Megaphone className="h-6 w-6 text-primary" />
-            Notifications &amp; Annonces Partenaires
+            {t.title}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Configurez les popups de bienvenue, les célébrations de niveau et diffusez des annonces ciblées.
+            {t.subtitle}
           </p>
         </div>
 
@@ -118,29 +117,29 @@ export default async function AnnouncementsAdminPage({
       {/* KPI Cards */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         <div className="rounded-xl border bg-card p-4 shadow-xs">
-          <div className="text-xs font-medium text-muted-foreground">Annonces créées</div>
+          <div className="text-xs font-medium text-muted-foreground">{locale === "ar" ? "إعلانات منشأة" : locale === "en" ? "Created announcements" : "Annonces créées"}</div>
           <div className="text-2xl font-bold mt-1">{totalAnnouncements}</div>
           <div className="text-xs text-muted-foreground mt-0.5">
-            {publishedCount} actuellement publiées
+            {publishedCount} {locale === "ar" ? "منشورة حالياً" : locale === "en" ? "currently published" : "actuellement publiées"}
           </div>
         </div>
 
         <div className="rounded-xl border bg-card p-4 shadow-xs">
-          <div className="text-xs font-medium text-muted-foreground">Vues plein écran (Impressions)</div>
+          <div className="text-xs font-medium text-muted-foreground">{locale === "ar" ? "المشاهدات (Impressions)" : locale === "en" ? "Views (Impressions)" : "Vues plein écran (Impressions)"}</div>
           <div className="text-2xl font-bold mt-1 text-primary">{totalImpressions}</div>
-          <div className="text-xs text-muted-foreground mt-0.5">Expositions partenaires</div>
+          <div className="text-xs text-muted-foreground mt-0.5">{locale === "ar" ? "ظهور للشركاء" : locale === "en" ? "Partner impressions" : "Expositions partenaires"}</div>
         </div>
 
         <div className="rounded-xl border bg-card p-4 shadow-xs">
-          <div className="text-xs font-medium text-muted-foreground">Clics sur boutons CTA</div>
+          <div className="text-xs font-medium text-muted-foreground">{locale === "ar" ? "النقرات على CTA" : locale === "en" ? "Clicks on CTA" : "Clics sur boutons CTA"}</div>
           <div className="text-2xl font-bold mt-1 text-emerald-600">{totalClicks}</div>
-          <div className="text-xs text-muted-foreground mt-0.5">Engagements générés</div>
+          <div className="text-xs text-muted-foreground mt-0.5">{locale === "ar" ? "تفاعل محقق" : locale === "en" ? "Generated engagements" : "Engagements générés"}</div>
         </div>
 
         <div className="rounded-xl border bg-card p-4 shadow-xs">
-          <div className="text-xs font-medium text-muted-foreground">Taux de clic moyen (CTR)</div>
+          <div className="text-xs font-medium text-muted-foreground">{locale === "ar" ? "معدل النقر (CTR)" : locale === "en" ? "Average CTR" : "Taux de clic moyen (CTR)"}</div>
           <div className="text-2xl font-bold mt-1 text-amber-600">{averageCtr} %</div>
-          <div className="text-xs text-muted-foreground mt-0.5">Conversion des annonces</div>
+          <div className="text-xs text-muted-foreground mt-0.5">{locale === "ar" ? "تحويل الإعلانات" : locale === "en" ? "Ad conversions" : "Conversion des annonces"}</div>
         </div>
       </div>
 
@@ -154,7 +153,7 @@ export default async function AnnouncementsAdminPage({
               : "border-border hover:bg-muted text-muted-foreground"
           }`}
         >
-          📢 Annonces manuelles ({totalAnnouncements})
+          📢 {locale === "ar" ? "إعلانات يدوية" : locale === "en" ? "Manual announcements" : "Annonces manuelles"} ({totalAnnouncements})
         </Link>
 
         <Link
@@ -166,7 +165,7 @@ export default async function AnnouncementsAdminPage({
           }`}
         >
           <Star className="h-3.5 w-3.5" />
-          <span>Bienvenue 1ère connexion</span>
+          <span>{t.welcomePopup}</span>
           <span
             className={`h-2 w-2 rounded-full ${
               welcomeSettings.isEnabled ? "bg-emerald-500" : "bg-muted-foreground/40"
@@ -183,7 +182,7 @@ export default async function AnnouncementsAdminPage({
           }`}
         >
           <PartyPopper className="h-3.5 w-3.5" />
-          <span>Célébration Level Up</span>
+          <span>{t.levelUpPopup}</span>
           <span
             className={`h-2 w-2 rounded-full ${
               levelUpSettings.isEnabled ? "bg-emerald-500" : "bg-muted-foreground/40"
@@ -197,8 +196,8 @@ export default async function AnnouncementsAdminPage({
         <div className="space-y-4">
           {announcements.length === 0 ? (
             <EmptyState
-              title="Aucune annonce pour le moment"
-              description="Créez votre première annonce pour communiquer un arrivage produit, un conseil ou une nouveauté à vos partenaires."
+              title={locale === "ar" ? "لا توجد إعلانات حالياً" : locale === "en" ? "No announcements yet" : "Aucune annonce pour le moment"}
+              description={locale === "ar" ? "أنشئ إعلانك الأول لإعلام الشركاء بوصول منتجات أو نصائح جديدة." : locale === "en" ? "Create your first announcement to share arrivals or tips with partners." : "Créez votre première annonce pour communiquer un arrivage produit, un conseil ou une nouveauté à vos partenaires."}
               action={<AnnouncementModal />}
             />
           ) : (
@@ -206,107 +205,60 @@ export default async function AnnouncementsAdminPage({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Annonce &amp; Type</TableHead>
-                    <TableHead>Audience ciblée</TableHead>
-                    <TableHead className="text-center">Statut</TableHead>
-                    <TableHead className="text-center">Affichages / Clics</TableHead>
-                    <TableHead className="text-center">Plein écran</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>{locale === "ar" ? "الإعلان والنوع" : locale === "en" ? "Announcement & Type" : "Annonce & Type"}</TableHead>
+                    <TableHead>{t.targetPartners}</TableHead>
+                    <TableHead className="text-center">{c.status}</TableHead>
+                    <TableHead className="text-center">{t.impressions} / {t.conversions}</TableHead>
+                    <TableHead className="text-center">{locale === "ar" ? "شاشة كاملة" : locale === "en" ? "Full screen" : "Plein écran"}</TableHead>
+                    <TableHead className="text-right">{c.actions}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {announcements.map((a) => {
-                    const typeInfo = TYPE_LABEL[a.type] ?? { label: a.type, icon: "📢" };
+                    const typeInfo = typeLabel[a.type] ?? { label: a.type, icon: "📢" };
 
                     return (
                       <TableRow key={a.id} className="hover:bg-muted/30">
                         <TableCell>
-                          <div className="space-y-0.5">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="font-semibold text-foreground">{a.title}</span>
-                              <span className="text-xs bg-muted px-1.5 py-0.5 rounded font-medium">
-                                {typeInfo.icon} {typeInfo.label}
-                              </span>
+                          <div className="flex items-start gap-2.5">
+                            <span className="text-lg">{typeInfo.icon}</span>
+                            <div>
+                              <div className="font-semibold text-foreground text-sm line-clamp-1">
+                                {a.title}
+                              </div>
+                              <div className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                                {a.content}
+                              </div>
                             </div>
-                            <p className="text-xs text-muted-foreground line-clamp-1 max-w-md">
-                              {a.content}
-                            </p>
                           </div>
                         </TableCell>
 
                         <TableCell>
-                          <Badge variant="outline" className="text-xs font-normal">
-                            <Users className="h-3 w-3 mr-1" />
-                            {AUDIENCE_LABEL[a.targetAudience] ?? a.targetAudience}
+                          <span className="text-xs text-muted-foreground">
+                            {audienceLabel[a.targetAudience] ?? a.targetAudience}
+                          </span>
+                        </TableCell>
+
+                        <TableCell className="text-center">
+                          <Badge variant={STATUS_BADGE[a.status]}>
+                            {statusLabel[a.status] ?? a.status}
                           </Badge>
                         </TableCell>
 
-                        <TableCell className="text-center">
-                          <Badge variant={STATUS_BADGE[a.status] ?? "secondary"}>
-                            {STATUS_LABEL[a.status] ?? a.status}
-                          </Badge>
-                          {a.status === "SCHEDULED" && a.scheduledAt && (
-                            <div className="text-[10px] text-muted-foreground mt-0.5">
-                              {new Date(a.scheduledAt).toLocaleDateString("fr-FR", {
-                                day: "2-digit",
-                                month: "short",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </div>
-                          )}
+                        <TableCell className="text-center text-xs font-mono">
+                          <span className="text-primary font-semibold">{a.stats.totalDisplayed}</span>
+                          <span className="text-muted-foreground"> / </span>
+                          <span className="text-emerald-600 font-semibold">{a.stats.totalClicked}</span>
                         </TableCell>
 
                         <TableCell className="text-center">
-                          <div className="flex flex-col items-center justify-center">
-                            <span className="text-xs font-semibold text-foreground">
-                              {a.stats.totalDisplayed} vues · {a.stats.totalClicked} clics
-                            </span>
-                            <span className="text-[10px] text-muted-foreground font-mono">
-                              CTR : {a.stats.clickRate} %
-                            </span>
-                          </div>
-                        </TableCell>
-
-                        <TableCell className="text-center">
-                          {a.isFullScreen ? (
-                            <span className="inline-flex items-center text-xs text-emerald-600 font-medium">
-                              ✓ Oui
-                            </span>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">Non</span>
-                          )}
+                          <span className="text-xs text-muted-foreground">
+                            {a.isFullScreen ? (locale === "ar" ? "نعم" : locale === "en" ? "Yes" : "Oui") : (locale === "ar" ? "لا" : locale === "en" ? "No" : "Non")}
+                          </span>
                         </TableCell>
 
                         <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <NotificationPreviewModal
-                              type="ANNOUNCEMENT"
-                              title={a.title}
-                              message={a.content}
-                              buttonText={a.buttonText || "Consulter"}
-                              buttonUrl={a.buttonUrl || "/catalogue"}
-                              imageUrl={a.imageUrl || undefined}
-                            />
-
-                            <AnnouncementModal
-                              announcement={{
-                                id: a.id,
-                                title: a.title,
-                                content: a.content,
-                                type: a.type,
-                                imageUrl: a.imageUrl,
-                                buttonText: a.buttonText,
-                                buttonUrl: a.buttonUrl,
-                                targetAudience: a.targetAudience,
-                                status: a.status,
-                                scheduledAt: a.scheduledAt,
-                                isFullScreen: a.isFullScreen,
-                              }}
-                            />
-
-                            <AnnouncementRowActions id={a.id} status={a.status} />
-                          </div>
+                          <AnnouncementRowActions id={a.id} status={a.status} />
                         </TableCell>
                       </TableRow>
                     );
@@ -318,14 +270,18 @@ export default async function AnnouncementsAdminPage({
         </div>
       )}
 
-      {/* Tab 2: Welcome Settings */}
+      {/* Tab 2: Welcome Notification Settings */}
       {activeTab === "welcome" && (
-        <WelcomeSettingsForm initialSettings={welcomeSettings} />
+        <div className="space-y-4">
+          <WelcomeSettingsForm initialSettings={welcomeSettings} />
+        </div>
       )}
 
-      {/* Tab 3: Level Up Settings */}
+      {/* Tab 3: Level Up Celebration Settings */}
       {activeTab === "levelup" && (
-        <LevelUpSettingsForm initialSettings={levelUpSettings} />
+        <div className="space-y-4">
+          <LevelUpSettingsForm initialSettings={levelUpSettings} />
+        </div>
       )}
     </div>
   );

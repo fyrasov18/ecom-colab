@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { toast } from "sonner";
+import { useI18n } from "@/lib/i18n";
 import {
   Palette,
   Image as ImageIcon,
@@ -80,6 +81,7 @@ export function AuthDesignForm({
   initialDeliveryPartnersConfig,
   canEdit,
 }: AuthDesignFormProps) {
+  const { dict } = useI18n();
   const [activeTab, setActiveTab] = React.useState<"preview" | "colors" | "content" | "layout" | "delivery">("preview");
 
   const [deliveryConfig, setDeliveryConfig] = React.useState<DeliveryPartnersConfig>(
@@ -259,7 +261,7 @@ export function AuthDesignForm({
             )}
           >
             <Eye className="h-4 w-4" />
-            <span>Aperçu Interactif</span>
+            <span>{dict.authDesign.interactivePreview}</span>
           </button>
           <button
             type="button"
@@ -272,7 +274,7 @@ export function AuthDesignForm({
             )}
           >
             <Palette className="h-4 w-4" />
-            <span>Palette & Logos</span>
+            <span>{dict.authDesign.paletteAndLogos}</span>
           </button>
           <button
             type="button"
@@ -285,7 +287,7 @@ export function AuthDesignForm({
             )}
           >
             <Languages className="h-4 w-4" />
-            <span>Contenu Marketing (FR / AR / EN)</span>
+            <span>{dict.authDesign.marketingContent}</span>
           </button>
           <button
             type="button"
@@ -298,7 +300,7 @@ export function AuthDesignForm({
             )}
           >
             <Layout className="h-4 w-4" />
-            <span>Disposition & Modules</span>
+            <span>{dict.authDesign.layoutAndModules}</span>
           </button>
           <button
             type="button"
@@ -311,7 +313,7 @@ export function AuthDesignForm({
             )}
           >
             <Truck className="h-4 w-4" />
-            <span>Partenaires de Livraison</span>
+            <span>{dict.authDesign.deliveryPartners}</span>
           </button>
         </div>
 
@@ -326,7 +328,7 @@ export function AuthDesignForm({
             className="cursor-pointer gap-1.5 text-muted-foreground hover:text-destructive"
           >
             <RotateCcw className="h-4 w-4" />
-            <span>Réinitialiser</span>
+            <span>{dict.authDesign.resetDefaults}</span>
           </Button>
           <Button
             type="button"
@@ -340,7 +342,7 @@ export function AuthDesignForm({
             }}
           >
             <Check className="h-4 w-4" />
-            <span>{isSaving ? "Enregistrement…" : "Enregistrer les modifications"}</span>
+            <span>{isSaving ? dict.authDesign.saving : dict.authDesign.saveConfig}</span>
           </Button>
         </div>
       </div>
@@ -371,7 +373,7 @@ export function AuthDesignForm({
                         : "text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    Connexion (/login)
+                    {dict.authDesign.loginView}
                   </button>
                   <button
                     type="button"
@@ -383,7 +385,7 @@ export function AuthDesignForm({
                         : "text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    Inscription (/register)
+                    {dict.authDesign.registerView}
                   </button>
                 </div>
 
@@ -400,7 +402,7 @@ export function AuthDesignForm({
                     )}
                   >
                     <Monitor className="h-3.5 w-3.5" />
-                    <span>Desktop</span>
+                    <span>{dict.authDesign.desktop}</span>
                   </button>
                   <button
                     type="button"
@@ -413,7 +415,7 @@ export function AuthDesignForm({
                     )}
                   >
                     <Smartphone className="h-3.5 w-3.5" />
-                    <span>Mobile (390px)</span>
+                    <span>{dict.authDesign.mobile} (390px)</span>
                   </button>
                 </div>
 

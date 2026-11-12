@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore, useState } from "react";
+import { useSyncExternalStore, useState, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -14,6 +14,7 @@ import {
   FilePlus2,
   FolderTree,
   LayoutDashboard,
+  Lightbulb,
   Megaphone,
   Menu,
   Package,
@@ -27,6 +28,7 @@ import {
   ShieldCheck,
   ShoppingCart,
   Truck,
+  User,
   UserPlus,
   Users,
   Wallet,
@@ -38,10 +40,11 @@ import { formatUnreadCount } from "@/modules/notifications/labels";
 import { GlobalSearch } from "./global-search";
 import { LogoutButton } from "./logout-button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { EcomPartnerLogo } from "@/components/brand/logo";
+import { LanguageSelector } from "@/components/i18n/language-selector";
 import { DynamicBrandLogo } from "@/components/brand/dynamic-brand-logo";
 import type { ResolvedBranding } from "@/modules/branding/defaults";
 import { PageTransition } from "@/components/ui/page-transition";
+import { useI18n } from "@/lib/i18n";
 
 type NavItem = { href: string; label: string; icon: LucideIcon; superAdminOnly?: boolean };
 type NavGroup = { label: string; items: NavItem[] };
@@ -69,88 +72,100 @@ function isActive(pathname: string, href: string): boolean {
   }
   if (href === "/produits") {
     if (pathname.startsWith("/produits/categories")) return false;
+    if (pathname.startsWith("/produits/suggestions")) return false;
   }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-const ADMIN_NAV: NavGroup[] = [
-  {
-    label: "Opérations",
-    items: [
-      { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
-      { href: "/commandes", label: "Commandes", icon: ShoppingCart },
-      { href: "/logistique", label: "Logistique", icon: Truck },
-      { href: "/clients", label: "Clients", icon: Contact },
-    ],
-  },
-  {
-    label: "Catalogue",
-    items: [
-      { href: "/produits", label: "Produits", icon: Package },
-      { href: "/produits/categories", label: "Catégories", icon: FolderTree },
-      { href: "/marketing", label: "Marketing", icon: Megaphone },
-    ],
-  },
-  {
-    label: "Partenaires",
-    items: [
-      { href: "/partenaires", label: "Partenaires", icon: Users },
-      { href: "/partenaires/parrainage", label: "Parrainage", icon: UserPlus },
-      { href: "/annonces", label: "Annonces & Popups", icon: Megaphone },
-      { href: "/performances", label: "Performances", icon: BarChart3 },
-    ],
-  },
-  {
-    label: "Finance",
-    items: [
-      { href: "/finance", label: "Revenus & règlements", icon: Wallet },
-      { href: "/parametres/commission", label: "Règles de commission", icon: Percent },
-      { href: "/parametres/settlement", label: "Règles de settlement", icon: CalendarClock },
-    ],
-  },
-  {
-    label: "Système",
-    items: [
-      { href: "/notifications", label: "Notifications", icon: Bell },
-      { href: "/parametres", label: "Paramètres", icon: Settings },
-      { href: "/parametres/design", label: "Design & Marque", icon: Palette },
-      { href: "/parametres/auth-design", label: "Design Authentification", icon: ShieldCheck },
-      { href: "/parametres/system", label: "État du système", icon: Activity },
-      { href: "/audit", label: "Audit", icon: ScrollText, superAdminOnly: true },
-    ],
-  },
-];
+function getAdminNav(t: (k: string) => string): NavGroup[] {
+  return [
+    {
+      label: t("nav.operations"),
+      items: [
+        { href: "/dashboard", label: t("nav.dashboard"), icon: LayoutDashboard },
+        { href: "/commandes", label: t("nav.orders"), icon: ShoppingCart },
+        { href: "/logistique", label: t("nav.logistics"), icon: Truck },
+        { href: "/clients", label: t("nav.clients"), icon: Contact },
+      ],
+    },
+    {
+      label: t("nav.catalogue"),
+      items: [
+        { href: "/produits", label: t("nav.products"), icon: Package },
+        { href: "/produits/categories", label: t("nav.categories"), icon: FolderTree },
+        { href: "/produits/suggestions", label: t("nav.productSuggestions"), icon: Lightbulb },
+        { href: "/marketing", label: t("nav.marketing"), icon: Megaphone },
+      ],
+    },
+    {
+      label: t("nav.partners"),
+      items: [
+        { href: "/partenaires", label: t("nav.partnerList"), icon: Users },
+        { href: "/partenaires/parrainage", label: t("nav.referrals"), icon: UserPlus },
+        { href: "/annonces", label: t("nav.announcements"), icon: Megaphone },
+        { href: "/performances", label: t("nav.performances"), icon: BarChart3 },
+      ],
+    },
+    {
+      label: t("nav.finance"),
+      items: [
+        { href: "/finance", label: t("nav.revenue"), icon: Wallet },
+        { href: "/parametres/commission", label: t("nav.commissionRules"), icon: Percent },
+        { href: "/parametres/settlement", label: t("nav.settlementRules"), icon: CalendarClock },
+      ],
+    },
+    {
+      label: t("nav.system"),
+      items: [
+        { href: "/notifications", label: t("nav.notifications"), icon: Bell },
+        { href: "/parametres", label: t("nav.settings"), icon: Settings },
+        { href: "/parametres/administrateurs", label: t("nav.administrators"), icon: Users, superAdminOnly: true },
+        { href: "/parametres/compte", label: t("nav.myAccount"), icon: User },
+        { href: "/parametres/design", label: t("nav.brandDesign"), icon: Palette },
+        { href: "/parametres/auth-design", label: t("nav.authDesign"), icon: ShieldCheck },
+        { href: "/parametres/system", label: t("nav.systemStatus"), icon: Activity },
+        { href: "/audit", label: t("nav.audit"), icon: ScrollText, superAdminOnly: true },
+      ],
+    },
+  ];
+}
 
-const PARTNER_NAV: NavGroup[] = [
-  {
-    label: "Espace de vente",
-    items: [
-      { href: "/tableau-de-bord", label: "Tableau de bord", icon: LayoutDashboard },
-      { href: "/catalogue", label: "Produits", icon: Package },
-      { href: "/nouvelle-commande", label: "Nouvelle commande", icon: FilePlus2 },
-      { href: "/mes-commandes", label: "Mes commandes", icon: ShoppingCart },
-    ],
-  },
-  {
-    label: "Suivi",
-    items: [
-      { href: "/parrainage", label: "Parrainage", icon: UserPlus },
-      { href: "/mes-performances", label: "Performances", icon: PieChart },
-      { href: "/portefeuille", label: "Portefeuille", icon: Wallet },
-      { href: "/mon-entreprise", label: "Mon entreprise", icon: Building2 },
-      { href: "/mes-notifications", label: "Notifications", icon: Bell },
-    ],
-  },
-];
+function getPartnerNav(t: (k: string) => string): NavGroup[] {
+  return [
+    {
+      label: t("nav.salesSpace"),
+      items: [
+        { href: "/tableau-de-bord", label: t("nav.dashboard"), icon: LayoutDashboard },
+        { href: "/catalogue", label: t("nav.products"), icon: Package },
+        { href: "/suggestions-produits", label: t("nav.productSuggestions"), icon: Lightbulb },
+        { href: "/nouvelle-commande", label: t("nav.newOrder"), icon: FilePlus2 },
+        { href: "/mes-commandes", label: t("nav.myOrders"), icon: ShoppingCart },
+      ],
+    },
+    {
+      label: t("nav.tracking"),
+      items: [
+        { href: "/suivi-commandes", label: t("nav.orderTracking"), icon: Truck },
+        { href: "/parrainage", label: t("nav.referrals"), icon: UserPlus },
+        { href: "/mes-performances", label: t("nav.myPerformances"), icon: PieChart },
+        { href: "/portefeuille", label: t("nav.wallet"), icon: Wallet },
+        { href: "/mon-entreprise", label: t("nav.myCompany"), icon: Building2 },
+        { href: "/mon-compte", label: t("nav.myAccount"), icon: User },
+        { href: "/mes-notifications", label: t("nav.myNotifications"), icon: Bell },
+      ],
+    },
+  ];
+}
 
-/** Mobile bottom navigation for partners (mobile-first dashboard). */
-const PARTNER_BOTTOM: NavItem[] = [
-  { href: "/tableau-de-bord", label: "Bord", icon: LayoutDashboard },
-  { href: "/catalogue", label: "Produits", icon: Package },
-  { href: "/nouvelle-commande", label: "Commande", icon: FilePlus2 },
-  { href: "/mes-commandes", label: "Commandes", icon: ShoppingCart },
-  { href: "/mes-performances", label: "Perf.", icon: PieChart },
-];
+function getPartnerBottom(t: (k: string) => string): NavItem[] {
+  return [
+    { href: "/tableau-de-bord", label: t("nav.dashboard"), icon: LayoutDashboard },
+    { href: "/catalogue", label: t("nav.products"), icon: Package },
+    { href: "/nouvelle-commande", label: t("nav.newOrder"), icon: FilePlus2 },
+    { href: "/mes-commandes", label: t("nav.myOrders"), icon: ShoppingCart },
+    { href: "/mes-performances", label: t("nav.myPerformances"), icon: PieChart },
+  ];
+}
 
 const STORAGE_KEY = "ecc:shell:collapsed";
 
@@ -241,13 +256,19 @@ export function AppShell({
     }
   }
 
+  const { t, isRtl } = useI18n();
+
+  const adminNav = useMemo(() => getAdminNav(t), [t]);
+  const partnerNav = useMemo(() => getPartnerNav(t), [t]);
+  const partnerBottom = useMemo(() => getPartnerBottom(t), [t]);
+
   const groups =
     scope === "admin"
-      ? ADMIN_NAV.map((g) => ({
+      ? adminNav.map((g) => ({
           ...g,
           items: g.items.filter((i) => !i.superAdminOnly || isSuperAdmin),
         }))
-      : PARTNER_NAV;
+      : partnerNav;
 
   const fullName = `${user.firstName} ${user.lastName}`;
   const badge = formatUnreadCount(unreadCount);
@@ -257,23 +278,29 @@ export function AppShell({
     <div
       className={cn(
         "min-h-screen bg-background transition-[padding] duration-200 ease-out",
-        collapsed ? "lg:pl-[76px]" : "lg:pl-60",
+        isRtl
+          ? (collapsed ? "lg:pr-[76px]" : "lg:pr-60")
+          : (collapsed ? "lg:pl-[76px]" : "lg:pl-60"),
       )}
     >
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground"
+        className={cn(
+          "sr-only focus:not-sr-only focus:fixed focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground",
+          isRtl ? "focus:right-4" : "focus:left-4",
+        )}
       >
-        Aller au contenu principal
+        {t("nav.mainContent")}
       </a>
 
       {/* Desktop sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-30 hidden flex-col border-r border-sidebar-border bg-sidebar transition-[width] duration-200 ease-out lg:flex",
+          "fixed inset-y-0 z-30 hidden flex-col bg-sidebar transition-[width] duration-200 ease-out lg:flex",
+          isRtl ? "right-0 border-l border-sidebar-border" : "left-0 border-r border-sidebar-border",
           collapsed ? "w-[76px]" : "w-60",
         )}
-        aria-label="Navigation latérale"
+        aria-label={t("nav.mobileNav")}
       >
         <Brand scope={scope} compact={collapsed} branding={branding} />
         <nav className="flex-1 space-y-4 overflow-y-auto p-3" aria-label="Navigation principale">
@@ -283,6 +310,7 @@ export function AppShell({
               group={group}
               pathname={pathname}
               collapsedMode={collapsed}
+              isRtl={isRtl}
             />
           ))}
         </nav>
@@ -291,18 +319,18 @@ export function AppShell({
             type="button"
             onClick={toggleCollapsed}
             className={cn(
-              "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-sidebar-foreground",
+              "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-sidebar-foreground cursor-pointer",
               collapsed && "justify-center px-0",
             )}
-            aria-label={collapsed ? "Déplier le menu" : "Replier le menu"}
-            title={collapsed ? "Déplier le menu" : "Replier le menu"}
+            aria-label={collapsed ? t("nav.expandMenu") : t("nav.collapseMenu")}
+            title={collapsed ? t("nav.expandMenu") : t("nav.collapseMenu")}
           >
             {collapsed ? (
-              <PanelLeftOpen className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <PanelLeftOpen className={cn("h-4 w-4 shrink-0", isRtl && "rotate-180")} aria-hidden="true" />
             ) : (
               <>
-                <PanelLeftClose className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <span>Replier le menu</span>
+                <PanelLeftClose className={cn("h-4 w-4 shrink-0", isRtl && "rotate-180")} aria-hidden="true" />
+                <span>{t("nav.collapseMenu")}</span>
               </>
             )}
           </button>
@@ -312,11 +340,7 @@ export function AppShell({
         </div>
       </aside>
 
-      {/* Mobile drawer
-          forceMount keeps the overlay and content nodes in the DOM during the
-          close animation so data-[state=closed]:animate-[shell-drawer-out…]
-          can play before React removes the elements. Without it, Radix unmounts
-          immediately and the exit animation is never rendered. */}
+      {/* Mobile drawer */}
       <Dialog.Root open={drawerOpen} onOpenChange={(open) => (open ? openDrawer() : closeDrawer())}>
         <Dialog.Portal>
           <Dialog.Overlay
@@ -328,16 +352,22 @@ export function AppShell({
             id="mobile-nav-drawer"
             aria-describedby={undefined}
             aria-modal="true"
-            className="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col border-r border-sidebar-border bg-sidebar outline-none data-[state=open]:animate-[shell-drawer-in_180ms_ease-out] data-[state=closed]:animate-[shell-drawer-out_160ms_ease-in] data-[state=closed]:pointer-events-none"
+            className={cn(
+              "fixed inset-y-0 z-50 flex w-72 max-w-[85vw] flex-col bg-sidebar outline-none data-[state=open]:animate-[shell-drawer-in_180ms_ease-out] data-[state=closed]:animate-[shell-drawer-out_160ms_ease-in] data-[state=closed]:pointer-events-none",
+              isRtl ? "right-0 border-l border-sidebar-border" : "left-0 border-r border-sidebar-border",
+            )}
           >
-            <Dialog.Title className="sr-only">Navigation</Dialog.Title>
+            <Dialog.Title className="sr-only">{t("nav.mobileNav")}</Dialog.Title>
             <div className="relative">
               <Brand scope={scope} branding={branding} />
               <Dialog.Close asChild>
                 <button
                   type="button"
-                  className="absolute right-3 top-4 rounded-lg p-2 text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-sidebar-foreground"
-                  aria-label="Fermer le menu"
+                  className={cn(
+                    "absolute top-4 rounded-lg p-2 text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-sidebar-foreground",
+                    isRtl ? "left-3" : "right-3",
+                  )}
+                  aria-label={t("common.close")}
                 >
                   <X className="h-4 w-4" aria-hidden="true" />
                 </button>
@@ -350,6 +380,7 @@ export function AppShell({
                   group={group}
                   pathname={pathname}
                   onNavigate={closeDrawer}
+                  isRtl={isRtl}
                 />
               ))}
             </nav>
@@ -379,6 +410,7 @@ export function AppShell({
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
             <TodayChip />
             <ThemeToggle />
+            <LanguageSelector />
             <Link
               href={notificationsHref}
               className="relative rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
@@ -393,19 +425,26 @@ export function AppShell({
                 </span>
               )}
             </Link>
-            <div className="hidden items-center gap-2.5 border-l pl-3 sm:flex">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+            <Link
+              href={scope === "admin" ? "/parametres/compte" : "/mon-compte"}
+              className={cn(
+                "hidden items-center gap-2.5 sm:flex group hover:opacity-90 transition-opacity",
+                isRtl ? "border-r pr-3" : "border-l pl-3",
+              )}
+              title={t("nav.myAccount")}
+            >
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary transition-colors group-hover:bg-primary/20">
                 {fullName
                   .split(" ")
                   .map((p) => p[0])
                   .slice(0, 2)
                   .join("")}
               </div>
-              <div className="leading-tight">
-                <div className="text-sm font-medium">{fullName}</div>
+              <div className={cn("leading-tight", isRtl ? "text-right" : "text-left")}>
+                <div className="text-sm font-medium group-hover:text-primary transition-colors">{fullName}</div>
                 <div className="text-[11px] text-muted-foreground">{user.role}</div>
               </div>
-            </div>
+            </Link>
             <LogoutButton />
           </div>
         </header>
@@ -427,7 +466,7 @@ export function AppShell({
           className="fixed inset-x-0 bottom-0 z-30 flex border-t bg-card lg:hidden"
           aria-label="Navigation mobile"
         >
-          {PARTNER_BOTTOM.map((item) => {
+          {partnerBottom.map((item) => {
             const active = pathname === item.href;
             const Icon = item.icon;
             return (
@@ -457,11 +496,13 @@ function NavGroupBlock({
   pathname,
   collapsedMode = false,
   onNavigate,
+  isRtl = false,
 }: {
   group: NavGroup;
   pathname: string;
   collapsedMode?: boolean;
   onNavigate?: () => void;
+  isRtl?: boolean;
 }) {
   return (
     <div>
@@ -494,13 +535,17 @@ function NavGroupBlock({
                 active
                   ? [
                       "bg-sidebar-active text-white nav-active-glow",
-                      /* Left accent bar */
+                      /* Left/Right accent bar */
                       !collapsedMode &&
-                        "before:absolute before:left-0 before:top-1/2 before:h-4 before:-translate-y-1/2 before:w-0.5 before:rounded-full before:bg-emerald-300 before:opacity-70",
+                        (isRtl
+                          ? "before:absolute before:right-0 before:top-1/2 before:h-4 before:-translate-y-1/2 before:w-0.5 before:rounded-full before:bg-emerald-300 before:opacity-70"
+                          : "before:absolute before:left-0 before:top-1/2 before:h-4 before:-translate-y-1/2 before:w-0.5 before:rounded-full before:bg-emerald-300 before:opacity-70"),
                     ]
                   : [
                       "text-sidebar-muted",
-                      "hover:bg-sidebar-hover hover:text-sidebar-foreground hover:translate-x-0.5",
+                      isRtl
+                        ? "hover:bg-sidebar-hover hover:text-sidebar-foreground hover:-translate-x-0.5"
+                        : "hover:bg-sidebar-hover hover:text-sidebar-foreground hover:translate-x-0.5",
                     ],
               )}
             >
@@ -563,10 +608,12 @@ function Brand({
 /** Today's date, formatted on the client to avoid a timezone mismatch at hydration. */
 function TodayChip() {
   const hydrated = useHydrated();
+  const { locale } = useI18n();
   if (!hydrated) {
     return <div className="hidden h-8 w-44 rounded-lg bg-muted lg:block" aria-hidden="true" />;
   }
-  const label = new Intl.DateTimeFormat("fr-FR", {
+  const intlLocale = locale === "ar" ? "ar-TN" : locale === "en" ? "en-US" : "fr-FR";
+  const label = new Intl.DateTimeFormat(intlLocale, {
     weekday: "short",
     day: "2-digit",
     month: "short",

@@ -27,6 +27,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { getServerLocale } from "@/lib/i18n/server";
+import { getDictionary } from "@/lib/i18n/dictionaries";
 
 export const metadata: Metadata = { title: "Commandes" };
 export const dynamic = "force-dynamic";
@@ -36,6 +38,13 @@ export default async function OrdersPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const locale = await getServerLocale();
+  const dict = getDictionary(locale);
+  const t = dict.orders;
+  const c = dict.common;
+  const currencySymbol = locale === "ar" ? "د.ت" : locale === "en" ? "TND" : "DT";
+  const intlLocale = locale === "ar" ? "ar-TN" : locale === "en" ? "en-US" : "fr-FR";
+
   const sp = await searchParams;
   const q = typeof sp.q === "string" ? sp.q : "";
   const status = ORDER_FILTER_STATUSES.find((s) => s === sp.status);
@@ -60,11 +69,16 @@ export default async function OrdersPage({
     listPartnerOptions(),
   ]);
 
+  const countSuffix = locale === "ar" ? "طلب" : locale === "en" ? "order(s)" : "commande(s)";
+  const fromLabel = locale === "ar" ? "من" : locale === "en" ? "From" : "Du";
+  const toLabel = locale === "ar" ? "إلى" : locale === "en" ? "To" : "Au";
+  const resetFiltersLabel = locale === "ar" ? "إعادة ضبط الفلاتر" : locale === "en" ? "Reset filters" : "Réinitialiser les filtres";
+
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Commandes"
-        description={`${total} commande(s)`}
+        title={t.title}
+        description={`${total} ${countSuffix}`}
       />
 
       {/* Filters */}
@@ -72,11 +86,11 @@ export default async function OrdersPage({
         className="flex flex-wrap items-end gap-3"
         method="GET"
         role="search"
-        aria-label="Filtrer les commandes"
+        aria-label={t.title}
       >
         <div className="min-w-56 flex-1 space-y-1">
           <Label className="text-xs font-medium text-muted-foreground">
-            Recherche (n°, téléphone, client, partenaire)
+            {t.searchPlaceholder}
           </Label>
           <div className="relative">
             <Search
@@ -87,7 +101,7 @@ export default async function OrdersPage({
               type="search"
               name="q"
               defaultValue={q}
-              placeholder="1250 ou 22333444…"
+              placeholder="1250, 22333444…"
               className="pl-8"
             />
           </div>
@@ -95,17 +109,17 @@ export default async function OrdersPage({
 
         <div className="space-y-1">
           <Label className="text-xs font-medium text-muted-foreground">
-            Statut
+            {t.filterStatus}
           </Label>
           <NativeSelect
             name="status"
             defaultValue={status ?? ""}
             className="w-44"
           >
-            <option value="">Tous</option>
+            <option value="">{c.all}</option>
             {ORDER_FILTER_STATUSES.map((s) => (
               <option key={s} value={s}>
-                {ORDER_STATUS_LABELS[s]}
+                {dict.statuses?.order?.[s] ?? ORDER_STATUS_LABELS[s]}
               </option>
             ))}
           </NativeSelect>
@@ -113,14 +127,14 @@ export default async function OrdersPage({
 
         <div className="space-y-1">
           <Label className="text-xs font-medium text-muted-foreground">
-            Partenaire
+            {t.partner}
           </Label>
           <NativeSelect
             name="partnerId"
             defaultValue={partnerId}
             className="w-48"
           >
-            <option value="">Tous</option>
+            <option value="">{c.all}</option>
             {partners.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.displayName}
@@ -131,14 +145,14 @@ export default async function OrdersPage({
 
         <div className="space-y-1">
           <Label className="text-xs font-medium text-muted-foreground">
-            Gouvernorat
+            {t.governorate.replace("*", "").trim()}
           </Label>
           <NativeSelect
             name="gouvernorat"
             defaultValue={governorate}
             className="w-40"
           >
-            <option value="">Tous</option>
+            <option value="">{c.all}</option>
             {GOVERNORATES.map((g) => (
               <option key={g} value={g}>
                 {g}
@@ -149,7 +163,7 @@ export default async function OrdersPage({
 
         <div className="space-y-1">
           <Label htmlFor="from-date" className="text-xs font-medium text-muted-foreground">
-            Du
+            {fromLabel}
           </Label>
           <Input
             id="from-date"
@@ -162,7 +176,7 @@ export default async function OrdersPage({
 
         <div className="space-y-1">
           <Label htmlFor="to-date" className="text-xs font-medium text-muted-foreground">
-            Au
+            {toLabel}
           </Label>
           <Input
             id="to-date"
@@ -175,13 +189,13 @@ export default async function OrdersPage({
 
         <div className="flex items-end gap-2">
           <Button type="submit" variant="outline" size="sm">
-            Filtrer
+            {c.filter}
           </Button>
           {hasFilters && (
             <Button asChild variant="ghost" size="sm">
               <Link href="/commandes">
                 <X className="h-4 w-4 mr-1" aria-hidden="true" />
-                Réinitialiser
+                {resetFiltersLabel}
               </Link>
             </Button>
           )}
@@ -190,16 +204,16 @@ export default async function OrdersPage({
 
       {items.length === 0 ? (
         <EmptyState
-          title="Aucune commande trouvée"
+          title={t.noOrders}
           description={
             hasFilters
-              ? "Aucun résultat pour ces filtres. Modifiez votre recherche."
-              : "Les commandes apparaissent ici dès qu'un partenaire en crée une."
+              ? t.noOrdersDesc
+              : (locale === "ar" ? "تظهر الطلبات هنا بمجرد إنشائها من قبل الشركاء." : locale === "en" ? "Orders will appear here as soon as partners create them." : "Les commandes apparaissent ici dès qu'un partenaire en crée une.")
           }
           action={
             hasFilters ? (
               <Button asChild variant="outline" size="sm">
-                <Link href="/commandes">Réinitialiser les filtres</Link>
+                <Link href="/commandes">{resetFiltersLabel}</Link>
               </Button>
             ) : undefined
           }
@@ -209,15 +223,15 @@ export default async function OrdersPage({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>N°</TableHead>
-                <TableHead>Client</TableHead>
-                <TableHead className="hidden md:table-cell">Produit</TableHead>
-                <TableHead className="hidden lg:table-cell">Partenaire</TableHead>
-                <TableHead>Montant</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead className="hidden xl:table-cell">Créée le</TableHead>
-                <TableHead className="hidden xl:table-cell">Mise à jour</TableHead>
-                <TableHead className="w-[100px] text-right">Actions</TableHead>
+                <TableHead>{t.orderNumber}</TableHead>
+                <TableHead>{t.customer}</TableHead>
+                <TableHead className="hidden md:table-cell">{dict.products.productName}</TableHead>
+                <TableHead className="hidden lg:table-cell">{t.partner}</TableHead>
+                <TableHead>{t.totalAmount}</TableHead>
+                <TableHead>{c.status}</TableHead>
+                <TableHead className="hidden xl:table-cell">{t.orderDate}</TableHead>
+                <TableHead className="hidden xl:table-cell">{c.date}</TableHead>
+                <TableHead className="w-[100px] text-right">{c.actions}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -243,13 +257,13 @@ export default async function OrdersPage({
                     {o.partner.displayName}
                   </TableCell>
                   <TableCell>
-                    {formatPrice(Number(o.unitSellingPrice) * o.quantity)} DT
+                    {formatPrice(Number(o.unitSellingPrice) * o.quantity)} {currencySymbol}
                   </TableCell>
                   <TableCell>
                     <OrderStatusBadge status={o.status} />
                   </TableCell>
                   <TableCell className="hidden text-xs text-muted-foreground xl:table-cell">
-                    {o.createdAt.toLocaleDateString("fr-FR", {
+                    {o.createdAt.toLocaleDateString(intlLocale, {
                       day: "2-digit",
                       month: "2-digit",
                       year: "2-digit",
@@ -258,7 +272,7 @@ export default async function OrdersPage({
                     })}
                   </TableCell>
                   <TableCell className="hidden text-xs text-muted-foreground xl:table-cell">
-                    {o.updatedAt.toLocaleDateString("fr-FR", {
+                    {o.updatedAt.toLocaleDateString(intlLocale, {
                       day: "2-digit",
                       month: "2-digit",
                       year: "2-digit",
@@ -269,7 +283,7 @@ export default async function OrdersPage({
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
                       <Button asChild variant="ghost" size="sm">
-                        <Link href={`/commandes/${o.id}`}>Ouvrir</Link>
+                        <Link href={`/commandes/${o.id}`}>{c.view}</Link>
                       </Button>
                       <form action={deleteOrderAction}>
                         <input type="hidden" name="orderId" value={o.id} />
@@ -277,11 +291,11 @@ export default async function OrdersPage({
                           variant="ghost"
                           size="sm"
                           className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive h-8 w-8 p-0"
-                          confirmMessage={`Supprimer définitivement la commande #${o.orderNumber} ?`}
-                          title="Supprimer cette commande"
+                          confirmMessage={locale === "ar" ? `حذف الطلب #${o.orderNumber} نهائياً؟` : locale === "en" ? `Permanently delete order #${o.orderNumber}?` : `Supprimer définitivement la commande #${o.orderNumber} ?`}
+                          title={locale === "ar" ? "حذف هذا الطلب" : locale === "en" ? "Delete this order" : "Supprimer cette commande"}
                         >
                           <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">Supprimer</span>
+                          <span className="sr-only">{c.delete}</span>
                         </ConfirmSubmit>
                       </form>
                     </div>

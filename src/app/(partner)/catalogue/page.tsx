@@ -23,6 +23,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { deriveGoogleDriveUrls } from "@/lib/google-drive";
 import { CATEGORY_ICONS } from "@/app/(admin)/produits/categories/category-modal";
+import { getServerLocale } from "@/lib/i18n/server";
+import { getDictionary } from "@/lib/i18n/dictionaries";
 
 export const metadata: Metadata = { title: "Catalogue Produits" };
 
@@ -40,6 +42,12 @@ export default async function CataloguePage({
   const user = await requireSession(["PARTNER"]);
   const params = await searchParams;
 
+  const locale = await getServerLocale();
+  const dict = getDictionary(locale);
+  const t = dict.partnerPortal.catalogue;
+  const c = dict.common;
+  const currencySymbol = locale === "ar" ? "د.ت" : locale === "en" ? "TND" : "DT";
+
   const categoryId = params.category?.trim();
   const badge = params.badge;
   const search = params.q?.trim();
@@ -55,7 +63,6 @@ export default async function CataloguePage({
 
   const hasActiveFilters = Boolean(categoryId || badge || search);
 
-  // Helper to build filter query string while preserving others
   const buildFilterUrl = (overrides: {
     category?: string | null;
     badge?: string | null;
@@ -74,14 +81,16 @@ export default async function CataloguePage({
     return query ? `/catalogue?${query}` : "/catalogue";
   };
 
+  const resetFiltersLabel = locale === "ar" ? "إعادة ضبط الفلاتر" : locale === "en" ? "Reset filters" : "Réinitialiser les filtres";
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Catalogue Produits</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t.title}</h1>
           <p className="text-sm text-muted-foreground">
-            Explorez vos produits assignés et leurs kits marketing prêts à l&apos;emploi.
+            {t.subtitle}
           </p>
         </div>
 
@@ -89,7 +98,7 @@ export default async function CataloguePage({
           <Button asChild variant="outline" size="sm" className="gap-1.5 self-start sm:self-auto">
             <Link href="/catalogue">
               <RotateCcw className="h-3.5 w-3.5" />
-              Réinitialiser les filtres
+              {resetFiltersLabel}
             </Link>
           </Button>
         )}
@@ -103,7 +112,7 @@ export default async function CataloguePage({
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             name="q"
-            placeholder="Rechercher un produit par nom..."
+            placeholder={t.searchPlaceholder}
             defaultValue={search ?? ""}
             className="pl-9 pr-9 bg-card"
           />
@@ -128,7 +137,7 @@ export default async function CataloguePage({
                 : "border-border hover:bg-muted text-muted-foreground"
             }`}
           >
-            Tous les produits ({stats.totalAssigned})
+            {t.allProducts} ({stats.totalAssigned})
           </Link>
 
           <Link
@@ -140,7 +149,7 @@ export default async function CataloguePage({
             }`}
           >
             <Trophy className="h-3.5 w-3.5" />
-            <span>Produits gagnants</span>
+            <span>{t.winningProducts}</span>
             <span className="opacity-80">({stats.winningCount})</span>
           </Link>
 
@@ -153,7 +162,7 @@ export default async function CataloguePage({
             }`}
           >
             <Flame className="h-3.5 w-3.5" />
-            <span>Recommandés</span>
+            <span>{t.recommended}</span>
             <span className="opacity-80">({stats.recommendedCount})</span>
           </Link>
 
@@ -166,7 +175,7 @@ export default async function CataloguePage({
             }`}
           >
             <Sparkles className="h-3.5 w-3.5" />
-            <span>Nouveautés</span>
+            <span>{dict.products.isNew}</span>
             <span className="opacity-80">({stats.newCount})</span>
           </Link>
         </div>
@@ -184,7 +193,7 @@ export default async function CataloguePage({
             }`}
           >
             <Package className="h-4 w-4" />
-            <span>Toutes les catégories</span>
+            <span>{dict.products.allCategories}</span>
             <span className="rounded-full bg-muted px-1.5 py-0.5 text-[11px] font-semibold text-foreground">
               {stats.totalAssigned}
             </span>
@@ -233,16 +242,16 @@ export default async function CataloguePage({
       {assignments.length === 0 ? (
         stats.totalAssigned === 0 ? (
           <EmptyState
-            title="Aucun produit assigné pour le moment"
-            description="L'équipe vous assignera des produits prochainement. Vous pourrez alors les promouvoir sur vos réseaux."
+            title={locale === "ar" ? "لا توجد منتجات مخصصة حالياً" : locale === "en" ? "No products assigned yet" : "Aucun produit assigné pour le moment"}
+            description={locale === "ar" ? "سيقوم فريق العمل بتعيين منتجات لك قريباً لتتمكن من الترويج لها." : locale === "en" ? "The team will assign you products soon so you can promote them." : "L'équipe vous assignera des produits prochainement. Vous pourrez alors les promouvoir sur vos réseaux."}
           />
         ) : (
           <EmptyState
-            title="Aucun produit ne correspond à vos critères"
-            description="Essayez de modifier votre recherche ou de réinitialiser vos filtres de catégorie et de badge."
+            title={t.outOfStock}
+            description={locale === "ar" ? "حاول تعديل بحثك أو إعادة ضبط عوامل التصفية." : locale === "en" ? "Try adjusting your search or resetting category filters." : "Essayez de modifier votre recherche ou de réinitialiser vos filtres de catégorie et de badge."}
             action={
               <Button asChild variant="outline">
-                <Link href="/catalogue">Réinitialiser les filtres</Link>
+                <Link href="/catalogue">{resetFiltersLabel}</Link>
               </Button>
             }
           />
@@ -270,7 +279,7 @@ export default async function CataloguePage({
                         />
                       ) : (
                         <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
-                          Aucune image
+                          {locale === "ar" ? "لا توجد صورة" : locale === "en" ? "No image" : "Aucune image"}
                         </div>
                       )}
 
@@ -278,22 +287,22 @@ export default async function CataloguePage({
                       <div className="absolute left-2.5 top-2.5 flex flex-wrap gap-1.5 max-w-[85%]">
                         {product.status === "OUT_OF_STOCK" && (
                           <Badge variant="warning" className="shadow-xs text-[11px]">
-                            Rupture de stock
+                            {t.outOfStock}
                           </Badge>
                         )}
                         {product.isWinning && (
                           <span className="inline-flex items-center gap-1 rounded-md bg-amber-500 text-white font-semibold px-2 py-0.5 text-[11px] shadow-xs">
-                            ⭐ Produit gagnant
+                            ⭐ {locale === "ar" ? "منتج رابح" : locale === "en" ? "Winner" : "Produit gagnant"}
                           </span>
                         )}
                         {product.isRecommended && (
                           <span className="inline-flex items-center gap-1 rounded-md bg-rose-500 text-white font-semibold px-2 py-0.5 text-[11px] shadow-xs">
-                            🔥 Recommandé
+                            🔥 {t.recommended}
                           </span>
                         )}
                         {product.isNew && (
                           <span className="inline-flex items-center gap-1 rounded-md bg-sky-500 text-white font-semibold px-2 py-0.5 text-[11px] shadow-xs">
-                            🆕 Nouveau
+                            🆕 {dict.products.isNew}
                           </span>
                         )}
                       </div>
@@ -332,14 +341,14 @@ export default async function CataloguePage({
                   {/* Bottom details */}
                   <div className="px-4 pb-4 pt-1 flex items-center justify-between border-t mt-2">
                     <div>
-                      <span className="text-xs text-muted-foreground block">Prix conseillé</span>
+                      <span className="text-xs text-muted-foreground block">{t.catalogPrice}</span>
                       <span className="text-base font-bold text-foreground">
-                        {formatPrice(product.sellingPrice)} DT
+                        {formatPrice(product.sellingPrice)} {currencySymbol}
                       </span>
                     </div>
 
                     <Badge variant="info" className="text-xs">
-                      {product.marketingAssets.length} kit(s) média
+                      {product.marketingAssets.length} {locale === "ar" ? "ملفات تسويقية" : locale === "en" ? "marketing kit(s)" : "kit(s) média"}
                     </Badge>
                   </div>
                 </Card>

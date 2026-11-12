@@ -28,34 +28,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { getServerLocale } from "@/lib/i18n/server";
+import { getDictionary } from "@/lib/i18n/dictionaries";
+import { OrderStatusBadge } from "@/components/orders/order-status-badge";
+import type { OrderStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
-
-const STATUS_LABELS: Record<string, string> = {
-  CONFIRMED: "Confirmée",
-  VALIDATED: "Validée",
-  ON_HOLD: "En attente",
-  PREPARING: "Préparation",
-  PACKAGED: "Emballée",
-  SHIPPED: "Expédiée",
-  IN_DELIVERY: "En livraison",
-  DELIVERED: "Livrée",
-  REFUSED: "Refusée",
-  RETURNED: "Retournée",
-  CANCELLED: "Annulée",
-};
-
-const STATUS_BADGE_VARIANT: Record<
-  string,
-  "success" | "warning" | "destructive" | "info" | "secondary"
-> = {
-  DELIVERED: "success",
-  REFUSED: "destructive",
-  RETURNED: "destructive",
-  ON_HOLD: "warning",
-  CONFIRMED: "info",
-  VALIDATED: "info",
-};
 
 function KpiCard({
   label,
@@ -106,6 +84,14 @@ function KpiCard({
 }
 
 export default async function DashboardPage() {
+  const locale = await getServerLocale();
+  const dict = getDictionary(locale);
+  const t = dict.dashboard;
+  const o = dict.orders;
+  const c = dict.common;
+  const currencySymbol = locale === "ar" ? "د.ت" : locale === "en" ? "TND" : "DT";
+  const intlLocale = locale === "ar" ? "ar-TN" : locale === "en" ? "en-US" : "fr-FR";
+
   const data = await getAdminDashboardData();
 
   const alerts: {
@@ -115,25 +101,25 @@ export default async function DashboardPage() {
   }[] = [];
   if (data.lowStockProducts > 0)
     alerts.push({
-      label: `${data.lowStockProducts} produit(s) en stock faible`,
+      label: locale === "ar" ? `${data.lowStockProducts} منتجات منخفضة المخزون` : locale === "en" ? `${data.lowStockProducts} low stock product(s)` : `${data.lowStockProducts} produit(s) en stock faible`,
       href: "/produits",
       tone: "warning",
     });
   if (data.pendingWithdrawals > 0)
     alerts.push({
-      label: `${data.pendingWithdrawals} demande(s) de retrait en attente`,
+      label: locale === "ar" ? `${data.pendingWithdrawals} طلبات سحب قيد الانتظار` : locale === "en" ? `${data.pendingWithdrawals} pending withdrawal(s)` : `${data.pendingWithdrawals} demande(s) de retrait en attente`,
       href: "/finance",
       tone: "warning",
     });
   if (data.onHold > 0)
     alerts.push({
-      label: `${data.onHold} commande(s) en attente (ON_HOLD)`,
+      label: locale === "ar" ? `${data.onHold} طلبات معلقة (ON_HOLD)` : locale === "en" ? `${data.onHold} order(s) on hold (ON_HOLD)` : `${data.onHold} commande(s) en attente (ON_HOLD)`,
       href: "/logistique",
       tone: "destructive",
     });
   if (data.refusedOrReturned > 0)
     alerts.push({
-      label: `${data.refusedOrReturned} retour(s)/refus à traiter`,
+      label: locale === "ar" ? `${data.refusedOrReturned} إرجاع/رفض قيد المعالجة` : locale === "en" ? `${data.refusedOrReturned} returns/refusals to process` : `${data.refusedOrReturned} retour(s)/refus à traiter`,
       href: "/logistique",
       tone: "destructive",
     });
@@ -141,62 +127,62 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Tableau de bord"
-        description="Vue d'ensemble de l'activité — données en temps réel."
+        title={t.title}
+        description={t.subtitle}
       />
 
       {/* KPI grid */}
-      <section aria-label="Indicateurs clés">
+      <section aria-label={t.title}>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <KpiCard
-            label="Partenaires actifs"
+            label={t.activePartners}
             value={data.activePartners}
             icon={Users}
             href="/partenaires"
-            hint="Voir les partenaires"
+            hint={t.topPartners}
           />
           <KpiCard
-            label="Commandes aujourd'hui"
+            label={t.confirmedToday}
             value={data.ordersToday}
             icon={ShoppingCart}
             href="/commandes"
-            hint="Voir les commandes"
+            hint={o.title}
           />
           <KpiCard
-            label="Livrées"
+            label={t.deliveredOrders}
             value={data.delivered}
             icon={PackageCheck}
             href="/commandes?status=DELIVERED"
           />
           <KpiCard
-            label="En livraison"
+            label={t.inTransitOrders}
             value={data.inDelivery}
             icon={Truck}
             href="/commandes?status=IN_DELIVERY"
           />
           <KpiCard
-            label="Retours / Refus"
+            label={dict.statuses.order.RETURNED + " / " + dict.statuses.order.REFUSED}
             value={data.refusedOrReturned}
             icon={AlertTriangle}
             href="/commandes?status=RETURNED"
             tone={data.refusedOrReturned > 0 ? "warning" : "default"}
           />
           <KpiCard
-            label="À valider"
+            label={t.pendingOrders}
             value={data.awaitingValidation}
             icon={ShoppingCart}
             href="/commandes?status=CONFIRMED"
             tone={data.awaitingValidation > 0 ? "warning" : "default"}
           />
           <KpiCard
-            label="Gains en attente (partenaires)"
-            value={`${formatPrice(data.wallets.pending)} DT`}
+            label={t.partnerCommissions}
+            value={`${formatPrice(data.wallets.pending)} ${currencySymbol}`}
             icon={Wallet}
             href="/finance"
           />
           <KpiCard
-            label="Solde disponible total"
-            value={`${formatPrice(data.wallets.available)} DT`}
+            label={t.availableBalance}
+            value={`${formatPrice(data.wallets.available)} ${currencySymbol}`}
             icon={Percent}
             href="/finance"
           />
@@ -208,12 +194,12 @@ export default async function DashboardPage() {
         <Card
           className="border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/30"
           role="region"
-          aria-label="Alertes opérationnelles"
+          aria-label={c.warning}
         >
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base text-amber-900 dark:text-amber-200">
               <AlertTriangle className="h-4 w-4" aria-hidden="true" />
-              Alertes opérationnelles
+              {locale === "ar" ? "تنبيهات العمليات" : locale === "en" ? "Operational Alerts" : "Alertes opérationnelles"}
             </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
@@ -236,59 +222,53 @@ export default async function DashboardPage() {
       <Card>
         <CardHeader className="flex-row items-center justify-between space-y-0">
           <div>
-            <CardTitle className="text-base">Commandes récentes</CardTitle>
+            <CardTitle className="text-base">{t.recentOrders}</CardTitle>
             <CardDescription className="mt-0.5">
-              Dernières commandes créées sur la plateforme.
+              {locale === "ar" ? "آخر الطلبات المسجلة على المنصة." : locale === "en" ? "Latest orders placed on the platform." : "Dernières commandes créées sur la plateforme."}
             </CardDescription>
           </div>
           <Link
             href="/commandes"
             className="text-xs font-medium text-primary underline-offset-2 hover:underline"
           >
-            Voir tout
+            {t.viewAll}
           </Link>
         </CardHeader>
         <CardContent>
           {data.recentOrders.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">
-              Aucune commande pour le moment.
+              {c.noData}
             </p>
           ) : (
             <div className="overflow-x-auto -mx-6 px-6">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>N°</TableHead>
-                    <TableHead>Client</TableHead>
-                    <TableHead>Partenaire</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead>Créée le</TableHead>
+                    <TableHead>{t.orderRef}</TableHead>
+                    <TableHead>{t.client}</TableHead>
+                    <TableHead>{o.partner}</TableHead>
+                    <TableHead>{t.status}</TableHead>
+                    <TableHead>{o.orderDate}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {data.recentOrders.map((o) => (
-                    <TableRow key={o.id}>
+                  {data.recentOrders.map((orderItem) => (
+                    <TableRow key={orderItem.id}>
                       <TableCell className="font-medium">
                         <Link
-                          href={`/commandes/${o.id}`}
+                          href={`/commandes/${orderItem.id}`}
                           className="hover:underline text-primary"
                         >
-                          #{o.orderNumber}
+                          #{orderItem.orderNumber}
                         </Link>
                       </TableCell>
-                      <TableCell>{o.customer.fullName}</TableCell>
-                      <TableCell>{o.partner.displayName}</TableCell>
+                      <TableCell>{orderItem.customer.fullName}</TableCell>
+                      <TableCell>{orderItem.partner.displayName}</TableCell>
                       <TableCell>
-                        <Badge
-                          variant={
-                            STATUS_BADGE_VARIANT[o.status] ?? "secondary"
-                          }
-                        >
-                          {STATUS_LABELS[o.status] ?? o.status}
-                        </Badge>
+                        <OrderStatusBadge status={orderItem.status as OrderStatus} />
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {o.createdAt.toLocaleDateString("fr-FR", {
+                        {orderItem.createdAt.toLocaleDateString(intlLocale, {
                           day: "2-digit",
                           month: "2-digit",
                           year: "numeric",

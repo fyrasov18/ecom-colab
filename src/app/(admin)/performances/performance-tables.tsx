@@ -1,20 +1,26 @@
+"use client";
+
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { formatPrice } from "@/lib/money";
 import type { PartnerPerfRow, ProductPerfRow } from "@/modules/analytics/compute";
+import { useI18n } from "@/lib/i18n";
 
 export function TopPartnersTable({ partners }: { partners: PartnerPerfRow[] }) {
+  const { dict, locale } = useI18n();
+  const currencySymbol = locale === "ar" ? "د.ت" : locale === "en" ? "TND" : "DT";
+
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Partenaire</TableHead>
-          <TableHead className="text-center">Commandes</TableHead>
-          <TableHead className="text-center">Livrées</TableHead>
-          <TableHead className="text-center">Retours</TableHead>
-          <TableHead className="text-center">Taux succès</TableHead>
-          <TableHead className="text-right">Volume livré</TableHead>
-          <TableHead className="text-right">Gains</TableHead>
+          <TableHead>{dict.orders.partner}</TableHead>
+          <TableHead className="text-center">{dict.orders.title}</TableHead>
+          <TableHead className="text-center">{dict.statuses.order.DELIVERED}</TableHead>
+          <TableHead className="text-center">{dict.statuses.order.RETURNED}</TableHead>
+          <TableHead className="text-center">{dict.partners.successRate}</TableHead>
+          <TableHead className="text-right">{dict.performances.deliveredVolume}</TableHead>
+          <TableHead className="text-right">{locale === "ar" ? "الأرباح" : locale === "en" ? "Earnings" : "Gains"}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -39,10 +45,10 @@ export function TopPartnersTable({ partners }: { partners: PartnerPerfRow[] }) {
               </Badge>
             </TableCell>
             <TableCell className="text-right text-xs font-semibold">
-              {formatPrice(p.turnover)} DT
+              {formatPrice(p.turnover)} {currencySymbol}
             </TableCell>
             <TableCell className="text-right text-xs font-medium text-emerald-600">
-              {formatPrice(p.earnings)} DT
+              {formatPrice(p.earnings)} {currencySymbol}
             </TableCell>
           </TableRow>
         ))}
@@ -52,17 +58,20 @@ export function TopPartnersTable({ partners }: { partners: PartnerPerfRow[] }) {
 }
 
 export function TopProductsTable({ products }: { products: ProductPerfRow[] }) {
+  const { dict, locale } = useI18n();
+  const currencySymbol = locale === "ar" ? "د.ت" : locale === "en" ? "TND" : "DT";
+
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Produit</TableHead>
-          <TableHead className="text-center">Commandes</TableHead>
-          <TableHead className="text-center">Unités livrées</TableHead>
-          <TableHead className="text-center">Retours</TableHead>
-          <TableHead className="text-center">Taux succès</TableHead>
-          <TableHead className="text-right">Chiffre d&apos;affaires</TableHead>
-          <TableHead className="text-right">Gains</TableHead>
+          <TableHead>{dict.products.productName}</TableHead>
+          <TableHead className="text-center">{dict.orders.title}</TableHead>
+          <TableHead className="text-center">{locale === "ar" ? "الوحدات المسلمة" : locale === "en" ? "Delivered units" : "Unités livrées"}</TableHead>
+          <TableHead className="text-center">{dict.statuses.order.RETURNED}</TableHead>
+          <TableHead className="text-center">{dict.partners.successRate}</TableHead>
+          <TableHead className="text-right">{dict.finance.totalRevenue}</TableHead>
+          <TableHead className="text-right">{locale === "ar" ? "الأرباح" : locale === "en" ? "Earnings" : "Gains"}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -82,10 +91,10 @@ export function TopProductsTable({ products }: { products: ProductPerfRow[] }) {
               </Badge>
             </TableCell>
             <TableCell className="text-right text-xs font-semibold">
-              {formatPrice(p.turnover)} DT
+              {formatPrice(p.turnover)} {currencySymbol}
             </TableCell>
             <TableCell className="text-right text-xs font-semibold text-emerald-600">
-              {formatPrice(p.earnings)} DT
+              {formatPrice(p.earnings)} {currencySymbol}
             </TableCell>
           </TableRow>
         ))}

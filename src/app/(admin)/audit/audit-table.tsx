@@ -2,6 +2,7 @@
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { useI18n } from "@/lib/i18n";
 
 export type AuditLogItem = {
   id: string;
@@ -15,26 +16,30 @@ export type AuditLogItem = {
 };
 
 export function AuditTable({ items }: { items: AuditLogItem[] }) {
+  const { dict, locale, formatDate } = useI18n();
+  const t = dict.audit;
+  const c = dict.common;
+
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Date</TableHead>
-          <TableHead>Acteur</TableHead>
-          <TableHead>Action</TableHead>
-          <TableHead>Entité</TableHead>
+          <TableHead>{c.date}</TableHead>
+          <TableHead>{t.actor}</TableHead>
+          <TableHead>{t.action}</TableHead>
+          <TableHead>{t.entity}</TableHead>
           <TableHead>ID</TableHead>
-          <TableHead className="text-right">Détails</TableHead>
+          <TableHead className="text-right">{t.details}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {items.map((log) => {
-          const actorName = log.actor ? `${log.actor.firstName} ${log.actor.lastName}` : "Système";
+          const actorName = log.actor ? `${log.actor.firstName} ${log.actor.lastName}` : (locale === "ar" ? "النظام" : locale === "en" ? "System" : "Système");
           const hasDiff = Boolean(log.before || log.after);
           return (
             <TableRow key={log.id}>
               <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                {new Date(log.createdAt).toLocaleDateString("fr-FR", {
+                {formatDate(log.createdAt, {
                   day: "2-digit",
                   month: "2-digit",
                   year: "numeric",
@@ -58,8 +63,8 @@ export function AuditTable({ items }: { items: AuditLogItem[] }) {
                   <details className="text-left text-xs">
                     <summary className="cursor-pointer text-xs font-medium text-primary hover:underline">Diff</summary>
                     <div className="mt-2 max-w-xs rounded bg-muted/70 p-2 font-mono text-[11px]">
-                      {log.before != null && <div><span className="text-rose-600 font-bold">Avant: </span><pre className="overflow-x-auto whitespace-pre-wrap">{JSON.stringify(log.before, null, 1)}</pre></div>}
-                      {log.after != null && <div><span className="text-emerald-600 font-bold">Après: </span><pre className="overflow-x-auto whitespace-pre-wrap">{JSON.stringify(log.after, null, 1)}</pre></div>}
+                      {log.before != null && <div><span className="text-rose-600 font-bold">{locale === "ar" ? "قبل: " : locale === "en" ? "Before: " : "Avant: "}</span><pre className="overflow-x-auto whitespace-pre-wrap">{JSON.stringify(log.before, null, 1)}</pre></div>}
+                      {log.after != null && <div><span className="text-emerald-600 font-bold">{locale === "ar" ? "بعد: " : locale === "en" ? "After: " : "Après: "}</span><pre className="overflow-x-auto whitespace-pre-wrap">{JSON.stringify(log.after, null, 1)}</pre></div>}
                     </div>
                   </details>
                 ) : "—"}

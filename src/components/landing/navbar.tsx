@@ -6,9 +6,12 @@ import { ArrowRight, Menu, X, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { EcomPartnerLogo } from "@/components/brand/logo";
+import { useI18n } from "@/lib/i18n";
+import { LanguageSelector } from "@/components/i18n/language-selector";
 
 export function LandingNavbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { dict } = useI18n();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-white/[0.08] bg-slate-950/80 backdrop-blur-xl">
@@ -27,30 +30,34 @@ export function LandingNavbar() {
             href="#features"
             className="transition-colors hover:text-white"
           >
-            Fonctionnalités
+            {dict.landing.features}
           </a>
           <a
             href="#demo"
             className="transition-colors hover:text-white"
           >
-            Aperçu
+            {dict.landing.preview}
           </a>
           <a
             href="#pricing"
             className="transition-colors hover:text-white"
           >
-            Tarifs
+            {dict.landing.pricing}
           </a>
           <a
             href="#faq"
             className="transition-colors hover:text-white"
           >
-            FAQ
+            {dict.landing.faq}
           </a>
         </nav>
 
         {/* Desktop actions */}
         <div className="hidden sm:flex items-center gap-3">
+          <LanguageSelector
+            variant="outline"
+            className="border-white/10 text-slate-300"
+          />
           <ThemeToggle className="text-slate-300 hover:text-white hover:bg-white/10 border-white/10" />
           <Button
             asChild
@@ -58,7 +65,7 @@ export function LandingNavbar() {
             size="sm"
             className="text-slate-300 hover:text-white hover:bg-white/05"
           >
-            <Link href="/login">Connexion</Link>
+            <Link href="/login">{dict.landing.login}</Link>
           </Button>
           <Button
             asChild
@@ -71,7 +78,7 @@ export function LandingNavbar() {
           >
             <Link href="/register">
               <Sparkles className="mr-1.5 h-3.5 w-3.5 text-blue-200" />
-              Rejoindre
+              {dict.landing.join}
               <ArrowRight className="ml-1 h-3.5 w-3.5" />
             </Link>
           </Button>
@@ -97,39 +104,39 @@ export function LandingNavbar() {
               onClick={() => setMobileMenuOpen(false)}
               className="rounded-lg px-3 py-2 text-sm hover:bg-white/05 hover:text-white"
             >
-              Fonctionnalités
+              {dict.landing.features}
             </a>
             <a
               href="#demo"
               onClick={() => setMobileMenuOpen(false)}
               className="rounded-lg px-3 py-2 text-sm hover:bg-white/05 hover:text-white"
             >
-              Aperçu en direct
+              {dict.landing.preview}
             </a>
             <a
               href="#pricing"
               onClick={() => setMobileMenuOpen(false)}
               className="rounded-lg px-3 py-2 text-sm hover:bg-white/05 hover:text-white"
             >
-              Tarifs
+              {dict.landing.pricing}
             </a>
             <a
               href="#faq"
               onClick={() => setMobileMenuOpen(false)}
               className="rounded-lg px-3 py-2 text-sm hover:bg-white/05 hover:text-white"
             >
-              FAQ
+              {dict.landing.faq}
             </a>
             <div className="mt-3 flex items-center justify-between pb-2">
-              <span className="text-xs text-slate-400">Mode sombre / clair</span>
+              <LanguageSelector variant="outline" className="border-white/10 text-slate-300" />
               <ThemeToggle className="text-slate-300 hover:text-white hover:bg-white/10 border-white/10" />
             </div>
             <div className="mt-3 flex flex-col gap-2 pt-3 border-t border-white/[0.08]">
               <Button asChild variant="outline" className="w-full border-white/10 text-white bg-white/05">
-                <Link href="/login">Connexion à l&apos;espace</Link>
+                <Link href="/login">{dict.landing.loginSpace}</Link>
               </Button>
               <Button asChild className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium">
-                <Link href="/register">Créer un compte partenaire</Link>
+                <Link href="/register">{dict.landing.createPartnerAccount}</Link>
               </Button>
             </div>
           </nav>

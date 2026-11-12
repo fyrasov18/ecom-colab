@@ -14,18 +14,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { OrderStatusBadge } from "@/components/orders/order-status-badge";
 import { CancelOrderForm } from "./cancel-form";
 import { ConfirmOrderForm } from "./confirm-form";
+import { getServerLocale } from "@/lib/i18n/server";
+import { getDictionary } from "@/lib/i18n/dictionaries";
 
 export const metadata: Metadata = { title: "Suivi de commande" };
-
-function fr(date: Date | null, withTime = true): string {
-  if (!date) return "—";
-  return date.toLocaleDateString("fr-FR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    ...(withTime ? { hour: "2-digit", minute: "2-digit" } : {}),
-  });
-}
 
 export default async function PartnerOrderDetailPage({
   params,
@@ -34,9 +26,25 @@ export default async function PartnerOrderDetailPage({
 }) {
   const { id } = await params;
   const user = await requireSession(["PARTNER"]);
-  // Ownership enforced in the query — null unless this IS their order.
   const order = await getPartnerOrder(user.partnerId!, id);
   if (!order) notFound();
+
+  const locale = await getServerLocale();
+  const dict = getDictionary(locale);
+  const t = dict.orders;
+  const c = dict.common;
+  const currencySymbol = locale === "ar" ? "د.ت" : locale === "en" ? "TND" : "DT";
+  const intlLocale = locale === "ar" ? "ar-TN" : locale === "en" ? "en-US" : "fr-FR";
+
+  const formatDate = (date: Date | null, withTime = true): string => {
+    if (!date) return "—";
+    return date.toLocaleDateString(intlLocale, {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      ...(withTime ? { hour: "2-digit", minute: "2-digit" } : {}),
+    });
+  };
 
   const reached = new Set(order.statusHistory.map((h) => h.newStatus));
   const offPipeline =
@@ -49,20 +57,20 @@ export default async function PartnerOrderDetailPage({
       <div>
         <Button asChild variant="ghost" size="sm" className="-ml-2 mb-2">
           <Link href="/mes-commandes">
-            <ArrowLeft className="h-4 w-4" /> Mes commandes
+            <ArrowLeft className="h-4 w-4" /> {t.partnerOrdersTitle}
           </Link>
         </Button>
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-semibold tracking-tight">
-            Commande #{order.orderNumber}
+            {locale === "ar" ? `طلب #${order.orderNumber}` : locale === "en" ? `Order #${order.orderNumber}` : `Commande #${order.orderNumber}`}
           </h1>
           <OrderStatusBadge status={order.status} />
         </div>
         <p className="text-sm text-muted-foreground">
-          Créée le {fr(order.createdAt)}
+          {locale === "ar" ? "تم الإنشاء في " : locale === "en" ? "Created on " : "Créée le "}{formatDate(order.createdAt)}
           {order.partnerConfirmedAt
-            ? " · Confirmation client enregistrée"
-            : " · En attente de confirmation client"}
+            ? (locale === "ar" ? " · تم تأكيد العميل" : locale === "en" ? " · Customer confirmation recorded" : " · Confirmation client enregistrée")
+            : (locale === "ar" ? " · في انتظار تأكيد العميل" : locale === "en" ? " · Awaiting customer confirmation" : " · En attente de confirmation client")}
         </p>
       </div>
 
@@ -90,7 +98,7 @@ export default async function PartnerOrderDetailPage({
                       ) : (
                         <Circle className="h-3.5 w-3.5" />
                       )}
-                      {ORDER_STEP_LABELS[s]}
+                      {dict.statuses?.order?.[s] ?? ORDER_STEP_LABELS[s]}
                     </span>
                   </li>
                 );
@@ -103,7 +111,7 @@ export default async function PartnerOrderDetailPage({
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Client</CardTitle>
+            <CardTitle className="text-base">{t.customer}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-1 text-sm">
             <p className="font-medium">{order.customer.fullName}</p>
@@ -118,27 +126,27 @@ export default async function PartnerOrderDetailPage({
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Détail</CardTitle>
+            <CardTitle className="text-base">{c.details}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-1 text-sm">
             {order.items.map((i) => (
               <p key={i.id}>
                 {i.productName} × {i.quantity} —{" "}
-                {formatPrice(Number(i.unitPrice) * i.quantity)} DT
+                {formatPrice(Number(i.unitPrice) * i.quantity)} {currencySymbol}
               </p>
             ))}
             <p className="pt-2 text-muted-foreground">
-              Montant total :{" "}
+              {t.totalAmount} :{" "}
               <strong>
-                {formatPrice(Number(order.unitSellingPrice) * order.quantity)} DT
+                {formatPrice(Number(order.unitSellingPrice) * order.quantity)} {currencySymbol}
               </strong>
             </p>
             <p className="font-medium text-primary">
-              Votre gain : {formatPrice(order.partnerEarning)} DT
+              {t.partnerEarning} : {formatPrice(order.partnerEarning)} {currencySymbol}
             </p>
             {order.status === "DELIVERED" && order.settlementDueAt ? (
               <p className="text-xs text-muted-foreground">
-                Disponible le {fr(order.settlementDueAt, false)}
+                {locale === "ar" ? "متاح في " : locale === "en" ? "Available on " : "Disponible le "}{formatDate(order.settlementDueAt, false)}
               </p>
             ) : null}
           </CardContent>
@@ -147,17 +155,17 @@ export default async function PartnerOrderDetailPage({
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Historique</CardTitle>
+          <CardTitle className="text-base">{t.timeline}</CardTitle>
         </CardHeader>
         <CardContent>
           <ul className="space-y-3">
             {order.statusHistory.map((h) => (
               <li key={h.id} className="flex items-start gap-3 text-sm">
                 <Badge variant="outline" className="mt-0.5 shrink-0">
-                  {ORDER_STATUS_LABELS[h.newStatus]}
+                  {dict.statuses?.order?.[h.newStatus] ?? ORDER_STATUS_LABELS[h.newStatus]}
                 </Badge>
                 <div>
-                  <div className="text-muted-foreground">{fr(h.createdAt)}</div>
+                  <div className="text-muted-foreground">{formatDate(h.createdAt)}</div>
                   {h.reason ? <div className="text-xs">{h.reason}</div> : null}
                 </div>
               </li>
@@ -176,4 +184,3 @@ export default async function PartnerOrderDetailPage({
     </div>
   );
 }
-

@@ -23,6 +23,8 @@ import {
 import { CategoryModal, CATEGORY_ICONS } from "./category-modal";
 import { DeleteCategoryDialog } from "./delete-category-dialog";
 import { ToggleCategoryStatusButton } from "./toggle-status-button";
+import { getServerLocale } from "@/lib/i18n/server";
+import { getDictionary } from "@/lib/i18n/dictionaries";
 
 export const metadata: Metadata = { title: "Gestion des catégories" };
 
@@ -37,6 +39,11 @@ export default async function CategoriesAdminPage({
   searchParams: SearchParams;
 }) {
   await requireSession(["SUPER_ADMIN", "ADMIN"]);
+  const locale = await getServerLocale();
+  const dict = getDictionary(locale);
+  const t = dict.products;
+  const c = dict.common;
+
   const params = await searchParams;
   const search = params.search?.trim();
   const status = params.status;
@@ -47,14 +54,26 @@ export default async function CategoriesAdminPage({
   });
 
   const totalCategories = categories.length;
-  const activeCount = categories.filter((c) => c.isActive).length;
+  const activeCount = categories.filter((cat) => cat.isActive).length;
   const inactiveCount = totalCategories - activeCount;
-  const totalProducts = categories.reduce((sum, c) => sum + c._count.products, 0);
+  const totalProducts = categories.reduce((sum, cat) => sum + cat._count.products, 0);
 
-  const availableCategoriesList = categories.map((c) => ({
-    id: c.id,
-    name: c.name,
+  const availableCategoriesList = categories.map((cat) => ({
+    id: cat.id,
+    name: cat.name,
   }));
+
+  const backLabel = locale === "ar" ? "العودة إلى المنتجات" : locale === "en" ? "Back to products" : "Retour aux produits";
+  const totalCatLabel = locale === "ar" ? "إجمالي الفئات" : locale === "en" ? "Total categories" : "Total catégories";
+  const activeCatLabel = locale === "ar" ? "فئات نشطة" : locale === "en" ? "Active categories" : "Catégories actives";
+  const inactiveCatLabel = locale === "ar" ? "فئات غير نشطة" : locale === "en" ? "Inactive categories" : "Catégories inactives";
+  const classifiedProdLabel = locale === "ar" ? "المنتجات المصنفة" : locale === "en" ? "Classified products" : "Produits classés";
+  const searchCatPlaceholder = locale === "ar" ? "البحث عن فئة..." : locale === "en" ? "Search category..." : "Rechercher une catégorie...";
+  const orderLabel = locale === "ar" ? "الترتيب" : locale === "en" ? "Order" : "Ordre";
+  const noCatTitle = locale === "ar" ? "لم يتم العثور على فئات" : locale === "en" ? "No categories found" : "Aucune catégorie trouvée";
+  const noCatDesc = search
+    ? (locale === "ar" ? "لا توجد فئات تطابق بحثك." : locale === "en" ? "No category matches your search." : "Aucune catégorie ne correspond à votre recherche.")
+    : (locale === "ar" ? "أنشئ فئتك الأولى لتنظيم المنتجات." : locale === "en" ? "Create your first category to organize products." : "Créez votre première catégorie pour organiser les produits.");
 
   return (
     <div className="space-y-6">
@@ -66,15 +85,15 @@ export default async function CategoriesAdminPage({
               href="/produits"
               className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
-              <ArrowLeft className="h-3 w-3" /> Retour aux produits
+              <ArrowLeft className="h-3 w-3" /> {backLabel}
             </Link>
           </div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <FolderTree className="h-6 w-6 text-primary" />
-            Gestion des catégories
+            {t.categoriesTitle}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Créez, organisez et structurez les catégories de produits pour guider vos partenaires.
+            {t.categoriesSubtitle}
           </p>
         </div>
 
@@ -86,19 +105,19 @@ export default async function CategoriesAdminPage({
       {/* KPI Stats cards */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         <div className="rounded-xl border bg-card p-4 shadow-xs">
-          <div className="text-xs font-medium text-muted-foreground">Total catégories</div>
+          <div className="text-xs font-medium text-muted-foreground">{totalCatLabel}</div>
           <div className="text-2xl font-bold mt-1">{totalCategories}</div>
         </div>
         <div className="rounded-xl border bg-card p-4 shadow-xs">
-          <div className="text-xs font-medium text-muted-foreground">Catégories actives</div>
+          <div className="text-xs font-medium text-muted-foreground">{activeCatLabel}</div>
           <div className="text-2xl font-bold mt-1 text-emerald-600">{activeCount}</div>
         </div>
         <div className="rounded-xl border bg-card p-4 shadow-xs">
-          <div className="text-xs font-medium text-muted-foreground">Catégories inactives</div>
+          <div className="text-xs font-medium text-muted-foreground">{inactiveCatLabel}</div>
           <div className="text-2xl font-bold mt-1 text-muted-foreground">{inactiveCount}</div>
         </div>
         <div className="rounded-xl border bg-card p-4 shadow-xs">
-          <div className="text-xs font-medium text-muted-foreground">Produits classés</div>
+          <div className="text-xs font-medium text-muted-foreground">{classifiedProdLabel}</div>
           <div className="text-2xl font-bold mt-1 text-primary">{totalProducts}</div>
         </div>
       </div>
@@ -109,7 +128,7 @@ export default async function CategoriesAdminPage({
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             name="search"
-            placeholder="Rechercher une catégorie..."
+            placeholder={searchCatPlaceholder}
             defaultValue={search ?? ""}
             className="pl-9"
           />
@@ -124,7 +143,7 @@ export default async function CategoriesAdminPage({
                 : "border-border hover:bg-muted text-muted-foreground"
             }`}
           >
-            Toutes ({totalCategories})
+            {c.all} ({totalCategories})
           </Link>
           <Link
             href="/produits/categories?status=ACTIVE"
@@ -134,7 +153,7 @@ export default async function CategoriesAdminPage({
                 : "border-border hover:bg-muted text-muted-foreground"
             }`}
           >
-            Actives ({activeCount})
+            {c.active} ({activeCount})
           </Link>
           <Link
             href="/produits/categories?status=INACTIVE"
@@ -144,7 +163,7 @@ export default async function CategoriesAdminPage({
                 : "border-border hover:bg-muted text-muted-foreground"
             }`}
           >
-            Inactives ({inactiveCount})
+            {c.inactive} ({inactiveCount})
           </Link>
         </div>
       </div>
@@ -152,12 +171,8 @@ export default async function CategoriesAdminPage({
       {/* Table */}
       {categories.length === 0 ? (
         <EmptyState
-          title="Aucune catégorie trouvée"
-          description={
-            search
-              ? "Aucune catégorie ne correspond à votre recherche. Essayez d'autres termes."
-              : "Créez votre première catégorie pour organiser les produits."
-          }
+          title={noCatTitle}
+          description={noCatDesc}
           action={<CategoryModal />}
         />
       ) : (
@@ -165,12 +180,12 @@ export default async function CategoriesAdminPage({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-16 text-center">Ordre</TableHead>
-                <TableHead>Catégorie</TableHead>
-                <TableHead>Slug</TableHead>
-                <TableHead className="text-center">Produits</TableHead>
-                <TableHead className="text-center">Statut</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="w-16 text-center">{orderLabel}</TableHead>
+                <TableHead>{t.category}</TableHead>
+                <TableHead>{t.categorySlug}</TableHead>
+                <TableHead className="text-center">{t.productsCount}</TableHead>
+                <TableHead className="text-center">{c.status}</TableHead>
+                <TableHead className="text-right">{c.actions}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -241,7 +256,7 @@ export default async function CategoriesAdminPage({
                           category={category}
                           trigger={
                             <Button variant="ghost" size="sm" className="h-8 px-2 text-xs">
-                              Modifier
+                              {c.edit}
                             </Button>
                           }
                         />

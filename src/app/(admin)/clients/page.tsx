@@ -13,6 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { getServerLocale } from "@/lib/i18n/server";
+import { getDictionary } from "@/lib/i18n/dictionaries";
 
 export const metadata: Metadata = { title: "Clients" };
 export const dynamic = "force-dynamic";
@@ -27,13 +29,22 @@ export default async function ClientsPage({
   const page = Math.max(1, Number(sp.page) || 1);
   const { items, total, totalPages } = await listCustomers({ search: q, page });
 
+  const locale = await getServerLocale();
+  const dict = getDictionary(locale);
+  const t = dict.clients;
+  const o = dict.orders;
+  const c = dict.common;
+  const intlLocale = locale === "ar" ? "ar-TN" : locale === "en" ? "en-US" : "fr-FR";
+
+  const countSuffix = locale === "ar" ? "عميل" : locale === "en" ? "client(s)" : "client(s)";
+  const searchPlaceholder = locale === "ar" ? "الاسم، الهاتف أو المدينة..." : locale === "en" ? "Name, phone or city..." : "Nom, téléphone ou ville…";
+
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Clients</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
         <p className="text-sm text-muted-foreground">
-          {total} client(s) — chaque client appartient au partenaire qui l&apos;a
-          saisi (téléphone = identifiant par partenaire).
+          {total} {countSuffix} — {locale === "ar" ? "كل عميل ينتمي للشريك الذي سجله (الهاتف = معرف فريد لكل شريك)." : locale === "en" ? "each client belongs to the partner who registered them (phone = unique identifier per partner)." : "chaque client appartient au partenaire qui l'a saisi (téléphone = identifiant par partenaire)."}
         </p>
       </div>
 
@@ -44,52 +55,57 @@ export default async function ClientsPage({
             type="search"
             name="q"
             defaultValue={q}
-            placeholder="Nom, téléphone ou ville…"
+            placeholder={searchPlaceholder}
             className="flex h-9 w-full rounded-md border border-input bg-card pl-8 pr-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
         <Button type="submit" variant="outline" size="sm">
-          Rechercher
+          {c.search}
         </Button>
       </form>
 
       {items.length === 0 ? (
         <EmptyState
-          title="Aucun client"
-          description="Les clients sont créés automatiquement lorsqu'un partenaire saisit une commande."
+          title={locale === "ar" ? "لا يوجد عملاء" : locale === "en" ? "No clients" : "Aucun client"}
+          description={locale === "ar" ? "يتم إنشاء العملاء تلقائياً عند تسجيل طلب جديد." : locale === "en" ? "Clients are automatically created when partners place orders." : "Les clients sont créés automatiquement lorsqu'un partenaire saisit une commande."}
         />
       ) : (
         <div className="rounded-xl border bg-card">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nom</TableHead>
-                <TableHead>Téléphone</TableHead>
-                <TableHead>Localisation</TableHead>
-                <TableHead>Partenaire</TableHead>
-                <TableHead>Commandes</TableHead>
-                <TableHead>Dernière MAJ</TableHead>
+                <TableHead>{t.customerName}</TableHead>
+                <TableHead>{t.phone}</TableHead>
+                <TableHead>{locale === "ar" ? "الموقع" : locale === "en" ? "Location" : "Localisation"}</TableHead>
+                <TableHead>{o.partner}</TableHead>
+                <TableHead>{t.totalOrders}</TableHead>
+                <TableHead>{locale === "ar" ? "آخر تحديث" : locale === "en" ? "Last update" : "Dernière MAJ"}</TableHead>
                 <TableHead />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.map((c) => (
-                <TableRow key={c.id}>
-                  <TableCell className="font-medium">{c.fullName}</TableCell>
-                  <TableCell className="text-muted-foreground">{c.phone}</TableCell>
+              {items.map((cust) => (
+                <TableRow key={cust.id}>
+                  <TableCell className="font-medium">{cust.fullName}</TableCell>
+                  <TableCell className="text-muted-foreground">{cust.phone}</TableCell>
                   <TableCell className="text-muted-foreground">
-                    {c.city}, {c.governorate}
+                    {cust.city}, {cust.governorate}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {c.ownerPartner.displayName}
+                    <Link
+                      href={`/partenaires/${cust.ownerPartnerId}`}
+                      className="hover:underline text-primary"
+                    >
+                      {cust.ownerPartner.displayName}
+                    </Link>
                   </TableCell>
-                  <TableCell>{c._count.orders}</TableCell>
+                  <TableCell>{cust._count.orders}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">
-                    {c.updatedAt.toLocaleDateString("fr-FR")}
+                    {cust.updatedAt.toLocaleDateString(intlLocale)}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-right">
                     <Button asChild variant="ghost" size="sm">
-                      <Link href={`/clients/${c.id}`}>Voir</Link>
+                      <Link href={`/clients/${cust.id}`}>{c.view}</Link>
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -103,4 +119,3 @@ export default async function ClientsPage({
     </div>
   );
 }
-

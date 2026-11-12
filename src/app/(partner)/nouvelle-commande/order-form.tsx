@@ -10,15 +10,15 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatPrice } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { d } from "@/lib/money";
+import { useI18n } from "@/lib/i18n";
 import type { CommissionSource } from "@prisma/client";
 import {
   calculateOrderContribution,
   type ContributionCalculationResult,
 } from "@/modules/finance/contribution-engine";
-import { GOVERNORATES, CONFIRMATION_TEXT } from "@/modules/orders/schemas";
+import { GOVERNORATES } from "@/modules/orders/schemas";
 import { submitOrder, type OrderActionState } from "../actions";
 
 type ProductOption = {
@@ -60,6 +60,7 @@ export function OrderForm({
   products: ProductOption[];
   minContribution?: number;
 }) {
+  const { t, formatMoney } = useI18n();
   const router = useRouter();
   const [state, formAction, pending] = useActionState(submitOrder, initialState);
 
@@ -105,11 +106,11 @@ export function OrderForm({
       <div className="space-y-4 lg:col-span-3">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Produit &amp; conditions</CardTitle>
+            <CardTitle className="text-base">{t("orders.productAndConditions")}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="productId">Produit *</Label>
+              <Label htmlFor="productId">{t("orders.productLabel")}</Label>
               <NativeSelect
                 id="productId"
                 name="productId"
@@ -127,7 +128,7 @@ export function OrderForm({
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="quantity">Quantité *</Label>
+              <Label htmlFor="quantity">{t("orders.quantityLabel")}</Label>
               <Input
                 id="quantity"
                 name="quantity"
@@ -140,17 +141,17 @@ export function OrderForm({
               />
               {product && quantity > product.stockQuantity && (
                 <p className="text-xs text-destructive">
-                  Stock disponible : {product.stockQuantity}
+                  {t("orders.stockAvailable", { stock: product.stockQuantity })}
                 </p>
               )}
             </div>
             <div className="space-y-2">
-              <Label>Prix catalogue (DT)</Label>
+              <Label>{t("orders.catalogPrice")}</Label>
               <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted/40 px-3 py-1 text-sm font-semibold shadow-sm">
-                {formatPrice(product?.sellingPrice ?? 0)} DT
+                {formatMoney(product?.sellingPrice ?? 0)}
               </div>
               <p className="text-xs text-muted-foreground">
-                Prix de vente fixe du catalogue officiel.
+                {t("orders.fixedCatalogPriceNotice")}
               </p>
             </div>
           </CardContent>
@@ -158,22 +159,22 @@ export function OrderForm({
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Client</CardTitle>
+            <CardTitle className="text-base">{t("orders.customerInfo")}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="customerFullName">Nom complet *</Label>
+              <Label htmlFor="customerFullName">{t("orders.fullName")}</Label>
               <Input id="customerFullName" name="customerFullName" required maxLength={160} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">Téléphone (8 chiffres) *</Label>
+              <Label htmlFor="phone">{t("orders.phoneLabel")}</Label>
               <Input id="phone" name="phone" required placeholder="22333444" maxLength={20} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="governorate">Gouvernorat *</Label>
+              <Label htmlFor="governorate">{t("orders.governorate")}</Label>
               <NativeSelect id="governorate" name="governorate" defaultValue="">
                 <option value="" disabled>
-                  Choisir…
+                  {t("orders.chooseGovernorate")}
                 </option>
                 {GOVERNORATES.map((g) => (
                   <option key={g} value={g}>
@@ -183,15 +184,15 @@ export function OrderForm({
               </NativeSelect>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="city">Ville *</Label>
+              <Label htmlFor="city">{t("orders.city")}</Label>
               <Input id="city" name="city" required maxLength={80} />
             </div>
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="address">Adresse complète *</Label>
+              <Label htmlFor="address">{t("orders.fullAddress")}</Label>
               <Input id="address" name="address" required maxLength={400} />
             </div>
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="notes">Notes (optionnel)</Label>
+              <Label htmlFor="notes">{t("orders.notes")}</Label>
               <textarea
                 id="notes"
                 name="notes"
@@ -209,55 +210,55 @@ export function OrderForm({
         <Card className="sticky top-20">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
-              <ShieldCheck className="h-4 w-4 text-primary" /> Récapitulatif
+              <ShieldCheck className="h-4 w-4 text-primary" /> {t("orders.recap")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <Row label="Produit" value={product?.name ?? "—"} />
-            <Row label="Quantité" value={String(quantity)} />
+            <Row label={t("orders.productLabel").replace(" *", "")} value={product?.name ?? "—"} />
+            <Row label={t("orders.quantityLabel").replace(" *", "")} value={String(quantity)} />
             <Row
-              label="Prix de vente"
-              value={`${formatPrice(product?.sellingPrice ?? 0)} DT × ${quantity}`}
+              label={t("orders.catalogPrice")}
+              value={`${formatMoney(product?.sellingPrice ?? 0)} × ${quantity}`}
             />
             <div className="my-2 border-t" />
             {calculation && (
               <>
-                <Row label="Chiffre d'affaires" value={`${formatPrice(calculation.revenue)} DT`} />
-                <Row label="Coût produit" value={`− ${formatPrice(calculation.productCost)} DT`} />
+                <Row label={t("orders.revenue")} value={formatMoney(calculation.revenue)} />
+                <Row label={t("orders.productCost")} value={`− ${formatMoney(calculation.productCost)}`} />
                 <Row
-                  label="Emballage"
-                  value={`− ${formatPrice(calculation.packagingCostTotal)} DT`}
+                  label={t("orders.packagingCost")}
+                  value={`− ${formatMoney(calculation.packagingCostTotal)}`}
                 />
                 <Row
-                  label="Livraison"
-                  value={`− ${formatPrice(calculation.deliveryCostTotal)} DT`}
+                  label={t("orders.deliveryCost")}
+                  value={`− ${formatMoney(calculation.deliveryCostTotal)}`}
                 />
                 <Row
-                  label="Contribution"
-                  value={`${formatPrice(calculation.contribution)} DT`}
+                  label={t("orders.contribution")}
+                  value={formatMoney(calculation.contribution)}
                   bold
                 />
                 <Row
-                  label="Seuil minimum requis"
-                  value={`> ${formatPrice(calculation.minContributionThreshold)} DT`}
+                  label={t("orders.minThresholdRequired")}
+                  value={`> ${formatMoney(calculation.minContributionThreshold)}`}
                 />
                 <div className="my-2 border-t" />
                 {calculation.isEligible ? (
                   <>
                     <Row
-                      label="Votre gain estimé"
-                      value={`${formatPrice(calculation.partnerEarning)} DT`}
+                      label={t("orders.partnerEarning")}
+                      value={formatMoney(calculation.partnerEarning)}
                       bold
                       highlight
                     />
                     <Row
-                      label="Part plateforme"
-                      value={`${formatPrice(calculation.platformShare)} DT`}
+                      label={t("orders.platformShare")}
+                      value={formatMoney(calculation.platformShare)}
                     />
                     <p className="text-xs text-muted-foreground">
                       {product?.commissionType === "PERCENTAGE"
-                        ? `${product.commissionValue} % de la contribution`
-                        : `Forfait ${product?.commissionValue} DT`}{" "}
+                        ? `${product.commissionValue} %`
+                        : `Forfait ${formatMoney(product?.commissionValue ?? 0)}`}{" "}
                       ({getSourceLabel(product?.commissionSource ?? "", product?.performanceLevelName)})
                     </p>
                   </>
@@ -265,12 +266,13 @@ export function OrderForm({
                   <div className="rounded-md border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive">
                     <div className="flex items-center gap-1.5 font-medium">
                       <AlertCircle className="h-4 w-4 shrink-0" />
-                      <span>Contribution insuffisante</span>
+                      <span>{t("orders.insufficientContributionTitle")}</span>
                     </div>
                     <p className="mt-1 leading-relaxed">
-                      La contribution ({formatPrice(calculation.contribution)} DT) doit être
-                      strictement supérieure au seuil minimal de {formatPrice(minContribution)} DT
-                      pour que la commande soit validée.
+                      {t("orders.insufficientContributionDesc", {
+                        contribution: formatMoney(calculation.contribution),
+                        threshold: formatMoney(minContribution),
+                      })}
                     </p>
                   </div>
                 )}
@@ -283,10 +285,10 @@ export function OrderForm({
                 checked={confirmed}
                 onCheckedChange={(v) => setConfirmed(v === true)}
                 className="mt-0.5"
-                aria-label={CONFIRMATION_TEXT}
+                aria-label={t("orders.confirmationCheckbox")}
               />
               <span className="text-xs leading-relaxed">
-                <strong>{CONFIRMATION_TEXT}</strong>
+                <strong>{t("orders.confirmationCheckbox")}</strong>
               </span>
             </label>
             <input type="hidden" name="confirmed" value={confirmed ? "on" : ""} />
@@ -301,11 +303,10 @@ export function OrderForm({
               disabled={pending || !confirmed || !calculation || !calculation.isEligible}
             >
               {pending && <Loader2 className="h-4 w-4 animate-spin" />}
-              Confirmer et enregistrer la commande
+              {t("orders.confirmSubmitButton")}
             </Button>
             <p className="text-center text-[11px] text-muted-foreground">
-              Statut initial : <strong>Confirmée</strong> — puis gérée par les
-              opérations.
+              {t("orders.initialStatusNotice")}
             </p>
           </CardContent>
         </Card>

@@ -3,8 +3,11 @@
 import Link from "next/link";
 import { ArrowUp, Heart, Shield, Lock } from "lucide-react";
 import { EcomPartnerLogo } from "@/components/brand/logo";
+import { useI18n } from "@/lib/i18n";
 
 export function LandingFooter() {
+  const { dict } = useI18n();
+
   function scrollToTop() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -30,34 +33,34 @@ export function LandingFooter() {
             </Link>
 
             <p className="text-xs text-slate-400 leading-relaxed max-w-sm">
-              Votre système d&apos;exploitation e-commerce complet en Tunisie. Nous réunissons les marques et les meilleurs partenaires pour générer une croissance rentable et pérenne.
+              {dict.landing.footerDesc}
             </p>
           </div>
 
           {/* Nav links columns */}
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-wider text-white">
-              Espace Partenaire
+              {dict.landing.partnerSpace}
             </h4>
             <ul className="mt-4 space-y-2.5 text-xs">
               <li>
                 <Link href="/register" className="hover:text-white transition-colors">
-                  Créer un compte
+                  {dict.landing.createMyAccount}
                 </Link>
               </li>
               <li>
                 <Link href="/login" className="hover:text-white transition-colors">
-                  Connexion à l&apos;espace
+                  {dict.landing.loginSpace}
                 </Link>
               </li>
               <li>
                 <a href="#features" className="hover:text-white transition-colors">
-                  Catalogue &amp; Produits
+                  {dict.products.title}
                 </a>
               </li>
               <li>
                 <a href="#pricing" className="hover:text-white transition-colors">
-                  Grille des commissions
+                  {dict.nav.revenue}
                 </a>
               </li>
             </ul>
@@ -65,22 +68,22 @@ export function LandingFooter() {
 
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-wider text-white">
-              Fournisseurs
+              {dict.landing.suppliers}
             </h4>
             <ul className="mt-4 space-y-2.5 text-xs">
               <li>
                 <a href="#features" className="hover:text-white transition-colors">
-                  Catalogue &amp; Produits
+                  {dict.products.title}
                 </a>
               </li>
               <li>
                 <a href="#pricing" className="hover:text-white transition-colors">
-                  Modèle de collaboration
+                  {dict.landing.pricingBadge}
                 </a>
               </li>
               <li>
                 <a href="#cta" className="hover:text-white transition-colors">
-                  Rejoindre la plateforme
+                  {dict.landing.joinPlatform}
                 </a>
               </li>
             </ul>
@@ -88,16 +91,16 @@ export function LandingFooter() {
 
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-wider text-white">
-              Sécurité &amp; Légal
+              {dict.landing.securityLegal}
             </h4>
             <ul className="mt-4 space-y-2.5 text-xs">
               <li className="flex items-center gap-1.5">
                 <Shield className="h-3.5 w-3.5 text-slate-400" />
-                <span>Protection des données</span>
+                <span>{dict.landing.dataProtection}</span>
               </li>
               <li className="flex items-center gap-1.5">
                 <Lock className="h-3.5 w-3.5 text-slate-400" />
-                <span>Transactions chiffrées</span>
+                <span>{dict.landing.encryptedTransactions}</span>
               </li>
             </ul>
           </div>
@@ -106,17 +109,16 @@ export function LandingFooter() {
         {/* Bottom Bar */}
         <div className="mt-12 pt-8 border-t border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <p className="flex items-center gap-1">
-            &copy; {new Date().getFullYear()} EcomPartner. Together, We Grow. Fait avec{" "}
-            <Heart className="h-3 w-3 text-red-400 inline fill-red-400" /> pour le commerce tunisien.
+            &copy; {new Date().getFullYear()} EcomPartner. Together, We Grow. {dict.landing.allRightsReserved}
           </p>
 
           <div className="flex items-center gap-4">
             <button
               type="button"
               onClick={scrollToTop}
-              className="inline-flex items-center gap-1 text-slate-400 hover:text-white transition-colors"
+              className="inline-flex items-center gap-1 text-slate-400 hover:text-white transition-colors cursor-pointer"
             >
-              Haut de page <ArrowUp className="h-3.5 w-3.5" />
+              {dict.landing.backToTop} <ArrowUp className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>

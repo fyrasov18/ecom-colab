@@ -6,6 +6,7 @@ import { Award, ArrowUpRight, Loader2, Sparkles, X, AlertCircle } from "lucide-r
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { useI18n } from "@/lib/i18n";
 import {
   confirmPromotionAction,
   rejectPromotionAction,
@@ -35,6 +36,7 @@ export type PromotionCandidate = {
 };
 
 function PromotionRow({ candidate }: { candidate: PromotionCandidate }) {
+  const { dict, locale } = useI18n();
   const [isRejecting, setIsRejecting] = useState(false);
   const [reason, setReason] = useState("");
   const [state, action, pending] = useActionState(confirmPromotionAction, initialState);
@@ -68,19 +70,19 @@ function PromotionRow({ candidate }: { candidate: PromotionCandidate }) {
 
         <td className="p-3">
           <Badge variant="outline" className="font-mono text-xs">
-            Niveau {candidate.currentLevel} ({candidate.currentRate})
+            {dict.announcements.levelNumber.replace("{level}", String(candidate.currentLevel))} ({candidate.currentRate})
           </Badge>
         </td>
 
         <td className="p-3 font-mono">
           <span className="font-bold text-foreground">{candidate.qualifiedCount}</span>
-          <span className="text-muted-foreground"> / {candidate.threshold} qualifiés</span>
+          <span className="text-muted-foreground"> / {candidate.threshold} {locale === "ar" ? "مؤهل" : locale === "en" ? "qualified" : "qualifiés"}</span>
         </td>
 
         <td className="p-3">
           <Badge variant="success" className="gap-1 font-mono text-xs">
             <ArrowUpRight className="h-3 w-3" />
-            Niveau {candidate.targetLevel} ({candidate.targetRate})
+            {dict.announcements.levelNumber.replace("{level}", String(candidate.targetLevel))} ({candidate.targetRate})
           </Badge>
         </td>
 
@@ -102,7 +104,7 @@ function PromotionRow({ candidate }: { candidate: PromotionCandidate }) {
                   ) : (
                     <Sparkles className="h-3 w-3" />
                   )}
-                  Confirmer
+                  {dict.common.confirm}
                 </Button>
               </form>
               <Button
@@ -113,7 +115,7 @@ function PromotionRow({ candidate }: { candidate: PromotionCandidate }) {
                 onClick={() => setIsRejecting(true)}
                 className="gap-1 text-xs text-destructive hover:bg-destructive/10 border-destructive/20"
               >
-                Rejeter
+                {dict.finance.rejectWithdrawal}
               </Button>
             </div>
           ) : (
@@ -121,13 +123,13 @@ function PromotionRow({ candidate }: { candidate: PromotionCandidate }) {
               <input type="hidden" name="partnerId" value={candidate.partnerId} />
               <div className="flex items-center gap-1.5 text-xs text-destructive font-medium">
                 <AlertCircle className="h-3.5 w-3.5" />
-                <span>Motif du refus obligatoire :</span>
+                <span>{dict.finance.rejectionReason} :</span>
               </div>
               <Input
                 name="reason"
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                placeholder="Ex : Commandes non conformes, vérification en cours..."
+                placeholder={dict.finance.rejectionReason}
                 className="h-8 text-xs bg-background"
                 required
               />
@@ -140,7 +142,7 @@ function PromotionRow({ candidate }: { candidate: PromotionCandidate }) {
                   className="gap-1 text-xs h-7 px-2"
                 >
                   {rejectPending && <Loader2 className="h-3 w-3 animate-spin" />}
-                  Confirmer le rejet
+                  {dict.finance.rejectWithdrawal}
                 </Button>
                 <Button
                   type="button"
@@ -154,7 +156,7 @@ function PromotionRow({ candidate }: { candidate: PromotionCandidate }) {
                   className="text-xs h-7 px-2 gap-1"
                 >
                   <X className="h-3 w-3" />
-                  Annuler
+                  {dict.common.cancel}
                 </Button>
               </div>
             </form>
@@ -166,13 +168,17 @@ function PromotionRow({ candidate }: { candidate: PromotionCandidate }) {
 }
 
 export function PromotionQueueTable({ candidates }: { candidates: PromotionCandidate[] }) {
+  const { dict, locale } = useI18n();
+
   if (candidates.length === 0) {
     return (
       <div className="rounded-xl border border-dashed p-8 text-center text-muted-foreground">
         <Award className="mx-auto h-8 w-8 text-muted-foreground/60 mb-2" />
-        <p className="text-sm font-medium">Aucun partenaire en attente de promotion</p>
+        <p className="text-sm font-medium">
+          {locale === "ar" ? "لا يوجد شركاء بانتظار الترقية" : locale === "en" ? "No partners pending promotion" : "Aucun partenaire en attente de promotion"}
+        </p>
         <p className="text-xs text-muted-foreground mt-1">
-          Tous les partenaires ayant atteint les seuils de parrainage (10, 100, 300 ou 900 qualifiés) sont à jour.
+          {locale === "ar" ? "جميع الشركاء الذين حققوا عتبات الإحالة محدثون بالكامل." : locale === "en" ? "All partners who reached referral thresholds are up to date." : "Tous les partenaires ayant atteint les seuils de parrainage sont à jour."}
         </p>
       </div>
     );
@@ -183,11 +189,11 @@ export function PromotionQueueTable({ candidates }: { candidates: PromotionCandi
       <table className="w-full text-left">
         <thead className="bg-muted/50 border-b text-xs font-semibold text-muted-foreground">
           <tr>
-            <th className="p-3">Partenaire</th>
-            <th className="p-3">Niveau actuel</th>
-            <th className="p-3">Filleuls qualifiés</th>
-            <th className="p-3">Niveau éligible</th>
-            <th className="p-3">Action d&apos;attribution</th>
+            <th className="p-3">{dict.nav.partnerList}</th>
+            <th className="p-3">{dict.announcements.oldLevel}</th>
+            <th className="p-3">{dict.partnerPortal.referrals.activeReferrals}</th>
+            <th className="p-3">{dict.announcements.newLevelStatus}</th>
+            <th className="p-3">{dict.common.actions}</th>
           </tr>
         </thead>
         <tbody className="divide-y">

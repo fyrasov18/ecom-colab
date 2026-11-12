@@ -23,6 +23,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { getServerLocale } from "@/lib/i18n/server";
+import { getDictionary } from "@/lib/i18n/dictionaries";
 
 export const metadata: Metadata = { title: "Mes commandes" };
 
@@ -40,21 +42,32 @@ export default async function MyOrdersPage({
       : undefined;
   const page = Math.max(1, Number(sp.page) || 1);
 
+  const locale = await getServerLocale();
+  const dict = getDictionary(locale);
+  const t = dict.orders;
+  const c = dict.common;
+  const currencySymbol = locale === "ar" ? "د.ت" : locale === "en" ? "TND" : "DT";
+  const intlLocale = locale === "ar" ? "ar-TN" : locale === "en" ? "en-US" : "fr-FR";
+
   const { items, total, totalPages } = await listPartnerOrders(
     user.partnerId!,
     { status, page },
   );
 
+  const countSuffix = locale === "ar" ? "طلب" : locale === "en" ? "order(s)" : "commande(s)";
+  const trackLabel = locale === "ar" ? "متابعة" : locale === "en" ? "Track" : "Suivre";
+  const viewAllOrdersLabel = locale === "ar" ? "عرض جميع طلباتي" : locale === "en" ? "View all my orders" : "Voir toutes mes commandes";
+
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Mes commandes"
-        description={`${total} commande(s)`}
+        title={t.partnerOrdersTitle}
+        description={`${total} ${countSuffix}`}
         action={
           <Button asChild size="sm">
             <Link href="/nouvelle-commande">
               <PlusCircle className="h-4 w-4 mr-1.5" aria-hidden="true" />
-              Nouvelle commande
+              {t.newOrderTitle}
             </Link>
           </Button>
         }
@@ -65,29 +78,29 @@ export default async function MyOrdersPage({
         className="flex flex-wrap items-center gap-3"
         method="GET"
         role="search"
-        aria-label="Filtrer mes commandes"
+        aria-label={t.partnerOrdersTitle}
       >
         <NativeSelect
           name="status"
           defaultValue={status ?? ""}
           className="w-52"
-          aria-label="Filtrer par statut"
+          aria-label={t.filterStatus}
         >
-          <option value="">Tous les statuts</option>
+          <option value="">{t.allStatuses}</option>
           {ORDER_FILTER_STATUSES.map((s) => (
             <option key={s} value={s}>
-              {ORDER_STATUS_LABELS[s]}
+              {dict.statuses.order[s] ?? ORDER_STATUS_LABELS[s]}
             </option>
           ))}
         </NativeSelect>
         <Button type="submit" variant="outline" size="sm">
-          Filtrer
+          {c.filter}
         </Button>
         {status && (
           <Button asChild variant="ghost" size="sm">
             <Link href="/mes-commandes">
               <X className="h-4 w-4 mr-1" aria-hidden="true" />
-              Réinitialiser
+              {locale === "ar" ? "إعادة ضبط" : locale === "en" ? "Reset" : "Réinitialiser"}
             </Link>
           </Button>
         )}
@@ -95,23 +108,23 @@ export default async function MyOrdersPage({
 
       {items.length === 0 ? (
         <EmptyState
-          title="Aucune commande"
+          title={locale === "ar" ? "لا توجد طلبات" : locale === "en" ? "No orders" : "Aucune commande"}
           description={
             status
-              ? "Aucune commande avec ce statut."
-              : "Créez votre première commande après l'avoir confirmée avec votre client."
+              ? (locale === "ar" ? "لا توجد طلبات بهذه الحالة." : locale === "en" ? "No orders with this status." : "Aucune commande avec ce statut.")
+              : (locale === "ar" ? "أنشئ طلبك الأول بعد تأكيده هاتفياً مع عميلك." : locale === "en" ? "Create your first order after confirming with your customer." : "Créez votre première commande après l'avoir confirmée avec votre client.")
           }
           action={
             !status ? (
               <Button asChild size="sm">
                 <Link href="/nouvelle-commande">
                   <PlusCircle className="h-4 w-4 mr-1.5" aria-hidden="true" />
-                  Créer une commande
+                  {t.newOrderTitle}
                 </Link>
               </Button>
             ) : (
               <Button asChild variant="outline" size="sm">
-                <Link href="/mes-commandes">Voir toutes mes commandes</Link>
+                <Link href="/mes-commandes">{viewAllOrdersLabel}</Link>
               </Button>
             )
           }
@@ -121,13 +134,13 @@ export default async function MyOrdersPage({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>N°</TableHead>
-                <TableHead>Client</TableHead>
-                <TableHead className="hidden md:table-cell">Produit</TableHead>
-                <TableHead>Montant</TableHead>
-                <TableHead className="hidden sm:table-cell">Votre gain</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead className="hidden lg:table-cell">Créée le</TableHead>
+                <TableHead>{t.orderNumber}</TableHead>
+                <TableHead>{t.customer}</TableHead>
+                <TableHead className="hidden md:table-cell">{dict.products.productName}</TableHead>
+                <TableHead>{t.totalAmount}</TableHead>
+                <TableHead className="hidden sm:table-cell">{t.partnerEarning}</TableHead>
+                <TableHead>{c.status}</TableHead>
+                <TableHead className="hidden lg:table-cell">{t.orderDate}</TableHead>
                 <TableHead className="w-[80px]" />
               </TableRow>
             </TableHeader>
@@ -146,16 +159,16 @@ export default async function MyOrdersPage({
                     {o.quantity > 1 ? ` ×${o.quantity}` : ""}
                   </TableCell>
                   <TableCell>
-                    {formatPrice(Number(o.unitSellingPrice) * o.quantity)} DT
+                    {formatPrice(Number(o.unitSellingPrice) * o.quantity)} {currencySymbol}
                   </TableCell>
                   <TableCell className="hidden font-medium text-primary sm:table-cell">
-                    {formatPrice(o.partnerEarning)} DT
+                    {formatPrice(o.partnerEarning)} {currencySymbol}
                   </TableCell>
                   <TableCell>
                     <OrderStatusBadge status={o.status} />
                   </TableCell>
                   <TableCell className="hidden text-muted-foreground lg:table-cell">
-                    {o.createdAt.toLocaleDateString("fr-FR", {
+                    {o.createdAt.toLocaleDateString(intlLocale, {
                       day: "2-digit",
                       month: "2-digit",
                       year: "2-digit",
@@ -165,9 +178,9 @@ export default async function MyOrdersPage({
                     <Link
                       href={`/mes-commandes/${o.id}`}
                       className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-sm font-medium hover:bg-accent transition-colors"
-                      aria-label={`Suivre la commande #${o.orderNumber}`}
+                      aria-label={`${trackLabel} #${o.orderNumber}`}
                     >
-                      Suivre{" "}
+                      {trackLabel}{" "}
                       <ChevronRight
                         className="h-3.5 w-3.5"
                         aria-hidden="true"

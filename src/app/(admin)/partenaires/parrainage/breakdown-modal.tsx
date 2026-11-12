@@ -1,13 +1,13 @@
 "use client";
 
 import type { Prisma } from "@prisma/client";
-
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { Calculator, X, CheckCircle2, AlertTriangle, Info } from "lucide-react";
+import { Calculator, X, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatMoney } from "@/lib/money";
+import { useI18n } from "@/lib/i18n";
 
 export interface CalculationBreakdownProps {
   commissionId: string;
@@ -30,10 +30,11 @@ export function CalculationBreakdownModal({
   calculationDetails,
   referrerName,
   referredName,
-  triggerLabel = "Détail du calcul",
+  triggerLabel,
   triggerVariant = "outline",
   triggerSize = "sm",
 }: CalculationBreakdownProps) {
+  const { dict, locale } = useI18n();
   const [open, setOpen] = useState(false);
 
   const details =
@@ -74,7 +75,7 @@ export function CalculationBreakdownModal({
       <Dialog.Trigger asChild>
         <Button variant={triggerVariant} size={triggerSize} className="gap-1.5 text-xs">
           <Calculator className="h-3.5 w-3.5" aria-hidden="true" />
-          {triggerLabel}
+          {triggerLabel ?? (locale === "ar" ? "تفاصيل الحساب" : locale === "en" ? "Calculation Breakdown" : "Détail du calcul")}
         </Button>
       </Dialog.Trigger>
       <Dialog.Portal>
@@ -87,20 +88,20 @@ export function CalculationBreakdownModal({
             <div>
               <Dialog.Title className="text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
                 <Calculator className="h-5 w-5 text-primary" aria-hidden="true" />
-                Décomposition financière ($R, E, P, A, B, C$)
+                {locale === "ar" ? "التفكيك المالي ($R, E, P, A, B, C$)" : locale === "en" ? "Financial Breakdown ($R, E, P, A, B, C$)" : "Décomposition financière ($R, E, P, A, B, C$)"}
               </Dialog.Title>
               <Dialog.Description
                 id="calculation-modal-description"
                 className="mt-1 text-xs text-muted-foreground"
               >
-                Transparence du calcul de profit sharing et commission de parrainage.
+                {locale === "ar" ? "شفافية احتساب تقاسم الأرباح وعمولة الإحالة." : locale === "en" ? "Full transparency on profit sharing and referral commission formula." : "Transparence du calcul de profit sharing et commission de parrainage."}
               </Dialog.Description>
             </div>
             <Dialog.Close asChild>
               <button
                 type="button"
                 className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-                aria-label="Fermer"
+                aria-label={dict.common.close}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -111,24 +112,24 @@ export function CalculationBreakdownModal({
             {/* Context meta */}
             <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted/50 p-3 text-xs">
               <div>
-                <span className="text-muted-foreground">Commission ID:</span>
+                <span className="text-muted-foreground">ID:</span>
                 <p className="font-mono font-medium truncate">{commissionId}</p>
               </div>
               {orderId && (
                 <div>
-                  <span className="text-muted-foreground">Commande liée:</span>
+                  <span className="text-muted-foreground">{dict.orders.title}:</span>
                   <p className="font-mono font-medium truncate">{orderId}</p>
                 </div>
               )}
               {referrerName && (
                 <div>
-                  <span className="text-muted-foreground">Parrain:</span>
+                  <span className="text-muted-foreground">{dict.nav.referrals}:</span>
                   <p className="font-medium truncate">{referrerName}</p>
                 </div>
               )}
               {referredName && (
                 <div>
-                  <span className="text-muted-foreground">Filleul:</span>
+                  <span className="text-muted-foreground">{dict.partnerPortal.referrals.activeReferrals}:</span>
                   <p className="font-medium truncate">{referredName}</p>
                 </div>
               )}
@@ -138,19 +139,16 @@ export function CalculationBreakdownModal({
             <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-foreground space-y-1">
               <div className="flex items-center gap-1.5 font-semibold text-primary">
                 <Info className="h-3.5 w-3.5" />
-                <span>Règle comptable : $P = R - E \implies A = 70\% \times P, B = 30\% \times P, C = B \times r$</span>
+                <span>$P = R - E \implies A = 70\% \times P, B = 30\% \times P, C = B \times r$</span>
               </div>
-              <p className="text-muted-foreground">
-                La commission est prélevée uniquement sur le pool restant $B$ (30%), jamais sur le bénéfice brut avant la part admin.
-              </p>
             </div>
 
             {/* Variables breakdown Table */}
             <div className="divide-y rounded-lg border bg-card text-xs">
               <div className="flex items-center justify-between p-2.5">
                 <div>
-                  <span className="font-semibold text-foreground">Revenu encaissé ($R$)</span>
-                  <p className="text-muted-foreground">Chiffre d&apos;affaires collecté / réglé</p>
+                  <span className="font-semibold text-foreground">{locale === "ar" ? "الإيرادات المحصلة ($R$)" : locale === "en" ? "Turnover ($R$)" : "Revenu encaissé ($R$)"}</span>
+                  <p className="text-muted-foreground">{locale === "ar" ? "رقم المعاملات المحصل" : locale === "en" ? "Collected revenue" : "Chiffre d'affaires collecté / réglé"}</p>
                 </div>
                 <span className="font-mono font-semibold text-foreground">
                   {revenue !== null ? formatMoney(revenue, { currency }) : "N/A"}
@@ -159,8 +157,8 @@ export function CalculationBreakdownModal({
 
               <div className="flex items-center justify-between p-2.5">
                 <div>
-                  <span className="font-semibold text-foreground">Dépenses imputables ($E$)</span>
-                  <p className="text-muted-foreground">Coûts et dépenses d&apos;exploitation approuvés</p>
+                  <span className="font-semibold text-foreground">{locale === "ar" ? "المصاريف المباشرة ($E$)" : locale === "en" ? "Expenses ($E$)" : "Dépenses imputables ($E$)"}</span>
+                  <p className="text-muted-foreground">{locale === "ar" ? "تكاليف التشغيل المباشرة" : locale === "en" ? "Direct operational costs" : "Coûts et dépenses d'exploitation"}</p>
                 </div>
                 <span className="font-mono font-semibold text-danger-600">
                   {expenses !== null ? `-${formatMoney(expenses, { currency })}` : "N/A"}
@@ -169,8 +167,8 @@ export function CalculationBreakdownModal({
 
               <div className="flex items-center justify-between bg-muted/30 p-2.5">
                 <div>
-                  <span className="font-bold text-foreground">Bénéfice net ($P = R - E$)</span>
-                  <p className="text-muted-foreground">Bénéfice avant répartition</p>
+                  <span className="font-bold text-foreground">{locale === "ar" ? "صافي الربح ($P = R - E$)" : locale === "en" ? "Net Profit ($P = R - E$)" : "Bénéfice net ($P = R - E$)"}</span>
+                  <p className="text-muted-foreground">{locale === "ar" ? "الربح قبل التوزيع" : locale === "en" ? "Profit before allocation" : "Bénéfice avant répartition"}</p>
                 </div>
                 <div className="text-right">
                   <span className="font-mono font-bold text-foreground">
@@ -178,7 +176,7 @@ export function CalculationBreakdownModal({
                   </span>
                   {!isProfitable && (
                     <Badge variant="destructive" className="ml-2 text-[10px]">
-                      Déficit (P ≤ 0)
+                      {locale === "ar" ? "عجز (P ≤ 0)" : locale === "en" ? "Deficit (P ≤ 0)" : "Déficit (P ≤ 0)"}
                     </Badge>
                   )}
                 </div>
@@ -186,8 +184,8 @@ export function CalculationBreakdownModal({
 
               <div className="flex items-center justify-between p-2.5">
                 <div>
-                  <span className="font-semibold text-foreground">Part Admin ($A = 70\% \times P$)</span>
-                  <p className="text-muted-foreground">Part revenant à la plateforme (70%)</p>
+                  <span className="font-semibold text-foreground">{locale === "ar" ? "حصة المنصة ($A = 70\\% \\times P$)" : locale === "en" ? "Platform Share ($A = 70\\% \\times P$)" : "Part Admin ($A = 70\\% \\times P$)"}</span>
+                  <p className="text-muted-foreground">{locale === "ar" ? "حصة تسيير المنصة (70%)" : locale === "en" ? "Platform share (70%)" : "Part revenant à la plateforme (70%)"}</p>
                 </div>
                 <span className="font-mono font-semibold text-foreground">
                   {adminShare !== null ? formatMoney(adminShare, { currency }) : "N/A"}
@@ -196,8 +194,8 @@ export function CalculationBreakdownModal({
 
               <div className="flex items-center justify-between bg-primary/5 p-2.5">
                 <div>
-                  <span className="font-semibold text-primary">Pool restant ($B = 30\% \times P$)</span>
-                  <p className="text-muted-foreground">Assiette de calcul de commission (30%)</p>
+                  <span className="font-semibold text-primary">{locale === "ar" ? "وعاء العمولة ($B = 30\\% \\times P$)" : locale === "en" ? "Remaining Pool ($B = 30\\% \\times P$)" : "Pool restant ($B = 30\\% \\times P$)"}</span>
+                  <p className="text-muted-foreground">{locale === "ar" ? "وعاء حساب العمولة (30%)" : locale === "en" ? "Commission pool (30%)" : "Assiette de calcul de commission (30%)"}</p>
                 </div>
                 <span className="font-mono font-bold text-primary">
                   {remainingPool !== null ? formatMoney(remainingPool, { currency }) : "N/A"}
@@ -206,9 +204,9 @@ export function CalculationBreakdownModal({
 
               <div className="flex items-center justify-between p-2.5">
                 <div>
-                  <span className="font-semibold text-foreground">Taux de parrainage ($r$)</span>
+                  <span className="font-semibold text-foreground">{locale === "ar" ? "نسبة الإحالة ($r$)" : locale === "en" ? "Referral Rate ($r$)" : "Taux de parrainage ($r$)"}</span>
                   <p className="text-muted-foreground">
-                    {referrerLevel ? `Niveau ${referrerLevel}` : "Taux selon le niveau du parrain"}
+                    {referrerLevel ? `${dict.announcements.levelNumber.replace("{level}", String(referrerLevel))}` : "Taux de palier"}
                   </p>
                 </div>
                 <Badge variant="secondary" className="font-mono font-bold">
@@ -219,9 +217,9 @@ export function CalculationBreakdownModal({
               <div className="flex items-center justify-between bg-success-50/60 p-3">
                 <div>
                   <span className="font-bold text-success-800">
-                    Commission calculée ($C = B \times r$)
+                    {locale === "ar" ? "العمولة المحسوبة ($C = B \\times r$)" : locale === "en" ? "Calculated Commission ($C = B \\times r$)" : "Commission calculée ($C = B \\times r$)"}
                   </span>
-                  <p className="text-success-700">Montant net attribué au parrain</p>
+                  <p className="text-success-700">{locale === "ar" ? "المبلغ الصافي للراعي" : locale === "en" ? "Net amount credited to referrer" : "Montant net attribué au parrain"}</p>
                 </div>
                 <span className="font-mono text-base font-extrabold text-success-700">
                   {formatMoney(referralCommission, { currency })}
@@ -231,7 +229,7 @@ export function CalculationBreakdownModal({
               {balanceAfterCommission !== null && (
                 <div className="flex items-center justify-between p-2.5 text-muted-foreground">
                   <div>
-                    <span>Solde pool après commission ($B - C$)</span>
+                    <span>{locale === "ar" ? "رصيد الوعاء بعد العمولة ($B - C$)" : locale === "en" ? "Remaining pool balance ($B - C$)" : "Solde pool après commission ($B - C$)"}</span>
                   </div>
                   <span className="font-mono">
                     {formatMoney(balanceAfterCommission, { currency })}
@@ -244,7 +242,7 @@ export function CalculationBreakdownModal({
           <div className="mt-5 flex justify-end">
             <Dialog.Close asChild>
               <Button type="button" variant="outline" size="sm">
-                Fermer
+                {dict.common.close}
               </Button>
             </Dialog.Close>
           </div>

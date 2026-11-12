@@ -39,10 +39,10 @@ export function RegisterHeroVisual() {
       {/* Visual Component: Partner Onboarding & Program Steps */}
       <div className="relative rounded-2xl border border-white/10 bg-slate-900/60 p-5 backdrop-blur-xl shadow-2xl glow-border-brand">
         <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4 text-xs text-slate-400">
-          <span className="font-semibold text-white">Processus d&apos;adhésion partenaire</span>
+          <span className="font-semibold text-white">{t.hero.onboardingProcess}</span>
           <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-400 border border-amber-500/20">
             <Clock className="h-3 w-3" />
-            Vérification requise
+            {t.hero.verificationRequired}
           </span>
         </div>
 
@@ -53,8 +53,8 @@ export function RegisterHeroVisual() {
               <UserCheck className="h-4 w-4" />
             </div>
             <div>
-              <p className="font-semibold text-white">1. Formulaire d&apos;inscription</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Saisie des informations de contact et d&apos;expérience</p>
+              <p className="font-semibold text-white">{t.hero.step1Title}</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">{t.hero.step1Desc}</p>
             </div>
           </div>
 
@@ -63,8 +63,8 @@ export function RegisterHeroVisual() {
               <Clock className="h-4 w-4" />
             </div>
             <div>
-              <p className="font-semibold text-white">2. Validation par l&apos;administrateur</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Activation manuelle après vérification du profil</p>
+              <p className="font-semibold text-white">{t.hero.step2Title}</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">{t.hero.step2Desc}</p>
             </div>
           </div>
 
@@ -73,8 +73,8 @@ export function RegisterHeroVisual() {
               <PackageCheck className="h-4 w-4" />
             </div>
             <div>
-              <p className="font-semibold text-white">3. Accès au catalogue &amp; parrainage</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Vente de produits et suivi des commissions associées</p>
+              <p className="font-semibold text-white">{t.hero.step3Title}</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">{t.hero.step3Desc}</p>
             </div>
           </div>
         </div>

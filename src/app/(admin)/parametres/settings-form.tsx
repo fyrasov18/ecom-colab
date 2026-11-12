@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
+import { useI18n } from "@/lib/i18n";
 import { Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,7 @@ export function FinanceSettingsForm({
   settings: SettingDTO[];
   canEdit: boolean;
 }) {
+  const { dict, locale } = useI18n();
   const getValue = (key: string) =>
     settings.find((s) => s.key === key)?.value;
 
@@ -48,15 +50,15 @@ export function FinanceSettingsForm({
     <form action={formAction}>
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Finance</CardTitle>
+          <CardTitle className="text-base">{dict.finance.title}</CardTitle>
           <CardDescription>
-            Période de settlement, retraits, contribution minimale par commande et règles de partage.
+            {dict.finance.subtitle}
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-2">
             <Label htmlFor="settlementPeriodHours">
-              Période de settlement (heures)
+              {locale === "ar" ? "مدة التسوية (ساعات)" : locale === "en" ? "Settlement Period (hours)" : "Période de settlement (heures)"}
             </Label>
             <Input
               id="settlementPeriodHours"
@@ -68,14 +70,13 @@ export function FinanceSettingsForm({
               disabled={!canEdit}
             />
             <p className="text-xs text-muted-foreground">
-              Appliquée à la livraison. Les commandes déjà livrées ne sont pas
-              affectées.
+              {locale === "ar" ? "تطبق عند التسليم. لا تتأثر الطلبيات المسلمة مسبقاً." : locale === "en" ? "Applied upon delivery. Delivered orders remain unaffected." : "Appliquée à la livraison. Les commandes déjà livrées ne sont pas affectées."}
             </p>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="minWithdrawalAmount">
-              Retrait minimum (DT)
+              {locale === "ar" ? "الحد الأدنى للسحب (د.ت)" : locale === "en" ? "Minimum Withdrawal (TND)" : "Retrait minimum (DT)"}
             </Label>
             <Input
               id="minWithdrawalAmount"
@@ -87,13 +88,13 @@ export function FinanceSettingsForm({
               disabled={!canEdit}
             />
             <p className="text-xs text-muted-foreground">
-              En dessous de ce montant, aucun retrait ne peut être demandé.
+              {locale === "ar" ? "لا يمكن طلب سحب لمبلغ أقل من هذا الحد." : locale === "en" ? "Withdrawal requests below this amount are not permitted." : "En dessous de ce montant, aucun retrait ne peut être demandé."}
             </p>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="minOrderContribution">
-              Contribution minimale (DT)
+              {locale === "ar" ? "المساهمة الدنيا للطلب (د.ت)" : locale === "en" ? "Minimum Order Contribution (TND)" : "Contribution minimale (DT)"}
             </Label>
             <Input
               id="minOrderContribution"
@@ -105,12 +106,12 @@ export function FinanceSettingsForm({
               disabled={!canEdit}
             />
             <p className="text-xs text-muted-foreground">
-              Seuil brut minimum requis pour autoriser la création de commande (défaut : 7.00 DT).
+              {locale === "ar" ? "الحد الأدنى الإجمالي للموافقة على تسجيل طلبية." : locale === "en" ? "Minimum gross threshold required to place an order." : "Seuil brut minimum requis pour autoriser la création de commande."}
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="returnCostRule">Règle de coût retour/refus</Label>
+            <Label htmlFor="returnCostRule">{locale === "ar" ? "قاعدة تكلفة الإرجاع / الرفض" : locale === "en" ? "Return / Refusal Cost Rule" : "Règle de coût retour/refus"}</Label>
             <NativeSelect
               id="returnCostRule"
               name="returnCostRule"
@@ -121,21 +122,21 @@ export function FinanceSettingsForm({
               disabled={!canEdit}
             >
               <option value="REVERSE_PENDING_EARNING">
-                Réverser le gain en attente (défaut, livraison à la plateforme)
+                {locale === "ar" ? "إلغاء الربح المعلق (تتحمل المنصة الشحن)" : locale === "en" ? "Reverse pending earning (platform covers delivery)" : "Réverser le gain en attente (défaut, livraison à la plateforme)"}
               </option>
               <option value="REVERSE_PLUS_DELIVERY">
-                Réverser le gain + facturer la livraison au partenaire
+                {locale === "ar" ? "إلغاء الربح + احتساب الشحن على الشريك" : locale === "en" ? "Reverse earning + charge delivery to partner" : "Réverser le gain + facturer la livraison au partenaire"}
               </option>
-              <option value="NO_COST">Aucun coût partenaire</option>
+              <option value="NO_COST">{locale === "ar" ? "لا توجد تكلفة على الشريك" : locale === "en" ? "No cost to partner" : "Aucun coût partenaire"}</option>
             </NativeSelect>
             <p className="text-xs text-muted-foreground">
-              Appliquée lors des retours et refus.
+              {locale === "ar" ? "تطبق عند رفض أو إرجاع الشحنة." : locale === "en" ? "Applied during parcel returns and refusals." : "Appliquée lors des retours et refus."}
             </p>
           </div>
 
           <div className="space-y-2 sm:col-span-2 lg:col-span-4">
             <Label htmlFor="globalCommissionType">
-              Commission globale par défaut
+              {locale === "ar" ? "العمولة العامة الافتراضية" : locale === "en" ? "Default Global Commission" : "Commission globale par défaut"}
             </Label>
             <div className="grid gap-3 sm:grid-cols-3">
               <NativeSelect
@@ -150,8 +151,8 @@ export function FinanceSettingsForm({
                 )}
                 disabled={!canEdit}
               >
-                <option value="PERCENTAGE">Pourcentage (%)</option>
-                <option value="FIXED">Montant fixe (DT)</option>
+                <option value="PERCENTAGE">{dict.partners.percentage}</option>
+                <option value="FIXED">{dict.partners.fixed}</option>
               </NativeSelect>
               <Input
                 id="globalCommissionValue"
@@ -170,24 +171,24 @@ export function FinanceSettingsForm({
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              Niveau 4 de la hiérarchie : appliquée uniquement si ni assignation produit, ni admin partenaire, ni niveau de performance n&apos;est défini (défaut : 30%).
+              {locale === "ar" ? "المستوى الرابع في التسلسل: تطبق في حال عدم وجود تعيين مباشر." : locale === "en" ? "Hierarchy Level 4: Applied only when no direct assignment or tier is set." : "Niveau 4 de la hiérarchie : appliquée uniquement si ni assignation produit, ni admin partenaire n'est défini."}
             </p>
           </div>
 
           <div className="space-y-2 sm:col-span-2 lg:col-span-4">
             <Label htmlFor="reason">
-              Motif de la modification <span className="text-destructive">*</span>
+              {locale === "ar" ? "سبب التعديل" : locale === "en" ? "Reason for modification" : "Motif de la modification"} <span className="text-destructive">*</span>
             </Label>
             <Input
               id="reason"
               name="reason"
-              placeholder="Ex : Révision trimestrielle des seuils financiers (min 5 caractères)"
+              placeholder={locale === "ar" ? "مثال: مراجعة دورية للحدود المالية" : locale === "en" ? "e.g. Quarterly financial limits review" : "Ex : Révision trimestrielle des seuils financiers"}
               minLength={5}
               required={canEdit}
               disabled={!canEdit}
             />
             <p className="text-xs text-muted-foreground">
-              Obligatoire pour toute modification — enregistré de manière immuable dans le journal d&apos;audit.
+              {locale === "ar" ? "إلزامي لكل تعديل — يسجل بشكل غير قابل للتعديل في سجل التدقيق." : locale === "en" ? "Mandatory for any update — permanently saved in audit logs." : "Obligatoire pour toute modification — enregistré de manière immuable dans le journal d'audit."}
             </p>
           </div>
 
@@ -198,11 +199,11 @@ export function FinanceSettingsForm({
               ) : (
                 <Save className="h-4 w-4" />
               )}
-              Enregistrer les paramètres
+              {dict.common.save}
             </Button>
             {!canEdit && (
               <p className="mt-2 text-xs text-muted-foreground">
-                Modification réservée aux utilisateurs disposant de la permission MANAGE_CONTRIBUTION_SETTINGS.
+                {locale === "ar" ? "التعديل متاح فقط للمشرفين المصرح لهم." : locale === "en" ? "Modification restricted to authorized administrators." : "Modification réservée aux utilisateurs habilités."}
               </p>
             )}
           </div>
