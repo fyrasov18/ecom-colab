@@ -51,3 +51,59 @@ export function dayBucket(date: Date, now: Date): string {
     year: date.getFullYear() === now.getFullYear() ? undefined : "numeric",
   });
 }
+
+/** Formats a timestamp into relative time e.g. "À l'instant", "Il y a 5 min", "5m ago", "منذ 5 د". */
+export function formatRelativeTime(
+  dateOrIso: Date | string,
+  now: Date = new Date(),
+  locale: "fr" | "en" | "ar" = "fr",
+): string {
+  const date = typeof dateOrIso === "string" ? new Date(dateOrIso) : dateOrIso;
+  const diffMs = Math.max(0, now.getTime() - date.getTime());
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHours = Math.floor(diffMin / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffSec < 60) {
+    if (locale === "ar") return "الآن";
+    if (locale === "en") return "Just now";
+    return "À l'instant";
+  }
+
+  if (diffMin < 60) {
+    if (locale === "ar") return `منذ ${diffMin} د`;
+    if (locale === "en") return `${diffMin}m ago`;
+    return `Il y a ${diffMin} min`;
+  }
+
+  if (diffHours < 24) {
+    if (locale === "ar") return `منذ ${diffHours} س`;
+    if (locale === "en") return `${diffHours}h ago`;
+    return `Il y a ${diffHours} h`;
+  }
+
+  if (diffDays < 7) {
+    if (locale === "ar") return `منذ ${diffDays} ي`;
+    if (locale === "en") return `${diffDays}d ago`;
+    return `Il y a ${diffDays} j`;
+  }
+
+  const intlLocale = locale === "ar" ? "ar-TN" : locale === "en" ? "en-US" : "fr-FR";
+  return date.toLocaleDateString(intlLocale, {
+    day: "numeric",
+    month: "short",
+  });
+}
+
+/** Detects if a notification is referral or partner approval related for dedicated icons/branding. */
+export function isReferralOrPartnerNotification(n: { type: string; title: string; body?: string }): boolean {
+  const text = `${n.title} ${n.body ?? ""}`.toLowerCase();
+  return (
+    text.includes("parrain") ||
+    text.includes("referral") ||
+    text.includes("إحالة") ||
+    text.includes("partenaire") ||
+    text.includes("شريك")
+  );
+}

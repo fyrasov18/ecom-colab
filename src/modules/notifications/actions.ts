@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireSession } from "@/lib/rbac";
 import {
+  listNotifications,
   markAllAsRead,
   markAsRead,
   NotificationError,
@@ -62,4 +63,48 @@ export async function markEveryNotificationRead(
   } catch {
     return { ok: false, error: "Mise à jour impossible." };
   }
+}
+
+/** Direct programmatic mark-as-read for interactive UI elements. */
+export async function markNotificationReadDirect(notificationId: string): Promise<{ ok: boolean; error?: string }> {
+  const user = await requireSession(["SUPER_ADMIN", "ADMIN", "PARTNER"]);
+  try {
+    await markAsRead(user.id, notificationId);
+    revalidateInbox();
+    return { ok: true };
+  } catch (e) {
+    if (e instanceof NotificationError) return { ok: false, error: e.message };
+    return { ok: false, error: "Impossible de marquer la notification comme lue." };
+  }
+}
+
+/** Direct programmatic mark-all-as-read for notification dropdown and full inbox. */
+export async function markAllNotificationsReadDirect(): Promise<{ ok: boolean; count: number }> {
+  const user = await requireSession(["SUPER_ADMIN", "ADMIN", "PARTNER"]);
+  try {
+    const count = await markAllAsRead(user.id);
+    revalidateInbox();
+    return { ok: true, count };
+  } catch {
+    return { ok: false, count: 0 };
+  }
+}
+
+/** Returns the most recent notifications for the interactive Notification Center dropdown. */
+export async function fetchRecentNotificationsAction(limit: number = 8) {
+  const user = await requireSession(["SUPER_ADMIN", "ADMIN", "PARTNER"]);
+  const data = await listNotifications(user.id, { page: 1, pageSize: limit });
+  return {
+    items: data.items.map((n) => ({
+      id: n.id,
+      type: n.type,
+      title: n.title,
+      body: n.body,
+      link: n.link,
+      readAt: n.readAt ? n.readAt.toISOString() : null,
+      createdAt: n.createdAt.toISOString(),
+    })),
+    unread: data.unread,
+    total: data.total,
+  };
 }

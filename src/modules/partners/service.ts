@@ -1,7 +1,7 @@
 import { Prisma, PartnerStatus, SocialPlatform } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/modules/audit/service";
-import { notify } from "@/modules/notifications/service";
+import { notify, notifyPartnerApproved } from "@/modules/notifications/service";
 import { assignProductSchema, socialAccountSchema } from "./schemas";
 
 const PAGE_SIZE = 20;
@@ -103,6 +103,22 @@ export async function setPartnerStatus(
       before: { status: before.status },
       after: { status: partner.status },
     });
+
+    // When approving a partner (PENDING -> ACTIVE), notify the partner and their referring partner
+    if (before.status === "PENDING" && status === "ACTIVE") {
+      const attribution = await tx.referralAttribution.findUnique({
+        where: { referredPartnerId: partnerId },
+        include: { referrerPartner: { select: { userId: true } } },
+      });
+      const referrerUserId = attribution?.referrerPartner?.userId ?? null;
+      await notifyPartnerApproved(tx, {
+        partnerId: partner.id,
+        partnerUserId: partner.userId,
+        partnerName: partner.displayName,
+        referrerUserId,
+      });
+    }
+
     return partner;
   });
 }

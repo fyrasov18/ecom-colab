@@ -714,6 +714,11 @@ export const fr = {
     allMarkedSuccess: "Toutes les notifications ont été marquées comme lues.",
     today: "Aujourd'hui",
     yesterday: "Hier",
+    viewAll: "Voir tout l'historique",
+    unreadBadge: "non lue(s)",
+    noNotifications: "Aucune notification pour le moment",
+    noNotificationsDesc: "Vous serez averti dès qu'un nouvel événement survient.",
+    justNow: "À l'instant",
     types: {
       announcement: "Annonce",
       orderStatus: "Commande",
@@ -722,6 +727,7 @@ export const fr = {
       withdrawal: "Retrait",
       stock: "Stock",
       system: "Système",
+      referral: "Parrainage",
     },
   },
   welcomeModal: {

@@ -716,6 +716,11 @@ export const ar: TranslationDictionary = {
     allMarkedSuccess: "تم تحديد جميع الإشعارات كمقروءة.",
     today: "اليوم",
     yesterday: "أمس",
+    viewAll: "عرض كل الإشعارات",
+    unreadBadge: "غير مقروءة",
+    noNotifications: "لا توجد أي إشعارات حالياً",
+    noNotificationsDesc: "ستتلقى تنبيهات فور حدوث أي نشاط جديد.",
+    justNow: "الآن",
     types: {
       announcement: "إعلان",
       orderStatus: "طلب",
@@ -724,6 +729,7 @@ export const ar: TranslationDictionary = {
       withdrawal: "سحب",
       stock: "مخزون",
       system: "نظام",
+      referral: "إحالة",
     },
   },
   welcomeModal: {

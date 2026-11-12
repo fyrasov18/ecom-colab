@@ -716,6 +716,11 @@ export const en: TranslationDictionary = {
     allMarkedSuccess: "All notifications marked as read.",
     today: "Today",
     yesterday: "Yesterday",
+    viewAll: "View all notifications",
+    unreadBadge: "unread",
+    noNotifications: "No notifications right now",
+    noNotificationsDesc: "You will be alerted whenever new activity occurs.",
+    justNow: "Just now",
     types: {
       announcement: "Announcement",
       orderStatus: "Order",
@@ -724,6 +729,7 @@ export const en: TranslationDictionary = {
       withdrawal: "Withdrawal",
       stock: "Stock",
       system: "System",
+      referral: "Referral",
     },
   },
   welcomeModal: {

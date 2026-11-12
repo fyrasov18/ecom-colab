@@ -41,6 +41,7 @@ import { GlobalSearch } from "./global-search";
 import { LogoutButton } from "./logout-button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { LanguageSelector } from "@/components/i18n/language-selector";
+import { NotificationCenterDropdown } from "@/components/notifications/notification-center-dropdown";
 import { DynamicBrandLogo } from "@/components/brand/dynamic-brand-logo";
 import type { ResolvedBranding } from "@/modules/branding/defaults";
 import { PageTransition } from "@/components/ui/page-transition";
@@ -411,20 +412,10 @@ export function AppShell({
             <TodayChip />
             <ThemeToggle />
             <LanguageSelector />
-            <Link
-              href={notificationsHref}
-              className="relative rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-              aria-label={
-                unreadCount > 0 ? `Notifications (${badge} non lues)` : "Notifications"
-              }
-            >
-              <Bell className="h-4 w-4" aria-hidden="true" />
-              {unreadCount > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-none text-primary-foreground">
-                  {badge}
-                </span>
-              )}
-            </Link>
+            <NotificationCenterDropdown
+              initialUnreadCount={unreadCount}
+              notificationsHref={notificationsHref}
+            />
             <Link
               href={scope === "admin" ? "/parametres/compte" : "/mon-compte"}
               className={cn(

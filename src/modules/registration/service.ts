@@ -7,6 +7,10 @@ import {
   validateReferralCode,
   validateReferralEligibility,
 } from "@/modules/referrals/service";
+import {
+  notifyReferralRegistration,
+  notifyAdminsPendingPartner,
+} from "@/modules/notifications/service";
 
 export type RegistrationResult =
   | { ok: true; email: string }
@@ -154,7 +158,19 @@ export async function registerPartner(raw: unknown): Promise<RegistrationResult>
             status: "PENDING_QUALIFICATION",
           },
         });
+
+        // Notify the referring partner about the new registration via their referral link
+        await notifyReferralRegistration(tx, {
+          referrerUserId: partnerReferrer.userId,
+          newPartnerName: partner.displayName,
+        });
       }
+
+      // Notify authorized administrators that a new partner is awaiting approval
+      await notifyAdminsPendingPartner(tx, {
+        partnerId: partner.id,
+        partnerName: partner.displayName,
+      });
 
       await tx.wallet.create({ data: { partnerId: partner.id } });
 
