@@ -19,6 +19,7 @@ import {
   type LightboxImage,
   type LightboxProduct,
 } from "./product-image-lightbox";
+import { AnimatedProductGallery } from "./animated-product-gallery";
 
 export type PartnerProductItem = {
   id: string;
@@ -123,78 +124,39 @@ export function PartnerProductCard({ product }: PartnerProductCardProps) {
     <>
       <Card className="group h-full flex flex-col justify-between transition-all duration-300 hover:shadow-lg hover:border-primary/40 rounded-2xl overflow-hidden border bg-card">
         <div>
-          {/* ── 1. Image Container — Full image display with contain & neutral background ── */}
-          <div className="relative h-60 sm:h-64 w-full bg-slate-50/80 dark:bg-neutral-900/50 border-b border-border/60 overflow-hidden flex items-center justify-center p-3 sm:p-4 select-none">
-            {coverUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={coverUrl}
-                alt={product.name}
-                className="max-h-full max-w-full h-auto w-auto object-contain drop-shadow-sm transition-transform duration-300 ease-out group-hover:scale-105"
-                loading="lazy"
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center gap-1.5 text-xs text-muted-foreground p-4">
-                <ImageIcon className="h-8 w-8 stroke-[1.25] text-muted-foreground/50" />
-                <span>
-                  {locale === "ar" ? "لا توجد صورة" : locale === "en" ? "No image" : "Aucune image"}
-                </span>
-              </div>
-            )}
-
-            {/* Quick Preview Hover Trigger */}
-            {lightboxImages.length > 0 && (
-              <button
-                type="button"
-                onClick={(e) => openLightbox(e, 0)}
-                className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer"
-                title={t.quickPreview}
-                aria-label={t.quickPreview}
-              >
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-background/95 dark:bg-neutral-900/95 text-foreground px-3.5 py-1.5 text-xs font-semibold shadow-md border border-border/80 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-200">
-                  <ZoomIn className="h-3.5 w-3.5 text-primary" />
-                  <span>{t.quickPreview}</span>
-                </span>
-              </button>
-            )}
-
-            {/* Top Left: Badges Overlay */}
-            <div className="absolute left-2.5 top-2.5 flex flex-wrap gap-1.5 max-w-[85%] z-10 pointer-events-none">
-              {product.status === "OUT_OF_STOCK" && (
-                <Badge variant="warning" className="shadow-xs text-[11px] font-semibold">
-                  {t.outOfStock}
-                </Badge>
-              )}
-              {product.isWinning && (
-                <span className="inline-flex items-center gap-1 rounded-md bg-amber-500 text-white font-semibold px-2 py-0.5 text-[11px] shadow-xs">
-                  ⭐ {locale === "ar" ? "منتج رابح" : locale === "en" ? "Winner" : "Produit gagnant"}
-                </span>
-              )}
-              {product.isRecommended && (
-                <span className="inline-flex items-center gap-1 rounded-md bg-rose-500 text-white font-semibold px-2 py-0.5 text-[11px] shadow-xs">
-                  🔥 {t.recommended}
-                </span>
-              )}
-              {product.isNew && (
-                <span className="inline-flex items-center gap-1 rounded-md bg-sky-500 text-white font-semibold px-2 py-0.5 text-[11px] shadow-xs">
-                  🆕 {dict.products.isNew}
-                </span>
-              )}
-            </div>
-
-            {/* Top Right: Multiple Images Indicator Button */}
-            {hasMultipleImages && (
-              <button
-                type="button"
-                onClick={(e) => openLightbox(e, 0)}
-                className="absolute right-2.5 top-2.5 z-10 inline-flex items-center gap-1 rounded-full bg-background/90 dark:bg-neutral-900/90 text-foreground px-2 py-0.5 text-[11px] font-medium shadow-xs border border-border/60 hover:bg-background transition-colors"
-                title={`${lightboxImages.length} photos disponibles`}
-              >
-                <Eye className="h-3 w-3 text-muted-foreground" />
-                <span>{lightboxImages.length}</span>
-              </button>
-            )}
-          </div>
+          {/* ── 1. Animated Image Gallery — Smooth transitions, dots, arrows & swipe ── */}
+          <AnimatedProductGallery
+            images={lightboxImages}
+            productName={product.name}
+            onOpenLightbox={(index) => {
+              setSelectedImageIndex(index);
+              setLightboxOpen(true);
+            }}
+            badges={
+              <>
+                {product.status === "OUT_OF_STOCK" && (
+                  <Badge variant="warning" className="shadow-xs text-[11px] font-semibold">
+                    {t.outOfStock}
+                  </Badge>
+                )}
+                {product.isWinning && (
+                  <span className="inline-flex items-center gap-1 rounded-md bg-amber-500 text-white font-semibold px-2 py-0.5 text-[11px] shadow-xs">
+                    ⭐ {locale === "ar" ? "منتج رابح" : locale === "en" ? "Winner" : "Produit gagnant"}
+                  </span>
+                )}
+                {product.isRecommended && (
+                  <span className="inline-flex items-center gap-1 rounded-md bg-rose-500 text-white font-semibold px-2 py-0.5 text-[11px] shadow-xs">
+                    🔥 {t.recommended}
+                  </span>
+                )}
+                {product.isNew && (
+                  <span className="inline-flex items-center gap-1 rounded-md bg-sky-500 text-white font-semibold px-2 py-0.5 text-[11px] shadow-xs">
+                    🆕 {dict.products.isNew}
+                  </span>
+                )}
+              </>
+            }
+          />
 
           {/* ── 2. Card Content ── */}
           <CardContent className="space-y-2.5 p-4 sm:p-5">
