@@ -366,6 +366,8 @@ describe("Milestone 5: Admin & Partner Dashboards UI & Actions", () => {
         vi.spyOn(prisma.referralCommission, "updateMany").mockResolvedValue({
           count: 1,
         });
+        vi.spyOn(prisma.financialTransaction, "findUnique").mockResolvedValue(null);
+        vi.spyOn(prisma.financialTransaction, "findMany").mockResolvedValue([]);
         vi.spyOn(prisma.financialTransaction, "create").mockResolvedValue({} as unknown as FinancialTransaction);
         vi.spyOn(prisma.financialTransaction, "aggregate").mockResolvedValue({
           _sum: { amount: new Decimal("60.000") },

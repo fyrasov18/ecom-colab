@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
 import {
@@ -26,14 +26,42 @@ type Props = {
   partnerId: string;
 };
 
+/**
+ * Module-level Set that persists across page navigations within the same
+ * browser session. Tracks IDs of popups that were already dismissed or
+ * displayed so that re-renders caused by layout server components running
+ * again on each navigation do not cause the same popup to reappear.
+ */
+const _dismissedPopupIds = new Set<string>();
+
 export function FullscreenPopupModal({ initialPopup, partnerId: _partnerId }: Props) {
   const router = useRouter();
   const { dict } = useI18n();
   const t = dict.announcements;
-  const [popup, setPopup] = useState<PartnerPopupPayload | null>(initialPopup);
+
+  // If the incoming popup has already been dismissed this session, suppress it.
+  const resolvedInitial =
+    initialPopup && _dismissedPopupIds.has(initialPopup.id) ? null : initialPopup;
+
+  const [popup, setPopup] = useState<PartnerPopupPayload | null>(resolvedInitial);
+
+  // Sync with server when layout re-renders supply a NEW popup (different id).
+  const prevInitialId = useRef<string | null>(resolvedInitial?.id ?? null);
+  useEffect(() => {
+    if (!initialPopup) return;
+    // Already dismissed this session — do not show.
+    if (_dismissedPopupIds.has(initialPopup.id)) return;
+    // New popup (different from what we last tracked) — show it.
+    if (initialPopup.id !== prevInitialId.current) {
+      prevInitialId.current = initialPopup.id;
+      setPopup(initialPopup);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPopup?.id]);
   const [closing, setClosing] = useState(false);
   const [imageError, setImageError] = useState(false);
 
+  // Track display for analytics (once per popup id).
   useEffect(() => {
     if (popup?.id) {
       void trackPopupDisplayedAction(popup.id);
@@ -43,6 +71,9 @@ export function FullscreenPopupModal({ initialPopup, partnerId: _partnerId }: Pr
   if (!popup) return null;
 
   const handleClose = async () => {
+    if (!popup) return;
+    // Immediately register as dismissed so navigation re-renders don't re-show it.
+    _dismissedPopupIds.add(popup.id);
     setClosing(true);
     await dismissPartnerPopupAction(popup.id, false);
     setTimeout(() => {
@@ -52,6 +83,9 @@ export function FullscreenPopupModal({ initialPopup, partnerId: _partnerId }: Pr
   };
 
   const handleAction = async () => {
+    if (!popup) return;
+    // Immediately register as dismissed so navigation re-renders don't re-show it.
+    _dismissedPopupIds.add(popup.id);
     setClosing(true);
     await dismissPartnerPopupAction(popup.id, true);
     setTimeout(() => {
@@ -89,10 +123,26 @@ export function FullscreenPopupModal({ initialPopup, partnerId: _partnerId }: Pr
   }
 
   // Level Up Metadata
-  const oldLevel = Number(popup.metadata?.previousLevel ?? 1);
-  const newLevel = Number(popup.metadata?.newLevel ?? 2);
-  const rateNumber = Number(popup.metadata?.newRate ?? 0.07);
+  const oldLevelRaw = popup.metadata?.previousLevel ?? 1;
+  const newLevelRaw = popup.metadata?.newLevel ?? 2;
+  const isOldNumeric = typeof oldLevelRaw === "number" || /^\d+$/.test(String(oldLevelRaw));
+  const isNewNumeric = typeof newLevelRaw === "number" || /^\d+$/.test(String(newLevelRaw));
+
+  const oldLevelDisplay = isOldNumeric
+    ? t.levelNumber.replace("{level}", String(oldLevelRaw))
+    : String(oldLevelRaw);
+  const newLevelDisplay = isNewNumeric
+    ? t.levelNumber.replace("{level}", String(newLevelRaw))
+    : String(newLevelRaw);
+
+  const rateNumber = Number(
+    popup.metadata?.newRate ?? popup.metadata?.sharePercentage ?? 0.07,
+  );
   const ratePercent = Math.round(rateNumber <= 1 ? rateNumber * 100 : rateNumber);
+  const benefits = (popup.metadata?.benefits as string) || null;
+  const upgradeDate = popup.metadata?.upgradeDate
+    ? new Date(popup.metadata.upgradeDate as string).toLocaleDateString()
+    : null;
 
   return (
     <div
@@ -135,7 +185,7 @@ export function FullscreenPopupModal({ initialPopup, partnerId: _partnerId }: Pr
         <div className="flex flex-col items-center text-center">
           {isLevelUp ? (
             <div className="relative mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-linear-to-tr from-amber-500/20 via-yellow-500/30 to-amber-400/20 ring-8 ring-amber-500/10">
-              <PartyPopper className="h-10 w-10 text-amber-500 animate-bounce" />
+              <PartyPopper className="h-10 w-10 text-amber-500 motion-safe:animate-bounce" />
               <div className="absolute -top-1 -right-1 rounded-full bg-amber-500 p-1 text-white shadow-xs">
                 <Sparkles className="h-4 w-4" />
               </div>
@@ -173,24 +223,39 @@ export function FullscreenPopupModal({ initialPopup, partnerId: _partnerId }: Pr
                 <div className="text-center">
                   <div className="text-xs text-muted-foreground">{t.oldLevel}</div>
                   <div className="mt-1 text-lg font-bold text-muted-foreground line-through">
-                    {t.levelNumber.replace("{level}", String(oldLevel))}
+                    {oldLevelDisplay}
                   </div>
                 </div>
                 <div className="text-amber-500 font-bold text-xl">➔</div>
                 <div className="text-center">
                   <div className="text-xs text-amber-600 dark:text-amber-400 font-semibold">{t.newLevelStatus}</div>
                   <div className="mt-1 text-2xl font-black text-amber-600 dark:text-amber-400">
-                    {t.levelNumber.replace("{level}", String(newLevel))}
+                    {newLevelDisplay}
                   </div>
                 </div>
               </div>
 
-              <div className="mt-3 pt-3 border-t border-amber-500/20 flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">{t.newCommissionRate}</span>
-                <span className="font-bold text-foreground text-base bg-amber-500/20 px-2.5 py-0.5 rounded-md text-amber-700 dark:text-amber-300">
-                  {ratePercent} %
-                </span>
-              </div>
+              {ratePercent > 0 && (
+                <div className="mt-3 pt-3 border-t border-amber-500/20 flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">{t.newCommissionRate}</span>
+                  <span className="font-bold text-foreground text-base bg-amber-500/20 px-2.5 py-0.5 rounded-md text-amber-700 dark:text-amber-300">
+                    {ratePercent} %
+                  </span>
+                </div>
+              )}
+
+              {benefits && (
+                <div className="mt-3 pt-3 border-t border-amber-500/20 text-xs text-muted-foreground text-left">
+                  <span className="font-semibold text-foreground">Avantages : </span>
+                  {benefits}
+                </div>
+              )}
+
+              {upgradeDate && (
+                <div className="mt-2 text-[11px] text-muted-foreground/80 text-right">
+                  {upgradeDate}
+                </div>
+              )}
             </div>
           )}
 

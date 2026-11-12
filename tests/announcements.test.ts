@@ -7,6 +7,7 @@ import {
 import {
   getPendingPartnerPopup,
   queueLevelUpPopup,
+  queuePerformanceLevelUpgrade,
   recordPopupDismissed,
   recordPopupDisplayed,
   createAnnouncement,
@@ -292,6 +293,316 @@ describe("Manual Announcements & Interaction Telemetry", () => {
         data: expect.objectContaining({
           dismissedAt: expect.any(Date),
           clickedAt: expect.any(Date),
+        }),
+      }),
+    );
+  });
+});
+
+describe("Popup Non-Repeating & Persistence Verification", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("does not resurface welcome popup once displayedAt is set (even if dismissedAt is null)", async () => {
+    vi.spyOn(prisma.partner, "findUnique").mockResolvedValue({
+      id: "partner-1",
+      displayName: "Sami Ben Salah",
+      status: "ACTIVE",
+      notes: null,
+      userId: "user-1",
+    } as unknown as Partner);
+
+    vi.spyOn(prisma.systemSetting, "findUnique").mockResolvedValue(null);
+
+    // Welcome popup exists and was already displayed, but not dismissed
+    vi.spyOn(prisma.partnerPopupEvent, "findUnique").mockResolvedValue({
+      id: "popup-welcome-1",
+      partnerId: "partner-1",
+      type: "WELCOME",
+      eventKey: "WELCOME",
+      displayedAt: new Date(),
+      dismissedAt: null,
+    } as unknown as PartnerPopupEvent);
+
+    vi.spyOn(prisma.partnerPopupEvent, "findFirst").mockResolvedValue(null);
+    vi.spyOn(prisma.announcement, "findMany").mockResolvedValue([]);
+
+    const popup = await getPendingPartnerPopup("partner-1", { firstName: "Sami" });
+    expect(popup).toBeNull();
+  });
+
+  it("does not resurface level-up popup once displayedAt is set", async () => {
+    vi.spyOn(prisma.partner, "findUnique").mockResolvedValue({
+      id: "partner-1",
+      displayName: "Sami",
+      status: "ACTIVE",
+      notes: null,
+      userId: "user-1",
+    } as unknown as Partner);
+
+    vi.spyOn(prisma.systemSetting, "findUnique").mockResolvedValue(null);
+
+    // Welcome dismissed
+    vi.spyOn(prisma.partnerPopupEvent, "findUnique").mockResolvedValue({
+      id: "welcome-1",
+      dismissedAt: new Date(),
+    } as unknown as PartnerPopupEvent);
+
+    // Level up query with displayedAt: null returns null because all were displayed
+    const findFirstSpy = vi
+      .spyOn(prisma.partnerPopupEvent, "findFirst")
+      .mockResolvedValue(null);
+
+    vi.spyOn(prisma.announcement, "findMany").mockResolvedValue([]);
+
+    const popup = await getPendingPartnerPopup("partner-1", { firstName: "Sami" });
+    expect(popup).toBeNull();
+    expect(findFirstSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          type: "LEVEL_UP",
+          dismissedAt: null,
+          displayedAt: null,
+        }),
+      }),
+    );
+  });
+
+  it("surfaces new independent announcements even if older ones were displayed", async () => {
+    vi.spyOn(prisma.partner, "findUnique").mockResolvedValue({
+      id: "partner-1",
+      displayName: "Sami",
+      status: "ACTIVE",
+      notes: null,
+      userId: "user-1",
+    } as unknown as Partner);
+
+    vi.spyOn(prisma.systemSetting, "findUnique").mockResolvedValue(null);
+
+    // Welcome already dismissed
+    vi.spyOn(prisma.partnerPopupEvent, "findUnique")
+      .mockResolvedValueOnce({
+        id: "welcome-1",
+        dismissedAt: new Date(),
+      } as unknown as PartnerPopupEvent)
+      // New announcement has no popup delivery event yet
+      .mockResolvedValueOnce(null);
+
+    vi.spyOn(prisma.partnerPopupEvent, "findFirst").mockResolvedValue(null);
+
+    vi.spyOn(prisma.announcement, "findMany").mockResolvedValue([
+      {
+        id: "ann-new-1",
+        title: "Nouvelle Annonce Importante",
+        content: "Contenu de la nouvelle annonce",
+        type: "INFO",
+        targetAudience: "ALL",
+        buttonText: "Voir",
+        buttonUrl: "/info",
+        imageUrl: null,
+      } as unknown as any,
+    ]);
+
+    vi.spyOn(prisma.partnerPopupEvent, "create").mockResolvedValue({
+      id: "popup-ann-new-1",
+      partnerId: "partner-1",
+      type: "ANNOUNCEMENT",
+      eventKey: "ann-new-1",
+      title: "Nouvelle Annonce Importante",
+      message: "Contenu de la nouvelle annonce",
+      buttonText: "Voir",
+      buttonUrl: "/info",
+      imageUrl: null,
+      dismissedAt: null,
+      displayedAt: null,
+    } as unknown as PartnerPopupEvent);
+
+    const popup = await getPendingPartnerPopup("partner-1", { firstName: "Sami" });
+    expect(popup).not.toBeNull();
+    expect(popup?.id).toBe("popup-ann-new-1");
+    expect(popup?.title).toBe("Nouvelle Annonce Importante");
+  });
+});
+
+describe("Performance Level Upgrade Notification & Idempotency", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("generates notification and popup on Bronze -> Silver upgrade", async () => {
+    const upsertSpy = vi.spyOn(prisma.partnerPopupEvent, "upsert").mockResolvedValue({
+      id: "popup-perf-silver",
+      partnerId: "partner-1",
+      type: "LEVEL_UP",
+      eventKey: "PERF_UPGRADE:Bronze->Silver",
+    } as unknown as PartnerPopupEvent);
+
+    vi.spyOn(prisma.partner, "findUnique").mockResolvedValue({
+      id: "partner-1",
+      userId: "user-1",
+    } as unknown as Partner);
+
+    const notifSpy = vi.spyOn(prisma.notification, "create").mockResolvedValue({} as unknown as Notification);
+    vi.spyOn(prisma.notification, "findFirst").mockResolvedValue(null);
+
+    const res = await queuePerformanceLevelUpgrade({
+      partnerId: "partner-1",
+      previousLevelName: "Bronze",
+      newLevelName: "Silver",
+      previousSortOrder: 1,
+      newSortOrder: 2,
+      newSharePercentage: 15,
+      description: "Accès à des commissions boostées et support prioritaire",
+    });
+
+    expect(res).not.toBeNull();
+    expect(upsertSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          partnerId_type_eventKey: {
+            partnerId: "partner-1",
+            type: "LEVEL_UP",
+            eventKey: "PERF_UPGRADE:Bronze->Silver",
+          },
+        },
+        create: expect.objectContaining({
+          type: "LEVEL_UP",
+          eventKey: "PERF_UPGRADE:Bronze->Silver",
+          title: expect.stringContaining("Félicitations"),
+          message: expect.stringContaining("Silver"),
+          buttonUrl: "/mes-performances",
+          metadata: expect.objectContaining({
+            previousLevel: "Bronze",
+            newLevel: "Silver",
+            benefits: "Accès à des commissions boostées et support prioritaire",
+          }),
+        }),
+      }),
+    );
+    expect(notifSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          userId: "user-1",
+          link: "/mes-performances",
+          title: expect.stringContaining("Félicitations"),
+        }),
+      }),
+    );
+  });
+
+  it("generates notification and popup on Silver -> Gold upgrade", async () => {
+    const upsertSpy = vi.spyOn(prisma.partnerPopupEvent, "upsert").mockResolvedValue({
+      id: "popup-perf-gold",
+      partnerId: "partner-1",
+      type: "LEVEL_UP",
+      eventKey: "PERF_UPGRADE:Silver->Gold",
+    } as unknown as PartnerPopupEvent);
+
+    vi.spyOn(prisma.partner, "findUnique").mockResolvedValue({
+      id: "partner-1",
+      userId: "user-1",
+    } as unknown as Partner);
+
+    const notifSpy = vi.spyOn(prisma.notification, "create").mockResolvedValue({} as unknown as Notification);
+    vi.spyOn(prisma.notification, "findFirst").mockResolvedValue(null);
+
+    const res = await queuePerformanceLevelUpgrade({
+      partnerId: "partner-1",
+      previousLevelName: "Silver",
+      newLevelName: "Gold",
+      previousSortOrder: 2,
+      newSortOrder: 3,
+      newSharePercentage: 25,
+      description: "Avantages Gold exclusifs",
+    });
+
+    expect(res).not.toBeNull();
+    expect(upsertSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          partnerId_type_eventKey: {
+            partnerId: "partner-1",
+            type: "LEVEL_UP",
+            eventKey: "PERF_UPGRADE:Silver->Gold",
+          },
+        },
+      }),
+    );
+    expect(notifSpy).toHaveBeenCalled();
+  });
+
+  it("is idempotent: repeated processing does not create duplicate notifications", async () => {
+    vi.spyOn(prisma.partner, "findUnique").mockResolvedValue({
+      id: "partner-1",
+      userId: "user-1",
+    } as unknown as Partner);
+
+    vi.spyOn(prisma.partnerPopupEvent, "upsert").mockResolvedValue({
+      id: "popup-perf-silver",
+      partnerId: "partner-1",
+      type: "LEVEL_UP",
+      eventKey: "PERF_UPGRADE:Bronze->Silver",
+    } as unknown as PartnerPopupEvent);
+
+    // Notification already exists for this upgrade
+    vi.spyOn(prisma.notification, "findFirst").mockResolvedValue({
+      id: "notif-existing-1",
+    } as unknown as Notification);
+
+    const notifCreateSpy = vi.spyOn(prisma.notification, "create");
+
+    await queuePerformanceLevelUpgrade({
+      partnerId: "partner-1",
+      previousLevelName: "Bronze",
+      newLevelName: "Silver",
+      previousSortOrder: 1,
+      newSortOrder: 2,
+    });
+
+    // Should NOT create duplicate notification
+    expect(notifCreateSpy).not.toHaveBeenCalled();
+  });
+
+  it("respects multilingual titles and messages for Arabic partners", async () => {
+    vi.spyOn(prisma.partner, "findUnique").mockResolvedValue({
+      id: "partner-ar",
+      userId: "user-ar",
+    } as unknown as Partner);
+
+    // Arabic locale in user settings
+    vi.spyOn(prisma.systemSetting, "findUnique").mockResolvedValue({
+      key: "user.user-ar.locale",
+      value: "ar",
+    } as unknown as any);
+
+    const upsertSpy = vi.spyOn(prisma.partnerPopupEvent, "upsert").mockResolvedValue({
+      id: "popup-ar",
+    } as unknown as PartnerPopupEvent);
+
+    vi.spyOn(prisma.notification, "findFirst").mockResolvedValue(null);
+    const notifSpy = vi.spyOn(prisma.notification, "create").mockResolvedValue({} as unknown as Notification);
+
+    await queuePerformanceLevelUpgrade({
+      partnerId: "partner-ar",
+      previousLevelName: "Bronze",
+      newLevelName: "Silver",
+      previousSortOrder: 1,
+      newSortOrder: 2,
+    });
+
+    expect(upsertSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          title: "مبروك! ارتقيت إلى مستوى جديد!",
+          buttonText: "اكتشف مستواي الجديد",
+        }),
+      }),
+    );
+    expect(notifSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          title: "مبروك! ارتقيت إلى مستوى جديد!",
         }),
       }),
     );

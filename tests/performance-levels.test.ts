@@ -1,4 +1,6 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { prisma } from "@/lib/prisma";
+import { assignPerformanceLevel } from "@/modules/finance/performance-service";
 import {
   performanceLevelSchema,
   resolvePerformanceShare,
@@ -155,5 +157,195 @@ describe("orderLevelsAsLadder", () => {
       "Bronze",
     ]);
     expect(input.map((l) => l.name)).toEqual(["Bronze", "Or", "Argent"]);
+  });
+});
+
+describe("assignPerformanceLevel — Automatic Level Upgrade Alerts & Idempotency", () => {
+  const bronze = {
+    id: "lvl-bronze",
+    name: "Bronze",
+    sortOrder: 1,
+    sharePercentage: 10,
+    isActive: true,
+    description: "Niveau débutant",
+  };
+
+  const silver = {
+    id: "lvl-silver",
+    name: "Silver",
+    sortOrder: 2,
+    sharePercentage: 15,
+    isActive: true,
+    description: "Avantages Silver",
+  };
+
+  const gold = {
+    id: "lvl-gold",
+    name: "Gold",
+    sortOrder: 3,
+    sharePercentage: 25,
+    isActive: true,
+    description: "Avantages Gold",
+  };
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.spyOn(prisma.systemSetting, "findUnique").mockResolvedValue(null);
+  });
+
+  it("Bronze -> Silver: generates level upgrade alert and notification", async () => {
+    const queueSpy = vi.fn().mockResolvedValue({ id: "popup-silver" });
+    vi.doMock("@/modules/announcements/service", () => ({
+      queuePerformanceLevelUpgrade: queueSpy,
+    }));
+
+    const txMock = {
+      partner: {
+        findUniqueOrThrow: vi.fn().mockResolvedValue({
+          id: "partner-1",
+          performanceLevelId: "lvl-bronze",
+          userId: "user-1",
+        }),
+        update: vi.fn().mockResolvedValue({
+          id: "partner-1",
+          performanceLevelId: "lvl-silver",
+          performanceLevel: silver,
+        }),
+      },
+      performanceLevel: {
+        findUniqueOrThrow: vi.fn().mockResolvedValue(silver),
+        findUnique: vi.fn().mockResolvedValue(bronze),
+      },
+      auditLog: {
+        create: vi.fn().mockResolvedValue({}),
+      },
+      partnerPopupEvent: {
+        upsert: vi.fn().mockResolvedValue({ id: "popup-silver" }),
+      },
+      notification: {
+        create: vi.fn().mockResolvedValue({}),
+        findFirst: vi.fn().mockResolvedValue(null),
+      },
+    };
+
+    vi.spyOn(prisma, "$transaction").mockImplementation(async (cb: any) => cb(txMock));
+
+    await assignPerformanceLevel("partner-1", "lvl-silver", "admin-1");
+
+    expect(txMock.partner.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "partner-1" },
+        data: { performanceLevelId: "lvl-silver" },
+      }),
+    );
+  });
+
+  it("Silver -> Gold: generates upgrade alert", async () => {
+    const txMock = {
+      partner: {
+        findUniqueOrThrow: vi.fn().mockResolvedValue({
+          id: "partner-1",
+          performanceLevelId: "lvl-silver",
+          userId: "user-1",
+        }),
+        update: vi.fn().mockResolvedValue({
+          id: "partner-1",
+          performanceLevelId: "lvl-gold",
+          performanceLevel: gold,
+        }),
+      },
+      performanceLevel: {
+        findUniqueOrThrow: vi.fn().mockResolvedValue(gold),
+        findUnique: vi.fn().mockResolvedValue(silver),
+      },
+      auditLog: {
+        create: vi.fn().mockResolvedValue({}),
+      },
+      partnerPopupEvent: {
+        upsert: vi.fn().mockResolvedValue({ id: "popup-gold" }),
+      },
+      notification: {
+        create: vi.fn().mockResolvedValue({}),
+        findFirst: vi.fn().mockResolvedValue(null),
+      },
+    };
+
+    vi.spyOn(prisma, "$transaction").mockImplementation(async (cb: any) => cb(txMock));
+
+    const updated = await assignPerformanceLevel("partner-1", "lvl-gold", "admin-1");
+    expect(updated.performanceLevelId).toBe("lvl-gold");
+  });
+
+  it("Same level -> Same level: does not generate notification", async () => {
+    const txMock = {
+      partner: {
+        findUniqueOrThrow: vi.fn().mockResolvedValue({
+          id: "partner-1",
+          performanceLevelId: "lvl-silver",
+          userId: "user-1",
+        }),
+        update: vi.fn().mockResolvedValue({
+          id: "partner-1",
+          performanceLevelId: "lvl-silver",
+          performanceLevel: silver,
+        }),
+      },
+      performanceLevel: {
+        findUniqueOrThrow: vi.fn().mockResolvedValue(silver),
+        findUnique: vi.fn().mockResolvedValue(silver),
+      },
+      auditLog: {
+        create: vi.fn().mockResolvedValue({}),
+      },
+      partnerPopupEvent: {
+        upsert: vi.fn(),
+      },
+      notification: {
+        create: vi.fn(),
+      },
+    };
+
+    vi.spyOn(prisma, "$transaction").mockImplementation(async (cb: any) => cb(txMock));
+
+    await assignPerformanceLevel("partner-1", "lvl-silver", "admin-1");
+    expect(txMock.notification.create).not.toHaveBeenCalled();
+    expect(txMock.partnerPopupEvent.upsert).not.toHaveBeenCalled();
+  });
+
+  it("Gold -> Silver (downgrade): does not trigger upgrade notification", async () => {
+    const txMock = {
+      partner: {
+        findUniqueOrThrow: vi.fn().mockResolvedValue({
+          id: "partner-1",
+          performanceLevelId: "lvl-gold",
+          userId: "user-1",
+        }),
+        update: vi.fn().mockResolvedValue({
+          id: "partner-1",
+          performanceLevelId: "lvl-silver",
+          performanceLevel: silver,
+        }),
+      },
+      performanceLevel: {
+        findUniqueOrThrow: vi.fn().mockResolvedValue(silver),
+        findUnique: vi.fn().mockResolvedValue(gold),
+      },
+      auditLog: {
+        create: vi.fn().mockResolvedValue({}),
+      },
+      partnerPopupEvent: {
+        upsert: vi.fn(),
+      },
+      notification: {
+        create: vi.fn(),
+      },
+    };
+
+    vi.spyOn(prisma, "$transaction").mockImplementation(async (cb: any) => cb(txMock));
+
+    await assignPerformanceLevel("partner-1", "lvl-silver", "admin-1");
+    // Downgrade: no upgrade notification or popup
+    expect(txMock.notification.create).not.toHaveBeenCalled();
+    expect(txMock.partnerPopupEvent.upsert).not.toHaveBeenCalled();
   });
 });

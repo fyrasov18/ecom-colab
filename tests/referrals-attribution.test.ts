@@ -619,12 +619,34 @@ describe("Milestone 2: Referral Permissions, Code Generation, Attribution & Regi
         termsAccepted: true,
       };
 
+      const { prisma } = await import("@/lib/prisma");
+      const userSpy = vi.spyOn(prisma.user, "findFirst").mockResolvedValue({
+        id: "admin-user-1",
+        role: "ADMIN",
+        status: "ACTIVE",
+      } as any);
+      const userUniqueSpy = vi.spyOn(prisma.user, "findUnique").mockResolvedValue(null);
+      const txSpy = vi.spyOn(prisma, "$transaction").mockImplementation(async (cb: any) =>
+        cb({
+          user: { create: vi.fn().mockResolvedValue({ id: "user-new", email: validAdminPayload.email }) },
+          partner: { create: vi.fn().mockResolvedValue({ id: "partner-new" }) },
+          auditLog: { create: vi.fn().mockResolvedValue({}) },
+        }),
+      );
+
       const res = await registerPartner(validAdminPayload);
       // Even if database connection is mocked or live, schema parsing passes
       expect(res).toBeDefined();
+      userSpy.mockRestore();
+      userUniqueSpy.mockRestore();
+      txSpy.mockRestore();
     });
 
     it("Rejects registration if referral code is invalid", async () => {
+      const { prisma } = await import("@/lib/prisma");
+      const linkSpy = vi.spyOn(prisma.referralLink, "findUnique").mockResolvedValue(null);
+      const partnerSpy = vi.spyOn(prisma.partner, "findUnique").mockResolvedValue(null);
+
       const payload = {
         fullName: "Test User",
         email: "test.invalid@example.tn",
@@ -641,6 +663,8 @@ describe("Milestone 2: Referral Permissions, Code Generation, Attribution & Regi
       if (!res.ok) {
         expect(res.fieldErrors?.invitationCode).toBeDefined();
       }
+      linkSpy.mockRestore();
+      partnerSpy.mockRestore();
     });
 
     it("Rejects registration on self-referral by matching email", async () => {
@@ -661,6 +685,7 @@ describe("Milestone 2: Referral Permissions, Code Generation, Attribution & Regi
         isActive: true,
         partner: activeReferrer,
       } as unknown as ReferralLinkWithPartner);
+      const partnerSpy = vi.spyOn(prisma.partner, "findUnique").mockResolvedValue(activeReferrer as any);
 
       const res = await registerPartner({
         fullName: "Candidate Same Email",
@@ -679,6 +704,7 @@ describe("Milestone 2: Referral Permissions, Code Generation, Attribution & Regi
       }
 
       linkSpy.mockRestore();
+      partnerSpy.mockRestore();
     });
 
     it("Rejects registration on self-referral by matching phone", async () => {

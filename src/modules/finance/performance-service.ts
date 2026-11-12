@@ -144,7 +144,7 @@ export async function assignPerformanceLevel(
   return prisma.$transaction(async (tx) => {
     const before = await tx.partner.findUniqueOrThrow({
       where: { id: partnerId },
-      select: { performanceLevelId: true },
+      select: { performanceLevelId: true, userId: true },
     });
     if (performanceLevelId) {
       const level = await tx.performanceLevel.findUniqueOrThrow({
@@ -170,6 +170,49 @@ export async function assignPerformanceLevel(
         performanceLevelName: partner.performanceLevel?.name ?? null,
       },
     });
+
+    // ── AUTOMATIC PERFORMANCE LEVEL UPGRADE ALERT ──
+    if (performanceLevelId && performanceLevelId !== before.performanceLevelId) {
+      const prevLevel = before.performanceLevelId
+        ? await tx.performanceLevel.findUnique({
+            where: { id: before.performanceLevelId },
+          })
+        : null;
+      const nextLevel = partner.performanceLevel;
+
+      if (nextLevel) {
+        const prevOrder = prevLevel?.sortOrder ?? -1;
+        const nextOrder = nextLevel.sortOrder;
+        const prevShare = prevLevel ? Number(prevLevel.sharePercentage) : -1;
+        const nextShare = Number(nextLevel.sharePercentage);
+
+        // Upgrade condition: moving up the ladder (higher sortOrder, or equal sortOrder with higher share)
+        const isUpgrade =
+          !prevLevel ||
+          nextOrder > prevOrder ||
+          (nextOrder === prevOrder && nextShare > prevShare);
+
+        if (isUpgrade) {
+          const { queuePerformanceLevelUpgrade } = await import(
+            "@/modules/announcements/service"
+          );
+          await queuePerformanceLevelUpgrade(
+            {
+              partnerId,
+              previousLevelName: prevLevel?.name ?? "Standard",
+              newLevelName: nextLevel.name,
+              previousSortOrder: prevOrder >= 0 ? prevOrder : undefined,
+              newSortOrder: nextOrder,
+              newSharePercentage: nextShare,
+              description: nextLevel.description ?? undefined,
+              actorId,
+            },
+            tx,
+          );
+        }
+      }
+    }
+
     return partner;
   });
 }
