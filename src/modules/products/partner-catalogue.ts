@@ -26,7 +26,16 @@ export async function listAssignedProducts(
       { categoryRef: { isActive: true } },
     ],
     AND: [
-      categoryId ? { categoryId } : {},
+      categoryId
+        ? {
+            OR: [
+              { categoryId },
+              { category: categoryId },
+              { categoryRef: { id: categoryId } },
+              { categoryRef: { slug: categoryId } },
+            ],
+          }
+        : {},
       badge === "WINNING" ? { isWinning: true } : {},
       badge === "NEW" ? { isNew: true } : {},
       badge === "RECOMMENDED" ? { isRecommended: true } : {},
@@ -93,6 +102,7 @@ export async function getPartnerCatalogueStats(partnerId: string) {
           select: {
             id: true,
             categoryId: true,
+            category: true,
             isWinning: true,
             isNew: true,
             isRecommended: true,
@@ -111,18 +121,27 @@ export async function getPartnerCatalogueStats(partnerId: string) {
   for (const item of assignedProducts) {
     totalAssigned++;
     const p = item.product;
-    if (p.categoryId) {
-      categoryCounts[p.categoryId] = (categoryCounts[p.categoryId] || 0) + 1;
-    }
     if (p.isWinning) winningCount++;
     if (p.isNew) newCount++;
     if (p.isRecommended) recommendedCount++;
   }
 
-  const categoriesWithCounts = categories.map((cat) => ({
-    ...cat,
-    productCount: categoryCounts[cat.id] || 0,
-  }));
+  const categoriesWithCounts = categories.map((cat) => {
+    const matchingCount = assignedProducts.filter((item) => {
+      const p = item.product;
+      return (
+        p.categoryId === cat.id ||
+        p.category === cat.id ||
+        (cat.slug && p.category === cat.slug) ||
+        p.category === cat.name
+      );
+    }).length;
+
+    return {
+      ...cat,
+      productCount: matchingCount,
+    };
+  });
 
   return {
     totalAssigned,

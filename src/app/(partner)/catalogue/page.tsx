@@ -21,10 +21,10 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CATEGORY_ICONS } from "@/app/(admin)/produits/categories/category-modal";
 import { getServerLocale } from "@/lib/i18n/server";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { PartnerProductCard } from "@/components/catalogue/partner-product-card";
+import { CategoryFilterBar } from "@/components/catalogue/category-filter-bar";
 
 export const metadata: Metadata = { title: "Catalogue Produits" };
 
@@ -182,61 +182,13 @@ export default async function CataloguePage({
       </div>
 
       {/* Category Tabs / Bar */}
-      <div className="border-b pb-3">
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-          <Link
-            href={buildFilterUrl({ category: null })}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium border transition-all shrink-0 ${
-              !categoryId
-                ? "border-primary bg-primary/10 text-primary font-semibold ring-1 ring-primary shadow-xs"
-                : "border-border hover:bg-muted text-muted-foreground"
-            }`}
-          >
-            <Package className="h-4 w-4" />
-            <span>{dict.products.allCategories}</span>
-            <span className="rounded-full bg-muted px-1.5 py-0.5 text-[11px] font-semibold text-foreground">
-              {stats.totalAssigned}
-            </span>
-          </Link>
-
-          {stats.categories.map((category) => {
-            const isSelected = categoryId === category.id;
-            const IconComponent =
-              (category.icon && CATEGORY_ICONS[category.icon]) || Package;
-
-            return (
-              <Link
-                key={category.id}
-                href={buildFilterUrl({
-                  category: isSelected ? null : category.id,
-                })}
-                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium border transition-all shrink-0 ${
-                  isSelected
-                    ? "border-primary bg-primary/10 text-primary font-semibold ring-1 ring-primary shadow-xs"
-                    : "border-border hover:bg-muted text-muted-foreground"
-                }`}
-              >
-                <IconComponent className="h-4 w-4" />
-                <span>{category.name}</span>
-                {category.nameAr && (
-                  <span dir="rtl" className="text-[11px] opacity-75 font-arabic">
-                    ({category.nameAr})
-                  </span>
-                )}
-                <span
-                  className={`rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${
-                    isSelected
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-foreground"
-                  }`}
-                >
-                  {category.productCount}
-                </span>
-              </Link>
-            );
-          })}
-        </div>
-      </div>
+      <CategoryFilterBar
+        categories={stats.categories}
+        selectedCategoryId={categoryId}
+        totalAssigned={stats.totalAssigned}
+        activeBadge={badge}
+        searchQuery={search}
+      />
 
       {/* Product Grid or Empty State */}
       {assignments.length === 0 ? (
@@ -244,6 +196,28 @@ export default async function CataloguePage({
           <EmptyState
             title={locale === "ar" ? "لا توجد منتجات مخصصة حالياً" : locale === "en" ? "No products assigned yet" : "Aucun produit assigné pour le moment"}
             description={locale === "ar" ? "سيقوم فريق العمل بتعيين منتجات لك قريباً لتتمكن من الترويج لها." : locale === "en" ? "The team will assign you products soon so you can promote them." : "L'équipe vous assignera des produits prochainement. Vous pourrez alors les promouvoir sur vos réseaux."}
+          />
+        ) : categoryId ? (
+          <EmptyState
+            title={
+              locale === "ar"
+                ? "لا توجد منتجات في هذا التصنيف حالياً"
+                : locale === "en"
+                ? "No products in this category yet"
+                : "Aucun produit dans cette catégorie pour le moment"
+            }
+            description={
+              locale === "ar"
+                ? "لم يتم تعيين منتجات لك في هذا التصنيف بعد. يمكنك استكشاف باقي التصنيفات أو إعادة ضبط الفلاتر."
+                : locale === "en"
+                ? "No products have been assigned to you in this category yet. You can explore other categories or reset filters."
+                : "Aucun produit ne vous est encore assigné dans cette catégorie. Vous pouvez explorer les autres catégories ou réinitialiser vos filtres."
+            }
+            action={
+              <Button asChild variant="outline">
+                <Link href="/catalogue">{resetFiltersLabel}</Link>
+              </Button>
+            }
           />
         ) : (
           <EmptyState

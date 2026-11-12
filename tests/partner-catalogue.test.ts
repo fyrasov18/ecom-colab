@@ -65,6 +65,34 @@ describe("Partner Catalogue Service", () => {
     );
   });
 
+  it("filters assigned products by category ID, slug or legacy name", async () => {
+    const findManySpy = vi.spyOn(prisma.partnerProduct, "findMany").mockResolvedValue([]);
+
+    await listAssignedProducts(mockPartnerId, {
+      categoryId: "cuisine-pro",
+    });
+
+    expect(findManySpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          partnerId: mockPartnerId,
+          product: expect.objectContaining({
+            AND: expect.arrayContaining([
+              {
+                OR: [
+                  { categoryId: "cuisine-pro" },
+                  { category: "cuisine-pro" },
+                  { categoryRef: { id: "cuisine-pro" } },
+                  { categoryRef: { slug: "cuisine-pro" } },
+                ],
+              },
+            ]),
+          }),
+        }),
+      }),
+    );
+  });
+
   it("calculates partner catalogue stats correctly per category and badge", async () => {
     vi.spyOn(prisma.category, "findMany").mockResolvedValue([
       {
