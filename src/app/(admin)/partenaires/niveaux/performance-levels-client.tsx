@@ -11,6 +11,9 @@ import {
   TrendingUp,
   Medal,
   Zap,
+  Flame,
+  Gem,
+  Target,
   Plus,
   Pencil,
   Trash2,
@@ -31,6 +34,10 @@ import {
   ShieldAlert,
   Loader2,
   Filter,
+  ArrowUp,
+  ArrowDown,
+  Power,
+  AlertTriangle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,6 +53,8 @@ import { useI18n } from "@/lib/i18n";
 import {
   savePerformanceLevelAction,
   deletePerformanceLevelAction,
+  toggleLevelActiveAction,
+  reorderLevelsAction,
   manualAssignPartnerLevelAction,
   evaluateAllPartnersAction,
   getPartnerHistoryAction,
@@ -53,6 +62,8 @@ import {
 import {
   parsePerformanceCriteria,
   getLocalizedLevelName,
+  getLocalizedLevelDescription,
+  validateProgressionRules,
   type PerformanceLevelCriteria,
 } from "@/modules/finance/performance-levels";
 import type { PartnerPerformanceOverviewDTO } from "@/modules/finance/performance-service";
@@ -68,15 +79,19 @@ export type PerformanceLevelItem = {
   _count?: { partners: number };
 };
 
-const COLOR_MAP: Record<string, { bg: string; text: string; border: string; badge: string }> = {
-  amber: { bg: "bg-amber-500/10", text: "text-amber-600 dark:text-amber-400", border: "border-amber-500/30", badge: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-300 dark:border-amber-800" },
-  emerald: { bg: "bg-emerald-500/10", text: "text-emerald-600 dark:text-emerald-400", border: "border-emerald-500/30", badge: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800" },
-  blue: { bg: "bg-blue-500/10", text: "text-blue-600 dark:text-blue-400", border: "border-blue-500/30", badge: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border-blue-300 dark:border-blue-800" },
-  purple: { bg: "bg-purple-500/10", text: "text-purple-600 dark:text-purple-400", border: "border-purple-500/30", badge: "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 border-purple-300 dark:border-purple-800" },
-  rose: { bg: "bg-rose-500/10", text: "text-rose-600 dark:text-rose-400", border: "border-rose-500/30", badge: "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border-rose-300 dark:border-rose-800" },
-  slate: { bg: "bg-slate-500/10", text: "text-slate-600 dark:text-slate-400", border: "border-slate-500/30", badge: "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300 border-slate-300 dark:border-slate-700" },
-  bronze: { bg: "bg-amber-700/10", text: "text-amber-700 dark:text-amber-500", border: "border-amber-700/30", badge: "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200 border-amber-600/40" },
-  gold: { bg: "bg-yellow-500/10", text: "text-yellow-600 dark:text-yellow-400", border: "border-yellow-500/30", badge: "bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300 border-yellow-400 dark:border-yellow-800" },
+const COLOR_MAP: Record<string, { bg: string; text: string; border: string; badge: string; label: string }> = {
+  amber: { bg: "bg-amber-500/10", text: "text-amber-600 dark:text-amber-400", border: "border-amber-500/30", badge: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-300 dark:border-amber-800", label: "Ambre / Bronze" },
+  emerald: { bg: "bg-emerald-500/10", text: "text-emerald-600 dark:text-emerald-400", border: "border-emerald-500/30", badge: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800", label: "Émeraude / Platine" },
+  blue: { bg: "bg-blue-500/10", text: "text-blue-600 dark:text-blue-400", border: "border-blue-500/30", badge: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border-blue-300 dark:border-blue-800", label: "Saphir / Bleu" },
+  purple: { bg: "bg-purple-500/10", text: "text-purple-600 dark:text-purple-400", border: "border-purple-500/30", badge: "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 border-purple-300 dark:border-purple-800", label: "Améthyste / Violet" },
+  rose: { bg: "bg-rose-500/10", text: "text-rose-600 dark:text-rose-400", border: "border-rose-500/30", badge: "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border-rose-300 dark:border-rose-800", label: "Rubis / Rose" },
+  slate: { bg: "bg-slate-500/10", text: "text-slate-600 dark:text-slate-400", border: "border-slate-500/30", badge: "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300 border-slate-300 dark:border-slate-700", label: "Argent / Slate" },
+  bronze: { bg: "bg-amber-700/10", text: "text-amber-700 dark:text-amber-500", border: "border-amber-700/30", badge: "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200 border-amber-600/40", label: "Bronze classique" },
+  gold: { bg: "bg-yellow-500/10", text: "text-yellow-600 dark:text-yellow-400", border: "border-yellow-500/30", badge: "bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300 border-yellow-400 dark:border-yellow-800", label: "Or / Gold" },
+  indigo: { bg: "bg-indigo-500/10", text: "text-indigo-600 dark:text-indigo-400", border: "border-indigo-500/30", badge: "bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800", label: "Indigo / Diamant" },
+  teal: { bg: "bg-teal-500/10", text: "text-teal-600 dark:text-teal-400", border: "border-teal-500/30", badge: "bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300 border-teal-300 dark:border-teal-800", label: "Turquoise / Teal" },
+  cyan: { bg: "bg-cyan-500/10", text: "text-cyan-600 dark:text-cyan-400", border: "border-cyan-500/30", badge: "bg-cyan-100 text-cyan-800 dark:bg-cyan-950 dark:text-cyan-300 border-cyan-300 dark:border-cyan-800", label: "Cyan / Cristal" },
+  orange: { bg: "bg-orange-500/10", text: "text-orange-600 dark:text-orange-400", border: "border-orange-500/30", badge: "bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300 border-orange-300 dark:border-orange-800", label: "Orange / Flamme" },
 };
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -88,6 +103,10 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   TrendingUp,
   Medal,
   Zap,
+  Flame,
+  Sparkles,
+  Gem,
+  Target,
 };
 
 function renderLevelBadge(level: { name: string; criteria?: unknown }, locale: string) {
@@ -129,6 +148,9 @@ export function PerformanceLevelsClient({
 
   // Modals state
   const [editingLevel, setEditingLevel] = useState<PerformanceLevelItem | null | "NEW">(null);
+  const [deletingLevel, setDeletingLevel] = useState<PerformanceLevelItem | null>(null);
+  const [reassignTargetId, setReassignTargetId] = useState<string>("");
+
   const [assigningPartner, setAssigningPartner] = useState<PartnerPerformanceOverviewDTO | null>(null);
   const [assignTargetLevelId, setAssignTargetLevelId] = useState<string>("");
   const [assignReason, setAssignReason] = useState("");
@@ -142,6 +164,8 @@ export function PerformanceLevelsClient({
     nameEn: "",
     nameAr: "",
     description: "",
+    descriptionEn: "",
+    descriptionAr: "",
     sharePercentage: 10,
     sortOrder: 1,
     isActive: true,
@@ -155,6 +179,11 @@ export function PerformanceLevelsClient({
     benefits: [] as string[],
   });
   const [newBenefitInput, setNewBenefitInput] = useState("");
+
+  // Progression rule validation
+  const progressionValidation = useMemo(() => {
+    return validateProgressionRules(levels);
+  }, [levels]);
 
   // KPIs
   const activeLevelsCount = levels.filter((l) => l.isActive).length;
@@ -195,6 +224,8 @@ export function PerformanceLevelsClient({
         nameEn: criteria.nameEn || "",
         nameAr: criteria.nameAr || "",
         description: lvl.description || "",
+        descriptionEn: criteria.descriptionEn || "",
+        descriptionAr: criteria.descriptionAr || "",
         sharePercentage: Number(lvl.sharePercentage),
         sortOrder: lvl.sortOrder,
         isActive: lvl.isActive,
@@ -209,13 +240,17 @@ export function PerformanceLevelsClient({
       });
       setEditingLevel(lvl);
     } else {
+      // Find highest sortOrder currently configured + 1
+      const maxSortOrder = levels.reduce((max, l) => Math.max(max, l.sortOrder), 0);
       setFormData({
         name: "",
         nameEn: "",
         nameAr: "",
         description: "",
+        descriptionEn: "",
+        descriptionAr: "",
         sharePercentage: 15,
-        sortOrder: levels.length + 1,
+        sortOrder: maxSortOrder + 1,
         isActive: true,
         minDeliveredOrders: 20,
         minDeliveryRate: 70,
@@ -249,16 +284,69 @@ export function PerformanceLevelsClient({
     });
   };
 
-  // Delete Level
-  const handleDeleteLevel = async (lvl: PerformanceLevelItem) => {
-    if (!confirm(t("performanceAdmin.deleteConfirm"))) return;
+  // Toggle Active/Inactive
+  const handleToggleActive = async (lvl: PerformanceLevelItem) => {
     startTransition(async () => {
-      const res = await deletePerformanceLevelAction(lvl.id);
+      const res = await toggleLevelActiveAction(lvl.id);
       if (res.ok) {
         toast.success(res.message);
-        setLevels((prev) => prev.filter((l) => l.id !== lvl.id));
+        setLevels((prev) =>
+          prev.map((l) => (l.id === lvl.id ? { ...l, isActive: !l.isActive } : l)),
+        );
       } else {
-        toast.error(res.error);
+        toast.error(res.error || "Erreur lors du changement de statut.");
+      }
+    });
+  };
+
+  // Swap / Reorder levels
+  const handleSwapOrder = (indexA: number, indexB: number) => {
+    if (indexA < 0 || indexB < 0 || indexA >= levels.length || indexB >= levels.length) return;
+
+    const newLevels = [...levels];
+    const orderA = newLevels[indexA].sortOrder;
+    const orderB = newLevels[indexB].sortOrder;
+
+    // Swap sortOrders
+    newLevels[indexA] = { ...newLevels[indexA], sortOrder: orderB };
+    newLevels[indexB] = { ...newLevels[indexB], sortOrder: orderA };
+
+    // Re-sort ladder descending
+    newLevels.sort((a, b) => b.sortOrder - a.sortOrder);
+    setLevels(newLevels);
+
+    startTransition(async () => {
+      const orders = newLevels.map((l) => ({ id: l.id, sortOrder: l.sortOrder }));
+      const res = await reorderLevelsAction(orders);
+      if (!res.ok) {
+        toast.error(res.error || "Erreur lors du réordonnancement.");
+        window.location.reload();
+      } else {
+        toast.success(res.message);
+      }
+    });
+  };
+
+  // Open Delete Modal
+  const openDeleteModal = (lvl: PerformanceLevelItem) => {
+    setDeletingLevel(lvl);
+    setReassignTargetId("");
+  };
+
+  // Confirm Delete
+  const handleConfirmDelete = async () => {
+    if (!deletingLevel) return;
+    startTransition(async () => {
+      const res = await deletePerformanceLevelAction(
+        deletingLevel.id,
+        reassignTargetId || null,
+      );
+      if (res.ok) {
+        toast.success(res.message);
+        setDeletingLevel(null);
+        window.location.reload();
+      } else {
+        toast.error(res.error || "Impossible de supprimer ce niveau.");
       }
     });
   };
@@ -380,6 +468,21 @@ export function PerformanceLevelsClient({
         )}
       </div>
 
+      {/* ── Progression Consistency Warnings (Advisory) ── */}
+      {progressionValidation.warnings.length > 0 && (
+        <div className="p-3.5 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 text-xs space-y-1.5">
+          <div className="flex items-center gap-2 font-semibold">
+            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+            <span>Recommandations de cohérence sur l&apos;échelle des niveaux</span>
+          </div>
+          <ul className="list-disc pl-5 space-y-0.5 text-[11px] text-amber-800 dark:text-amber-300">
+            {progressionValidation.warnings.map((w, idx) => (
+              <li key={idx}>{w.message}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* ── KPI Summary Cards ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="border bg-card shadow-sm">
@@ -389,7 +492,7 @@ export function PerformanceLevelsClient({
                 {t("performanceAdmin.kpiActiveLevels")}
               </p>
               <p className="text-2xl font-bold mt-1 text-foreground">
-                {activeLevelsCount} <span className="text-xs text-muted-foreground font-normal">/ {levels.length}</span>
+                {activeLevelsCount} <span className="text-xs text-muted-foreground font-normal">/ {levels.length} configurés</span>
               </p>
             </div>
             <div className="p-2.5 bg-blue-500/10 text-blue-600 rounded-lg">
@@ -447,12 +550,12 @@ export function PerformanceLevelsClient({
         </Card>
       </div>
 
-      {/* ── Section 1: Levels Hierarchy (Ladder Cards) ── */}
+      {/* ── Section 1: Dynamic Levels Hierarchy ── */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold text-foreground">
-              {t("performanceAdmin.levelsHierarchy")}
+              {t("performanceAdmin.levelsHierarchy")} ({levels.length})
             </h2>
             <p className="text-xs text-muted-foreground">
               {t("performanceAdmin.criteriaDescription")}
@@ -466,19 +569,20 @@ export function PerformanceLevelsClient({
             description={t("performanceAdmin.noLevelsDesc")}
           />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {levels.map((lvl) => {
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {levels.map((lvl, index) => {
               const criteria = parsePerformanceCriteria(lvl.criteria);
               const colorConfig = COLOR_MAP[criteria.color] ?? COLOR_MAP.blue;
               const IconComp = ICON_MAP[criteria.icon] ?? Award;
               const displayName = getLocalizedLevelName(lvl, locale);
+              const displayDesc = getLocalizedLevelDescription(lvl, locale);
 
               return (
                 <Card
                   key={lvl.id}
-                  className={`border transition-all shadow-sm hover:shadow-md ${colorConfig.border} ${
-                    !lvl.isActive ? "opacity-60 bg-muted/40" : "bg-card"
-                  }`}
+                  className={`border transition-all shadow-sm hover:shadow-md flex flex-col justify-between ${
+                    colorConfig.border
+                  } ${!lvl.isActive ? "opacity-60 bg-muted/40" : "bg-card"}`}
                 >
                   <CardHeader className="p-4 pb-3">
                     <div className="flex items-start justify-between gap-2">
@@ -498,13 +602,38 @@ export function PerformanceLevelsClient({
                             )}
                           </CardTitle>
                           <p className="text-xs text-muted-foreground mt-0.5">
-                            {t("performanceAdmin.sortOrder")} : #{lvl.sortOrder}
+                            Rang #{lvl.sortOrder}
                           </p>
                         </div>
                       </div>
 
                       {canManage && (
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-0.5">
+                          {/* Reorder Up */}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            disabled={index === 0 || isPending}
+                            onClick={() => handleSwapOrder(index, index - 1)}
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            title="Monter d'un rang"
+                          >
+                            <ArrowUp className="h-3.5 w-3.5" />
+                          </Button>
+
+                          {/* Reorder Down */}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            disabled={index === levels.length - 1 || isPending}
+                            onClick={() => handleSwapOrder(index, index + 1)}
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            title="Descendre d'un rang"
+                          >
+                            <ArrowDown className="h-3.5 w-3.5" />
+                          </Button>
+
+                          {/* Edit */}
                           <Button
                             variant="ghost"
                             size="icon"
@@ -514,11 +643,29 @@ export function PerformanceLevelsClient({
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
+
+                          {/* Toggle Active */}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            disabled={isPending}
+                            onClick={() => handleToggleActive(lvl)}
+                            className={`h-7 w-7 ${
+                              lvl.isActive
+                                ? "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                                : "text-muted-foreground hover:text-foreground"
+                            }`}
+                            title={lvl.isActive ? "Désactiver le niveau" : "Activer le niveau"}
+                          >
+                            <Power className="h-3.5 w-3.5" />
+                          </Button>
+
+                          {/* Delete */}
                           <Button
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                            onClick={() => handleDeleteLevel(lvl)}
+                            onClick={() => openDeleteModal(lvl)}
                             title={t("performanceAdmin.deleteLevel")}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -526,9 +673,9 @@ export function PerformanceLevelsClient({
                         </div>
                       )}
                     </div>
-                    {lvl.description && (
+                    {displayDesc && (
                       <CardDescription className="text-xs mt-2 line-clamp-2">
-                        {lvl.description}
+                        {displayDesc}
                       </CardDescription>
                     )}
                   </CardHeader>
@@ -573,7 +720,7 @@ export function PerformanceLevelsClient({
                           Taux retour : <strong className="text-foreground">≤ {criteria.maxReturnRate}%</strong>
                         </span>
                         <span className="text-muted-foreground col-span-2">
-                          Chiffre d&apos;affaires : <strong className="text-foreground">≥ {criteria.minTurnover} TND</strong>
+                          CA : <strong className="text-foreground">≥ {criteria.minTurnover} TND</strong>
                         </span>
                       </div>
                     </div>
@@ -909,7 +1056,7 @@ export function PerformanceLevelsClient({
                     maxLength={80}
                     value={formData.nameEn}
                     onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
-                    placeholder="e.g. Gold"
+                    placeholder="e.g. Diamond"
                     className="w-full px-3 py-1.5 rounded-md border border-input bg-card text-xs focus:ring-1 focus:ring-primary focus:outline-none"
                   />
                 </div>
@@ -921,26 +1068,55 @@ export function PerformanceLevelsClient({
                     maxLength={80}
                     value={formData.nameAr}
                     onChange={(e) => setFormData({ ...formData, nameAr: e.target.value })}
-                    placeholder="مثال: ذهبي"
+                    placeholder="مثال: ألماسي"
                     dir="rtl"
                     className="w-full px-3 py-1.5 rounded-md border border-input bg-card text-xs focus:ring-1 focus:ring-primary focus:outline-none"
                   />
                 </div>
               </div>
 
-              {/* Description */}
-              <div className="space-y-1">
-                <label className="font-medium text-foreground">
-                  {t("performanceAdmin.description")}
-                </label>
-                <textarea
-                  rows={2}
-                  maxLength={500}
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder={t("performanceAdmin.descriptionPlaceholder")}
-                  className="w-full px-3 py-1.5 rounded-md border border-input bg-card text-xs focus:ring-1 focus:ring-primary focus:outline-none resize-none"
-                />
+              {/* Description in FR, EN, AR */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <label className="font-medium text-foreground">
+                    {t("performanceAdmin.description")} (FR)
+                  </label>
+                  <textarea
+                    rows={2}
+                    maxLength={500}
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder={t("performanceAdmin.descriptionPlaceholder")}
+                    className="w-full px-3 py-1.5 rounded-md border border-input bg-card text-xs focus:ring-1 focus:ring-primary focus:outline-none resize-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="font-medium text-foreground">
+                    Description (EN)
+                  </label>
+                  <textarea
+                    rows={2}
+                    maxLength={500}
+                    value={formData.descriptionEn}
+                    onChange={(e) => setFormData({ ...formData, descriptionEn: e.target.value })}
+                    placeholder="Tier description in English..."
+                    className="w-full px-3 py-1.5 rounded-md border border-input bg-card text-xs focus:ring-1 focus:ring-primary focus:outline-none resize-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="font-medium text-foreground">
+                    الوصف (AR)
+                  </label>
+                  <textarea
+                    rows={2}
+                    maxLength={500}
+                    value={formData.descriptionAr}
+                    onChange={(e) => setFormData({ ...formData, descriptionAr: e.target.value })}
+                    placeholder="شرح المستوى بالعربية..."
+                    dir="rtl"
+                    className="w-full px-3 py-1.5 rounded-md border border-input bg-card text-xs focus:ring-1 focus:ring-primary focus:outline-none resize-none"
+                  />
+                </div>
               </div>
 
               {/* Share, Sort Order, Active */}
@@ -966,7 +1142,7 @@ export function PerformanceLevelsClient({
 
                 <div className="space-y-1">
                   <label className="font-medium text-foreground">
-                    {t("performanceAdmin.sortOrder")} *
+                    {t("performanceAdmin.sortOrder")} (Rang unique) *
                   </label>
                   <input
                     type="number"
@@ -1015,13 +1191,11 @@ export function PerformanceLevelsClient({
                       onChange={(e) => setFormData({ ...formData, color: e.target.value })}
                       className="w-full px-3 py-1.5 rounded-md border border-input bg-card text-xs focus:outline-none"
                     >
-                      <option value="amber">Amber / Bronze</option>
-                      <option value="slate">Silver / Slate</option>
-                      <option value="gold">Gold / Yellow</option>
-                      <option value="emerald">Emerald / Platinum</option>
-                      <option value="blue">Sapphire / Blue</option>
-                      <option value="purple">Amethyst / Purple</option>
-                      <option value="rose">Ruby / Rose</option>
+                      {Object.entries(COLOR_MAP).map(([key, cfg]) => (
+                        <option key={key} value={key}>
+                          {cfg.label}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
@@ -1034,14 +1208,11 @@ export function PerformanceLevelsClient({
                       onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
                       className="w-full px-3 py-1.5 rounded-md border border-input bg-card text-xs focus:outline-none"
                     >
-                      <option value="Award">Award</option>
-                      <option value="Trophy">Trophy</option>
-                      <option value="Star">Star</option>
-                      <option value="Crown">Crown</option>
-                      <option value="Shield">Shield</option>
-                      <option value="TrendingUp">TrendingUp</option>
-                      <option value="Medal">Medal</option>
-                      <option value="Zap">Zap</option>
+                      {Object.keys(ICON_MAP).map((iconKey) => (
+                        <option key={iconKey} value={iconKey}>
+                          {iconKey}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>
@@ -1245,6 +1416,89 @@ export function PerformanceLevelsClient({
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Delete with Reassignment Modal ── */}
+      {deletingLevel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-card border rounded-xl shadow-xl w-full max-w-md p-6 space-y-4 text-xs">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div>
+                <h3 className="text-base font-bold text-foreground">
+                  Supprimer le niveau « {deletingLevel.name} »
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Action définitive de suppression du palier de performance.
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setDeletingLevel(null)}
+                className="h-8 w-8 p-0"
+              >
+                ✕
+              </Button>
+            </div>
+
+            {(deletingLevel._count?.partners ?? 0) > 0 ? (
+              <div className="space-y-3">
+                <div className="p-3 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 text-xs flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    Ce niveau est actuellement attribué à{" "}
+                    <strong>{deletingLevel._count?.partners} partenaire(s)</strong>.
+                    Pour continuer, vous devez sélectionner où réassigner ces partenaires.
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-medium text-foreground block">
+                    Réassigner les partenaires concernés vers :
+                  </label>
+                  <select
+                    value={reassignTargetId}
+                    onChange={(e) => setReassignTargetId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-md border border-input bg-card text-xs focus:ring-1 focus:ring-primary focus:outline-none"
+                  >
+                    <option value="">{t("performanceAdmin.noLevelBadge")}</option>
+                    {levels
+                      .filter((l) => l.id !== deletingLevel.id && l.isActive)
+                      .map((lvl) => (
+                        <option key={lvl.id} value={lvl.id}>
+                          {getLocalizedLevelName(lvl, locale)} ({Number(lvl.sharePercentage)}% commission)
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-xs">
+                {t("performanceAdmin.deleteConfirm")}
+              </p>
+            )}
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setDeletingLevel(null)}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleConfirmDelete}
+                disabled={isPending}
+              >
+                {isPending && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
+                {(deletingLevel._count?.partners ?? 0) > 0
+                  ? "Réassigner et supprimer"
+                  : t("common.delete")}
+              </Button>
+            </div>
           </div>
         </div>
       )}

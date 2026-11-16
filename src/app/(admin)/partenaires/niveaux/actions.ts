@@ -7,6 +7,8 @@ import {
   createPerformanceLevel,
   updatePerformanceLevel,
   deletePerformanceLevel,
+  togglePerformanceLevelActive,
+  reorderPerformanceLevels,
   assignPerformanceLevel,
   getPartnerLevelHistory,
   evaluateAndPromoteEligiblePartners,
@@ -58,6 +60,8 @@ const levelInputSchema = z.object({
   icon: z.string().default("Award"),
   nameEn: z.string().optional().default(""),
   nameAr: z.string().optional().default(""),
+  descriptionEn: z.string().optional().default(""),
+  descriptionAr: z.string().optional().default(""),
   benefits: z.array(z.string()).default([]),
 });
 
@@ -78,6 +82,8 @@ export async function savePerformanceLevelAction(
       icon: parsed.icon,
       nameEn: parsed.nameEn,
       nameAr: parsed.nameAr,
+      descriptionEn: parsed.descriptionEn,
+      descriptionAr: parsed.descriptionAr,
       benefits: parsed.benefits,
     });
 
@@ -114,12 +120,59 @@ export async function savePerformanceLevelAction(
   }
 }
 
-export async function deletePerformanceLevelAction(id: string): Promise<ActionState> {
+export async function toggleLevelActiveAction(id: string): Promise<ActionState> {
   try {
     const user = await requireLevelManagementUser();
     if (!id) return { ok: false, error: "Identifiant manquant." };
 
-    await deletePerformanceLevel(id, user.id);
+    const updated = await togglePerformanceLevelActive(id, user.id);
+
+    revalidatePath("/partenaires/niveaux");
+    revalidatePath("/partenaires");
+    revalidatePath("/parametres");
+
+    return {
+      ok: true,
+      message: updated.isActive ? "Niveau activé avec succès." : "Niveau désactivé avec succès.",
+      data: updated,
+    };
+  } catch (err) {
+    if (err instanceof PermissionError) return { ok: false, error: err.message };
+    if (err instanceof PerformanceLevelError) return { ok: false, error: err.message };
+    return { ok: false, error: "Impossible de modifier le statut du niveau." };
+  }
+}
+
+export async function reorderLevelsAction(
+  orders: Array<{ id: string; sortOrder: number }>,
+): Promise<ActionState> {
+  try {
+    const user = await requireLevelManagementUser();
+    if (!orders || orders.length === 0) return { ok: false, error: "Liste vide." };
+
+    await reorderPerformanceLevels(orders, user.id);
+
+    revalidatePath("/partenaires/niveaux");
+    revalidatePath("/partenaires");
+    revalidatePath("/parametres");
+
+    return { ok: true, message: "Ordre hiérarchique mis à jour avec succès." };
+  } catch (err) {
+    if (err instanceof PermissionError) return { ok: false, error: err.message };
+    if (err instanceof PerformanceLevelError) return { ok: false, error: err.message };
+    return { ok: false, error: "Échec du réordonnancement des niveaux." };
+  }
+}
+
+export async function deletePerformanceLevelAction(
+  id: string,
+  reassignToLevelId?: string | null,
+): Promise<ActionState> {
+  try {
+    const user = await requireLevelManagementUser();
+    if (!id) return { ok: false, error: "Identifiant manquant." };
+
+    await deletePerformanceLevel(id, user.id, { reassignToLevelId });
 
     revalidatePath("/partenaires/niveaux");
     revalidatePath("/partenaires");

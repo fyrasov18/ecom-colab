@@ -42,6 +42,16 @@ export async function createPerformanceLevel(
     if (existing) {
       throw new PerformanceLevelError(`Le niveau « ${data.name} » existe déjà.`);
     }
+
+    const existingOrder = await tx.performanceLevel.findFirst({
+      where: { sortOrder: data.sortOrder },
+    });
+    if (existingOrder) {
+      throw new PerformanceLevelError(
+        `Le rang / priorité ${data.sortOrder} est déjà attribué au niveau « ${existingOrder.name} ». Chaque niveau doit avoir un rang unique.`,
+      );
+    }
+
     const level = await tx.performanceLevel.create({
       data: {
         name: data.name,
@@ -76,6 +86,29 @@ export async function updatePerformanceLevel(
   const data = performanceLevelSchema.parse(input);
   return prisma.$transaction(async (tx) => {
     const before = await tx.performanceLevel.findUniqueOrThrow({ where: { id } });
+
+    // Enforce unique name if changed
+    if (data.name !== before.name) {
+      const existingName = await tx.performanceLevel.findFirst({
+        where: { name: data.name, id: { not: id } },
+      });
+      if (existingName) {
+        throw new PerformanceLevelError(`Le nom « ${data.name} » est déjà utilisé par un autre niveau.`);
+      }
+    }
+
+    // Enforce unique sortOrder if changed
+    if (data.sortOrder !== before.sortOrder) {
+      const existingOrder = await tx.performanceLevel.findFirst({
+        where: { sortOrder: data.sortOrder, id: { not: id } },
+      });
+      if (existingOrder) {
+        throw new PerformanceLevelError(
+          `Le rang / priorité ${data.sortOrder} est déjà attribué au niveau « ${existingOrder.name} ». Chaque niveau doit avoir un rang unique.`,
+        );
+      }
+    }
+
     // A share change is a financial-rule change: before/after are recorded so
     // the audit trail shows the exact transition. Existing orders are untouched
     // because each one carries its own frozen snapshot.
@@ -115,20 +148,124 @@ export async function updatePerformanceLevel(
 }
 
 /**
- * Levels are never hard-deleted while a partner holds one: deactivation is the
- * safe lifecycle operation, and it stops affecting new orders immediately.
+ * Toggle active/inactive status of a level.
+ * IMPORTANT: Deactivating a level does NOT delete or invalidate existing partner
+ * assignments, but pauses its participation in automatic promotions and new orders.
  */
-export async function deletePerformanceLevel(id: string, actorId: string) {
+export async function togglePerformanceLevelActive(id: string, actorId: string) {
+  return prisma.$transaction(async (tx) => {
+    const level = await tx.performanceLevel.findUniqueOrThrow({ where: { id } });
+    const updated = await tx.performanceLevel.update({
+      where: { id },
+      data: { isActive: !level.isActive },
+    });
+
+    await recordAudit(tx, {
+      actorId,
+      action: "PERFORMANCE_LEVEL_STATUS_TOGGLED",
+      entityType: "PerformanceLevel",
+      entityId: id,
+      before: { isActive: level.isActive },
+      after: { isActive: updated.isActive },
+    });
+
+    return updated;
+  });
+}
+
+/**
+ * Reorder performance levels by assigning unique consecutive or specified ranks.
+ * Uses a safe two-pass update to eliminate any unique constraint collisions.
+ */
+export async function reorderPerformanceLevels(
+  orders: Array<{ id: string; sortOrder: number }>,
+  actorId: string,
+) {
+  const uniqueOrders = new Set(orders.map((o) => o.sortOrder));
+  if (uniqueOrders.size !== orders.length) {
+    throw new PerformanceLevelError("Chaque niveau doit avoir un ordre de tri unique.");
+  }
+
+  return prisma.$transaction(async (tx) => {
+    // Pass 1: Assign temporary negative values to clear existing slots
+    for (let i = 0; i < orders.length; i++) {
+      await tx.performanceLevel.update({
+        where: { id: orders[i].id },
+        data: { sortOrder: -(i + 1000) },
+      });
+    }
+
+    // Pass 2: Assign final desired sort orders
+    for (const item of orders) {
+      await tx.performanceLevel.update({
+        where: { id: item.id },
+        data: { sortOrder: item.sortOrder },
+      });
+    }
+
+    await recordAudit(tx, {
+      actorId,
+      action: "PERFORMANCE_LEVELS_REORDERED",
+      entityType: "PerformanceLevel",
+      after: { reordered: orders },
+    });
+  });
+}
+
+/**
+ * Delete a performance level.
+ * Blocked if partners are currently assigned, UNLESS an explicit reassignToLevelId
+ * (another active level ID or null for 'No level') is provided.
+ */
+export async function deletePerformanceLevel(
+  id: string,
+  actorId: string,
+  options?: { reassignToLevelId?: string | null },
+) {
   return prisma.$transaction(async (tx) => {
     const level = await tx.performanceLevel.findUniqueOrThrow({
       where: { id },
       include: { _count: { select: { partners: true } } },
     });
+
     if (level._count.partners > 0) {
-      throw new PerformanceLevelError(
-        "Ce niveau est encore attribué à des partenaires. Désactivez-le plutôt que de le supprimer.",
-      );
+      if (options?.reassignToLevelId !== undefined) {
+        const targetId = options.reassignToLevelId;
+        if (targetId) {
+          if (targetId === id) {
+            throw new PerformanceLevelError(
+              "Impossible de réassigner les partenaires au niveau en cours de suppression.",
+            );
+          }
+          const targetLevel = await tx.performanceLevel.findUnique({ where: { id: targetId } });
+          if (!targetLevel) {
+            throw new PerformanceLevelError(
+              "Le niveau cible sélectionné pour la réassignation est introuvable.",
+            );
+          }
+        }
+
+        // Reassign all partners holding this level
+        await tx.partner.updateMany({
+          where: { performanceLevelId: id },
+          data: { performanceLevelId: targetId },
+        });
+
+        await recordAudit(tx, {
+          actorId,
+          action: "PARTNER_LEVEL_REASSIGNED_ON_DELETE",
+          entityType: "PerformanceLevel",
+          entityId: id,
+          before: { deletedLevelId: id, affectedPartnersCount: level._count.partners },
+          after: { newPerformanceLevelId: targetId },
+        });
+      } else {
+        throw new PerformanceLevelError(
+          `Ce niveau est encore attribué à ${level._count.partners} partenaire(s). Vous devez réassigner ces partenaires avant de pouvoir le supprimer, ou désactiver le niveau.`,
+        );
+      }
     }
+
     await tx.performanceLevel.delete({ where: { id } });
     await recordAudit(tx, {
       actorId,

@@ -20,10 +20,12 @@ export const performanceLevelCriteriaSchema = z.object({
   minConfirmationRate: z.coerce.number().min(0).max(100).default(0),
   maxReturnRate: z.coerce.number().min(0).max(100).default(100),
   minTurnover: z.coerce.number().min(0).default(0),
-  color: z.string().default("blue"), // "amber" | "emerald" | "blue" | "purple" | "rose" | "slate" | "indigo" | "bronze" | "silver" | "gold"
-  icon: z.string().default("Award"), // "Award" | "Trophy" | "Star" | "Crown" | "Shield" | "TrendingUp" | "Medal" | "Zap"
+  color: z.string().default("blue"), // "amber" | "emerald" | "blue" | "purple" | "rose" | "slate" | "indigo" | "bronze" | "silver" | "gold" | "teal" | "cyan" | "orange"
+  icon: z.string().default("Award"), // "Award" | "Trophy" | "Star" | "Crown" | "Shield" | "TrendingUp" | "Medal" | "Zap" | "Flame" | "Sparkles" | "Gem" | "Target"
   nameEn: z.string().optional().default(""),
   nameAr: z.string().optional().default(""),
+  descriptionEn: z.string().optional().default(""),
+  descriptionAr: z.string().optional().default(""),
   benefits: z.array(z.string()).default([]),
 });
 
@@ -221,4 +223,86 @@ export function getLocalizedLevelName(
     return criteria.nameEn.trim();
   }
   return level.name;
+}
+
+/** Get localized level description from criteria or base description */
+export function getLocalizedLevelDescription(
+  level: { description?: string | null; criteria?: unknown },
+  locale: string,
+): string {
+  const criteria = parsePerformanceCriteria(level.criteria);
+  if (locale === "ar" && criteria.descriptionAr?.trim()) {
+    return criteria.descriptionAr.trim();
+  }
+  if (locale === "en" && criteria.descriptionEn?.trim()) {
+    return criteria.descriptionEn.trim();
+  }
+  return level.description || "";
+}
+
+export type ProgressionValidationWarning = {
+  levelId: string;
+  levelName: string;
+  message: string;
+};
+
+/**
+ * Validate that level ordering and progression criteria remain logically sound
+ * and free of duplicate ranks or contradictory thresholds.
+ */
+export function validateProgressionRules(
+  levels: Array<{
+    id: string;
+    name: string;
+    sortOrder: number;
+    sharePercentage: number;
+    criteria?: unknown;
+  }>,
+): { isValid: boolean; duplicateSortOrders: number[]; warnings: ProgressionValidationWarning[] } {
+  const sortOrderMap = new Map<number, string[]>();
+  for (const lvl of levels) {
+    const list = sortOrderMap.get(lvl.sortOrder) || [];
+    list.push(lvl.name);
+    sortOrderMap.set(lvl.sortOrder, list);
+  }
+
+  const duplicateSortOrders: number[] = [];
+  for (const [order, list] of sortOrderMap.entries()) {
+    if (list.length > 1) duplicateSortOrders.push(order);
+  }
+
+  // Ladder check: ascending by sortOrder (rank 1 -> rank N)
+  const sorted = [...levels].sort((a, b) => a.sortOrder - b.sortOrder);
+  const warnings: ProgressionValidationWarning[] = [];
+
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = sorted[i - 1];
+    const curr = sorted[i];
+    const prevCrit = parsePerformanceCriteria(prev.criteria);
+    const currCrit = parsePerformanceCriteria(curr.criteria);
+
+    // Advisory: If current higher rank has lower commission share than previous rank
+    if (curr.sharePercentage < prev.sharePercentage) {
+      warnings.push({
+        levelId: curr.id,
+        levelName: curr.name,
+        message: `Le niveau supérieur « ${curr.name} » (${curr.sharePercentage}%) a un partage de profit inférieur au niveau « ${prev.name} » (${prev.sharePercentage}%).`,
+      });
+    }
+
+    // Advisory: If current higher rank requires fewer delivered orders than previous rank
+    if ((currCrit.minDeliveredOrders ?? 0) < (prevCrit.minDeliveredOrders ?? 0)) {
+      warnings.push({
+        levelId: curr.id,
+        levelName: curr.name,
+        message: `Le niveau supérieur « ${curr.name} » requiert moins de commandes livrées (${currCrit.minDeliveredOrders}) que le niveau inférieur « ${prev.name} » (${prevCrit.minDeliveredOrders}).`,
+      });
+    }
+  }
+
+  return {
+    isValid: duplicateSortOrders.length === 0,
+    duplicateSortOrders,
+    warnings,
+  };
 }

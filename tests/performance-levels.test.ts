@@ -1,6 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { prisma } from "@/lib/prisma";
-import { assignPerformanceLevel } from "@/modules/finance/performance-service";
+import {
+  assignPerformanceLevel,
+  createPerformanceLevel,
+  updatePerformanceLevel,
+  deletePerformanceLevel,
+  togglePerformanceLevelActive,
+  reorderPerformanceLevels,
+  PerformanceLevelError,
+} from "@/modules/finance/performance-service";
 import {
   performanceLevelSchema,
   resolvePerformanceShare,
@@ -10,6 +18,8 @@ import {
   evaluateLevelCriteria,
   calculatePerformanceScore,
   getLocalizedLevelName,
+  getLocalizedLevelDescription,
+  validateProgressionRules,
   type LevelLike,
 } from "@/modules/finance/performance-levels";
 
@@ -515,5 +525,299 @@ describe("Performance Criteria & Evaluation Engine", () => {
     expect(getLocalizedLevelName(levelObj, "fr")).toBe("Or");
     expect(getLocalizedLevelName(levelObj, "en")).toBe("Gold Tier");
     expect(getLocalizedLevelName(levelObj, "ar")).toBe("المستوى الذهبي");
+  });
+
+  it("localizes level descriptions by language preference", () => {
+    const levelObj = {
+      description: "Description en français",
+      criteria: {
+        descriptionEn: "English description",
+        descriptionAr: "الوصف بالعربية",
+      },
+    };
+
+    expect(getLocalizedLevelDescription(levelObj, "fr")).toBe("Description en français");
+    expect(getLocalizedLevelDescription(levelObj, "en")).toBe("English description");
+    expect(getLocalizedLevelDescription(levelObj, "ar")).toBe("الوصف بالعربية");
+  });
+});
+
+describe("Dynamic Multi-Level Ladder & Scale Tests (2, 5, 10, 20 levels)", () => {
+  it("supports creating unlimited dynamic levels without hardcoded limits", () => {
+    const levelCounts = [2, 5, 10, 20];
+
+    for (const count of levelCounts) {
+      const generatedLevels = Array.from({ length: count }, (_, i) => {
+        const rank = i + 1;
+        return performanceLevelSchema.parse({
+          name: `Tier ${rank}`,
+          sharePercentage: Math.min(100, rank * 4),
+          sortOrder: rank,
+          criteria: {
+            minDeliveredOrders: rank * 10,
+            minDeliveryRate: Math.min(95, 60 + rank * 2),
+            minConfirmationRate: Math.min(95, 65 + rank),
+            maxReturnRate: Math.max(5, 25 - rank),
+            minTurnover: rank * 1000,
+            color: rank % 2 === 0 ? "gold" : "blue",
+            icon: "Crown",
+            nameEn: `Tier ${rank} EN`,
+            nameAr: `الرتبة ${rank}`,
+          },
+        });
+      });
+
+      expect(generatedLevels).toHaveLength(count);
+      const ladder = orderLevelsAsLadder(generatedLevels);
+      // Highest sortOrder first
+      expect(ladder[0].sortOrder).toBe(count);
+      expect(ladder[count - 1].sortOrder).toBe(1);
+    }
+  });
+
+  it("evaluates promotion across a 10-level ladder dynamically", () => {
+    // Generate 10 progressive levels
+    const tenLevels = Array.from({ length: 10 }, (_, i) => {
+      const rank = i + 1;
+      return {
+        id: `lvl-${rank}`,
+        name: `Rank ${rank}`,
+        sortOrder: rank,
+        sharePercentage: 10 + rank * 5,
+        criteria: {
+          minDeliveredOrders: rank * 10,
+          minDeliveryRate: 70,
+          minConfirmationRate: 75,
+          maxReturnRate: 20,
+          minTurnover: rank * 1000,
+        },
+      };
+    }).sort((a, b) => b.sortOrder - a.sortOrder); // ladder desc
+
+    // Partner with 45 delivered orders and 4800 TND turnover
+    // Should qualify for rank 4 (requires 40 orders and 4000 turnover), but not rank 5 (requires 50 orders)
+    const partnerMetrics = {
+      totalOrders: 60,
+      deliveredOrders: 45,
+      deliveryRate: 85,
+      confirmationRate: 90,
+      returnRate: 10,
+      turnover: 4800,
+    };
+
+    const eligibleLevel = tenLevels.find(
+      (l) => evaluateLevelCriteria(partnerMetrics, l.criteria).isEligible,
+    );
+
+    expect(eligibleLevel).toBeDefined();
+    expect(eligibleLevel?.id).toBe("lvl-4");
+    expect(eligibleLevel?.sortOrder).toBe(4);
+  });
+
+  it("detects duplicate sort orders and inconsistent progression rules via validateProgressionRules", () => {
+    const invalidDuplicate = [
+      { id: "1", name: "Tier A", sortOrder: 1, sharePercentage: 10 },
+      { id: "2", name: "Tier B", sortOrder: 1, sharePercentage: 20 },
+    ];
+    const resDup = validateProgressionRules(invalidDuplicate);
+    expect(resDup.isValid).toBe(false);
+    expect(resDup.duplicateSortOrders).toContain(1);
+
+    const inconsistent = [
+      {
+        id: "1",
+        name: "Bronze",
+        sortOrder: 1,
+        sharePercentage: 25,
+        criteria: { minDeliveredOrders: 50 },
+      },
+      {
+        id: "2",
+        name: "Silver",
+        sortOrder: 2,
+        sharePercentage: 15, // Warning: lower share than Bronze
+        criteria: { minDeliveredOrders: 20 }, // Warning: fewer orders than Bronze
+      },
+    ];
+    const resInc = validateProgressionRules(inconsistent);
+    expect(resInc.isValid).toBe(true); // Distinct sort orders
+    expect(resInc.warnings.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe("Level Service Lifecycle Operations (Reorder, Unique Order, Delete Reassignment, Deactivation)", () => {
+  it("enforces unique sortOrder on createPerformanceLevel", async () => {
+    const txMock = {
+      performanceLevel: {
+        findUnique: vi.fn().mockResolvedValue(null),
+        findFirst: vi.fn().mockResolvedValue({ id: "lvl-existing", name: "Bronze" }),
+      },
+    };
+
+    vi.spyOn(prisma, "$transaction").mockImplementation(async (cb: any) => cb(txMock));
+
+    await expect(
+      createPerformanceLevel(
+        { name: "New Tier", sortOrder: 1, sharePercentage: 20, isActive: true },
+        "admin-1",
+      ),
+    ).rejects.toThrow(PerformanceLevelError);
+  });
+
+  it("enforces unique sortOrder on updatePerformanceLevel", async () => {
+    const txMock = {
+      performanceLevel: {
+        findUniqueOrThrow: vi.fn().mockResolvedValue({
+          id: "lvl-current",
+          name: "Current",
+          sortOrder: 2,
+          sharePercentage: "20",
+        }),
+        findFirst: vi.fn().mockResolvedValue({ id: "lvl-other", name: "Other Level" }),
+      },
+    };
+
+    vi.spyOn(prisma, "$transaction").mockImplementation(async (cb: any) => cb(txMock));
+
+    await expect(
+      updatePerformanceLevel(
+        "lvl-current",
+        { name: "Current", sortOrder: 1, sharePercentage: 20, isActive: true },
+        "admin-1",
+      ),
+    ).rejects.toThrow(/Le rang \/ priorité 1 est déjà attribué/);
+  });
+
+  it("blocks deletePerformanceLevel if partners are assigned and no reassignment is provided", async () => {
+    const txMock = {
+      performanceLevel: {
+        findUniqueOrThrow: vi.fn().mockResolvedValue({
+          id: "lvl-active",
+          name: "Active Tier",
+          sharePercentage: "20",
+          _count: { partners: 5 },
+        }),
+      },
+    };
+
+    vi.spyOn(prisma, "$transaction").mockImplementation(async (cb: any) => cb(txMock));
+
+    await expect(deletePerformanceLevel("lvl-active", "admin-1")).rejects.toThrow(
+      PerformanceLevelError,
+    );
+  });
+
+  it("successfully reassigns partners and deletes level when reassignToLevelId is provided", async () => {
+    const txMock = {
+      performanceLevel: {
+        findUniqueOrThrow: vi.fn().mockResolvedValue({
+          id: "lvl-old",
+          name: "Old Tier",
+          sharePercentage: "20",
+          _count: { partners: 3 },
+        }),
+        findUnique: vi.fn().mockResolvedValue({
+          id: "lvl-target",
+          name: "Target Tier",
+        }),
+        delete: vi.fn().mockResolvedValue({}),
+      },
+      partner: {
+        updateMany: vi.fn().mockResolvedValue({ count: 3 }),
+      },
+      auditLog: {
+        create: vi.fn().mockResolvedValue({}),
+      },
+    };
+
+    vi.spyOn(prisma, "$transaction").mockImplementation(async (cb: any) => cb(txMock));
+
+    await deletePerformanceLevel("lvl-old", "admin-1", { reassignToLevelId: "lvl-target" });
+
+    // Verifies batch reassignment happened
+    expect(txMock.partner.updateMany).toHaveBeenCalledWith({
+      where: { performanceLevelId: "lvl-old" },
+      data: { performanceLevelId: "lvl-target" },
+    });
+
+    // Verifies audit log recorded the reassignment and deletion
+    expect(txMock.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "PARTNER_LEVEL_REASSIGNED_ON_DELETE",
+          entityId: "lvl-old",
+        }),
+      }),
+    );
+    expect(txMock.performanceLevel.delete).toHaveBeenCalledWith({ where: { id: "lvl-old" } });
+  });
+
+  it("toggles level active status without invalidating or deleting partner assignments", async () => {
+    const txMock = {
+      performanceLevel: {
+        findUniqueOrThrow: vi.fn().mockResolvedValue({
+          id: "lvl-1",
+          name: "Gold",
+          isActive: true,
+        }),
+        update: vi.fn().mockResolvedValue({
+          id: "lvl-1",
+          name: "Gold",
+          isActive: false,
+        }),
+      },
+      auditLog: {
+        create: vi.fn().mockResolvedValue({}),
+      },
+    };
+
+    vi.spyOn(prisma, "$transaction").mockImplementation(async (cb: any) => cb(txMock));
+
+    const res = await togglePerformanceLevelActive("lvl-1", "admin-1");
+    expect(res.isActive).toBe(false);
+    expect(txMock.performanceLevel.update).toHaveBeenCalledWith({
+      where: { id: "lvl-1" },
+      data: { isActive: false },
+    });
+    expect(txMock.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "PERFORMANCE_LEVEL_STATUS_TOGGLED",
+          entityId: "lvl-1",
+        }),
+      }),
+    );
+  });
+
+  it("reorders levels safely using unique orders", async () => {
+    const txMock = {
+      performanceLevel: {
+        update: vi.fn().mockResolvedValue({}),
+      },
+      auditLog: {
+        create: vi.fn().mockResolvedValue({}),
+      },
+    };
+
+    vi.spyOn(prisma, "$transaction").mockImplementation(async (cb: any) => cb(txMock));
+
+    await reorderPerformanceLevels(
+      [
+        { id: "lvl-a", sortOrder: 1 },
+        { id: "lvl-b", sortOrder: 2 },
+        { id: "lvl-c", sortOrder: 3 },
+      ],
+      "admin-1",
+    );
+
+    // 3 temporary updates + 3 target updates = 6 update calls
+    expect(txMock.performanceLevel.update).toHaveBeenCalledTimes(6);
+    expect(txMock.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "PERFORMANCE_LEVELS_REORDERED",
+        }),
+      }),
+    );
   });
 });
