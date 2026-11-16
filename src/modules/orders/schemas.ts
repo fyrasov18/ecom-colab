@@ -27,11 +27,17 @@ export const createOrderSchema = z.object({
   productId: z.string().min(1, "Produit requis"),
   quantity: z.coerce.number().int().min(1, "Quantité minimale : 1").max(99),
   /**
-   * NOT part of this schema on purpose (spec §42/§47).
-   * The selling price is read from the Product inside the order transaction;
-   * accepting it from the client would let a partner inflate their own earning.
-   * A stray `sellingPrice` field is stripped rather than honoured.
+   * The selling price can be customized by the partner, provided the order's
+   * contribution satisfies the minimum contribution threshold.
+   * If omitted or empty, defaults to the product's official catalog sellingPrice.
    */
+  sellingPrice: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : val),
+    z.coerce
+      .number({ invalid_type_error: "Prix de vente invalide" })
+      .positive("Le prix de vente doit être supérieur à 0")
+      .optional(),
+  ),
   customerFullName: z.string().trim().min(3, "Nom complet requis").max(160),
   phone: phoneSchema,
   governorate: z.string().trim().min(2, "Gouvernorat requis").max(80),

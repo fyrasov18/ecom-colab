@@ -36,8 +36,7 @@ export async function submitOrder(
       {
         productId: str(formData.get("productId")),
         quantity: str(formData.get("quantity")),
-        // sellingPrice is intentionally NOT forwarded: the server derives it
-        // from the Product. Trusting this field would be a financial hole.
+        sellingPrice: formData.get("sellingPrice") ? str(formData.get("sellingPrice")) : undefined,
         customerFullName: str(formData.get("customerFullName")),
         phone: str(formData.get("phone")),
         governorate: str(formData.get("governorate")),

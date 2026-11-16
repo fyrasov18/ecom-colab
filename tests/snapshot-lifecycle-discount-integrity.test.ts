@@ -613,7 +613,24 @@ describe("FINAL VERIFICATION: InitialSnapshot vs FinalSnapshot Lifecycle & Disco
       return cb(env.tx);
     }) as never);
 
-    // A. Malicious client attempts to pass arbitrary discount and custom sellingPrice
+    // A. Client attempts to pass an invalid custom sellingPrice yielding contribution <= threshold
+    const belowMinInput = {
+      productId: "prod-1",
+      quantity: 1,
+      customerFullName: "Attacker",
+      phone: "98123456",
+      governorate: "Tunis",
+      city: "Tunis",
+      address: "Rue Test",
+      confirmed: "on",
+      sellingPrice: 10, // 10 - (20 + 1 + 8) = -19 <= 7.00 -> MUST BE REJECTED!
+    } as unknown as CreateOrderInput;
+
+    await expect(
+      createOrder(belowMinInput, { partnerId: "part-1", actorId: "part-1" }),
+    ).rejects.toThrow("Contribution insuffisante");
+
+    // B. Malicious client attempts to pass arbitrary discount
     const maliciousInput = {
       productId: "prod-1",
       quantity: 1,
@@ -624,12 +641,12 @@ describe("FINAL VERIFICATION: InitialSnapshot vs FinalSnapshot Lifecycle & Disco
       address: "Rue Test",
       confirmed: "on",
       discount: 50, // Untrusted discount injection attempt!
-      sellingPrice: 10, // Untrusted price override attempt!
+      sellingPrice: 44,
     } as unknown as CreateOrderInput;
 
     const order = await createOrder(maliciousInput, { partnerId: "part-1", actorId: "part-1" });
 
-    // Server completely ignored client discount and price:
+    // Server completely ignored client discount:
     // NetRevenue = 44 * 1 - 0 = 44 DT
     // Costs = 20 + 1 + 8 = 29 DT
     // Contribution = 15 DT
@@ -689,5 +706,44 @@ describe("FINAL VERIFICATION: InitialSnapshot vs FinalSnapshot Lifecycle & Disco
     ).rejects.toThrow(
       "La commande doit être confirmée par le partenaire avant d'entrer en opérations.",
     );
+  });
+
+  // ── 10. Partner can customize selling price if contribution exceeds minimum threshold ──
+  it("#10 Partner can customize selling price if contribution exceeds minimum threshold", async () => {
+    const env = createLifecycleMockEnv();
+    vi.mocked(prisma.$transaction).mockImplementation((async (cb: MockTxCallback) => {
+      return cb(env.tx);
+    }) as never);
+
+    const order = await createOrder(
+      {
+        productId: "prod-1",
+        quantity: 2,
+        customerFullName: "Client VIP",
+        phone: "98123456",
+        governorate: "Tunis",
+        city: "Tunis",
+        address: "Rue Habib Bourguiba",
+        confirmed: "on",
+        sellingPrice: 50, // Custom unit price: 50 > catalog (44)
+      },
+      { partnerId: "part-1", actorId: "part-1" },
+    );
+
+    // Revenue = 50 * 2 = 100 DT
+    // Costs = (20 * 2) + (1 * 2) + 8 = 50 DT
+    // Contribution = 50 DT (> 7 DT minimum threshold)
+    // Partner earning = 60% of 50 = 30 DT
+    expect(order.unitSellingPrice.toString()).toBe("50.000");
+    expect(order.quantity).toBe(2);
+    expect(order.contribution.toString()).toBe("50.00");
+    expect(order.partnerEarning.toString()).toBe("30.00");
+    const snapshot = order.finalSnapshot as unknown as FinancialSnapshot;
+    expect(snapshot.unitSellingPrice).toBe("50.000");
+    expect(snapshot.revenue).toBe("100.000");
+    expect(snapshot.contribution).toBe("50.00");
+    expect(snapshot.partnerEarning).toBe("30.00");
+    expect(snapshot.isEligible).toBe(true);
+    expect(snapshot.isCustomSellingPrice).toBe(true);
   });
 });

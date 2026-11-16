@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { d, roundMoney } from "@/lib/money";
 import { recordAudit } from "@/modules/audit/service";
 import { alertIfLowStock } from "@/modules/products/service";
 import { getSetting } from "@/modules/settings/service";
@@ -7,6 +8,7 @@ import { SETTING_KEYS } from "@/modules/settings/defaults";
 import { readPartnerLevel } from "@/modules/finance/performance-service";
 import {
   calculateOrderContribution,
+  calculateMinimumSellingPrice,
   resolveContributionRate,
   verifyConfirmationIntegrity,
   type FinancialSnapshot,
@@ -135,10 +137,24 @@ export async function createOrder(
           });
 
           const quantity = data.quantity;
-          // SECURITY: Selling price is NEVER taken from the client.
+          const hasExplicitPrice =
+            data.sellingPrice !== undefined &&
+            data.sellingPrice !== null &&
+            !isNaN(Number(data.sellingPrice)) &&
+            Number(data.sellingPrice) > 0;
+
+          const chosenSellingPrice = hasExplicitPrice
+            ? Number(data.sellingPrice)
+            : Number(product.sellingPrice);
+
+          const sellingPrice = roundMoney(d(chosenSellingPrice));
+          const isCustomSellingPrice =
+            hasExplicitPrice && !sellingPrice.equals(roundMoney(d(product.sellingPrice)));
+
           // Discount is hardcoded to 0 (no unapproved discount mechanism).
           const calculation = calculateOrderContribution({
-            sellingPrice: product.sellingPrice,
+            sellingPrice,
+            isCustomSellingPrice,
             quantity,
             purchaseCost: product.purchaseCost,
             packagingCost: product.packagingCost,
@@ -149,9 +165,17 @@ export async function createOrder(
           });
 
           if (!calculation.isEligible) {
+            const minAllowed = calculateMinimumSellingPrice({
+              quantity,
+              purchaseCost: product.purchaseCost,
+              packagingCost: product.packagingCost,
+              deliveryCost: product.deliveryCost,
+              minContributionThreshold: minContribution,
+            });
             throw new OrderError(
               `Contribution insuffisante : minimum requis supérieur à ${calculation.minContributionThreshold.toFixed(2)} DT. ` +
-                `Contribution actuelle : ${calculation.contribution.toFixed(2)} DT.`,
+                `Contribution actuelle : ${calculation.contribution.toFixed(2)} DT. ` +
+                `Le prix de vente doit être d'au moins ${minAllowed.toFixed(3)} DT.`,
             );
           }
 
@@ -419,8 +443,13 @@ export async function confirmOrder(
             global: globalCommission,
           });
 
+          const initialSnapshot = order.initialSnapshot as unknown as FinancialSnapshot | null;
+          const isCustom = initialSnapshot?.isCustomSellingPrice === true;
+          const sellingPrice =
+            isCustom && order.unitSellingPrice ? d(order.unitSellingPrice) : product.sellingPrice;
           const calculation = calculateOrderContribution({
-            sellingPrice: product.sellingPrice,
+            sellingPrice,
+            isCustomSellingPrice: isCustom,
             quantity: order.quantity,
             purchaseCost: product.purchaseCost,
             packagingCost: product.packagingCost,
@@ -431,9 +460,17 @@ export async function confirmOrder(
           });
 
           if (!calculation.isEligible) {
+            const minAllowed = calculateMinimumSellingPrice({
+              quantity: order.quantity,
+              purchaseCost: product.purchaseCost,
+              packagingCost: product.packagingCost,
+              deliveryCost: product.deliveryCost,
+              minContributionThreshold: minContribution,
+            });
             throw new OrderError(
               `Contribution insuffisante : minimum requis supérieur à ${calculation.minContributionThreshold.toFixed(2)} DT. ` +
-                `Contribution actuelle : ${calculation.contribution.toFixed(2)} DT.`,
+                `Contribution actuelle : ${calculation.contribution.toFixed(2)} DT. ` +
+                `Le prix de vente doit être d'au moins ${minAllowed.toFixed(3)} DT.`,
             );
           }
 

@@ -3,10 +3,11 @@
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { AlertCircle, Loader2, ShieldCheck } from "lucide-react";
+import { AlertCircle, Loader2, RotateCcw, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +17,7 @@ import { useI18n } from "@/lib/i18n";
 import type { CommissionSource } from "@prisma/client";
 import {
   calculateOrderContribution,
+  calculateMinimumSellingPrice,
   type ContributionCalculationResult,
 } from "@/modules/finance/contribution-engine";
 import { GOVERNORATES } from "@/modules/orders/schemas";
@@ -67,8 +69,42 @@ export function OrderForm({
   const [productId, setProductId] = useState(products[0]?.id ?? "");
   const [quantity, setQuantity] = useState(1);
   const [confirmed, setConfirmed] = useState(false);
+  const [sellingPriceInput, setSellingPriceInput] = useState<string>(
+    () => (products[0]?.sellingPrice != null ? String(products[0].sellingPrice) : "")
+  );
 
   const product = products.find((p) => p.id === productId);
+
+  useEffect(() => {
+    if (product) {
+      setSellingPriceInput(String(product.sellingPrice));
+    }
+  }, [productId, product]);
+
+  const parsedPrice = parseFloat(sellingPriceInput);
+  const hasValidPrice = !isNaN(parsedPrice) && parsedPrice > 0;
+  const effectiveSellingPrice = hasValidPrice ? parsedPrice : (product?.sellingPrice ?? 0);
+  const isCustomPrice = Boolean(
+    product && hasValidPrice && Math.abs(parsedPrice - product.sellingPrice) > 0.0001
+  );
+
+  const minAllowedSellingPrice = useMemo(() => {
+    if (!product || quantity < 1) return 0;
+    try {
+      const min = calculateMinimumSellingPrice({
+        quantity,
+        purchaseCost: product.purchaseCost,
+        packagingCost: product.packagingCost,
+        deliveryCost: product.deliveryCost,
+        minContributionThreshold: minContribution,
+      });
+      return min.toNumber();
+    } catch {
+      return 0;
+    }
+  }, [product, quantity, minContribution]);
+
+  const isBelowMin = hasValidPrice && minAllowedSellingPrice > 0 && parsedPrice < minAllowedSellingPrice;
 
   useEffect(() => {
     if (state.ok) {
@@ -83,7 +119,7 @@ export function OrderForm({
   const calculation: ContributionCalculationResult | null = useMemo(() => {
     if (!product || quantity < 1) return null;
     return calculateOrderContribution({
-      sellingPrice: product.sellingPrice,
+      sellingPrice: effectiveSellingPrice,
       quantity,
       purchaseCost: product.purchaseCost,
       packagingCost: product.packagingCost,
@@ -98,7 +134,7 @@ export function OrderForm({
         performanceLevelName: product.performanceLevelName ?? null,
       },
     });
-  }, [product, quantity, minContribution]);
+  }, [product, quantity, effectiveSellingPrice, minContribution]);
 
   return (
     <form action={formAction} className="grid gap-5 lg:grid-cols-5">
@@ -146,13 +182,49 @@ export function OrderForm({
               )}
             </div>
             <div className="space-y-2">
-              <Label>{t("orders.catalogPrice")}</Label>
-              <div className="flex h-9 w-full items-center rounded-md border border-input bg-muted/40 px-3 py-1 text-sm font-semibold shadow-sm">
-                {formatMoney(product?.sellingPrice ?? 0)}
+              <div className="flex items-center justify-between">
+                <Label htmlFor="sellingPrice">{t("orders.sellingPrice")}</Label>
+                {isCustomPrice && (
+                  <button
+                    type="button"
+                    onClick={() => setSellingPriceInput(String(product?.sellingPrice ?? ""))}
+                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                    title={t("orders.resetCatalogPrice")}
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                    {t("orders.resetCatalogPrice")}
+                  </button>
+                )}
               </div>
-              <p className="text-xs text-muted-foreground">
-                {t("orders.fixedCatalogPriceNotice")}
-              </p>
+              <Input
+                id="sellingPrice"
+                name="sellingPrice"
+                type="number"
+                step="0.001"
+                min={minAllowedSellingPrice > 0 ? minAllowedSellingPrice : 0.001}
+                value={sellingPriceInput}
+                onChange={(e) => setSellingPriceInput(e.target.value)}
+                required
+                className={cn(isBelowMin && "border-destructive focus-visible:ring-destructive")}
+              />
+              <div className="flex flex-wrap items-center justify-between gap-1 text-xs text-muted-foreground">
+                <span>
+                  {t("orders.minSellingPriceLabel", { price: formatMoney(minAllowedSellingPrice) })}
+                </span>
+                {product && (
+                  <span>
+                    {t("orders.catalogReferencePrice", { price: formatMoney(product.sellingPrice) })}
+                  </span>
+                )}
+              </div>
+              {isBelowMin && (
+                <p className="text-xs font-medium text-destructive">
+                  {t("orders.priceBelowMinWarning", {
+                    price: formatMoney(parsedPrice),
+                    minPrice: formatMoney(minAllowedSellingPrice),
+                  })}
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -217,9 +289,19 @@ export function OrderForm({
             <Row label={t("orders.productLabel").replace(" *", "")} value={product?.name ?? "—"} />
             <Row label={t("orders.quantityLabel").replace(" *", "")} value={String(quantity)} />
             <Row
-              label={t("orders.catalogPrice")}
-              value={`${formatMoney(product?.sellingPrice ?? 0)} × ${quantity}`}
+              label={t("orders.sellingPrice").replace(" *", "")}
+              value={`${formatMoney(effectiveSellingPrice)} × ${quantity}`}
             />
+            {isCustomPrice && (
+              <div className="flex items-center justify-between text-xs">
+                <Badge variant="outline" className="border-primary/30 text-[10px] uppercase text-primary">
+                  {t("orders.customPriceBadge")}
+                </Badge>
+                <span className="text-muted-foreground line-through">
+                  {formatMoney(product?.sellingPrice ?? 0)}
+                </span>
+              </div>
+            )}
             <div className="my-2 border-t" />
             {calculation && (
               <>
@@ -274,6 +356,11 @@ export function OrderForm({
                         threshold: formatMoney(minContribution),
                       })}
                     </p>
+                    {minAllowedSellingPrice > 0 && (
+                      <p className="mt-1 font-semibold">
+                        {t("orders.minSellingPriceLabel", { price: formatMoney(minAllowedSellingPrice) })}
+                      </p>
+                    )}
                   </div>
                 )}
               </>
@@ -300,7 +387,14 @@ export function OrderForm({
             <Button
               type="submit"
               className="w-full"
-              disabled={pending || !confirmed || !calculation || !calculation.isEligible}
+              disabled={
+                pending ||
+                !confirmed ||
+                !calculation ||
+                !calculation.isEligible ||
+                isBelowMin ||
+                !hasValidPrice
+              }
             >
               {pending && <Loader2 className="h-4 w-4 animate-spin" />}
               {t("orders.confirmSubmitButton")}

@@ -126,6 +126,7 @@ export type FinancialSnapshot = {
   performanceLevelName: string | null;
   partnerEarning: string;
   platformShare: string;
+  isCustomSellingPrice?: boolean;
 };
 
 export type ContributionCalculationResult = {
@@ -174,6 +175,7 @@ export function calculateOrderContribution(params: {
   discount?: Decimal | number | string;
   minContributionThreshold: Decimal | number | string;
   rateRule: ContributionRateRule;
+  isCustomSellingPrice?: boolean;
 }): ContributionCalculationResult {
   const {
     sellingPrice,
@@ -184,6 +186,7 @@ export function calculateOrderContribution(params: {
     discount = 0,
     minContributionThreshold,
     rateRule,
+    isCustomSellingPrice = false,
   } = params;
 
   if (quantity < 1) {
@@ -228,6 +231,7 @@ export function calculateOrderContribution(params: {
     version: 1,
     calculatedAt: new Date().toISOString(),
     unitSellingPrice: unitSellingPrice.toFixed(3),
+    isCustomSellingPrice,
     quantity: q,
     unitPurchaseCost: unitPurchaseCost.toFixed(3),
     unitPackagingCost: unitPackagingCost.toFixed(3),
@@ -276,6 +280,34 @@ export function calculateOrderContribution(params: {
     platformShare,
     snapshot,
   };
+}
+
+/**
+ * Calculate the minimum unit selling price required for an order to be eligible
+ * (i.e. yield Contribution > minContributionThreshold).
+ */
+export function calculateMinimumSellingPrice(params: {
+  quantity: number;
+  purchaseCost: Decimal | number | string;
+  packagingCost: Decimal | number | string;
+  deliveryCost: Decimal | number | string;
+  minContributionThreshold: Decimal | number | string;
+  discount?: Decimal | number | string;
+}): Decimal {
+  const q = Math.max(1, params.quantity);
+  const purchaseCostTotal = d(params.purchaseCost).times(q);
+  const packagingCostTotal = d(params.packagingCost).times(q);
+  const deliveryCostTotal = d(params.deliveryCost);
+  const discountTotal = d(params.discount ?? 0);
+  const minThreshold = d(params.minContributionThreshold);
+
+  const totalCosts = purchaseCostTotal.plus(packagingCostTotal).plus(deliveryCostTotal);
+  // Contribution = NetRevenue - totalCosts > minThreshold
+  // So NetRevenue must be at least totalCosts + minThreshold + 0.01 (strict inequality)
+  const minRevenue = totalCosts.plus(discountTotal).plus(minThreshold).plus(0.01);
+  const minUnitSellingPrice = minRevenue.dividedBy(q);
+
+  return roundMoney(minUnitSellingPrice.toDecimalPlaces(3, Decimal.ROUND_CEIL));
 }
 
 /**
