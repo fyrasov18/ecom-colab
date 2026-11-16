@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
   Activity,
+  Award,
   BarChart3,
   Bell,
   Building2,
@@ -70,6 +71,7 @@ function isActive(pathname: string, href: string): boolean {
   if (href === "/parametres") return pathname === "/parametres";
   if (href === "/partenaires") {
     if (pathname.startsWith("/partenaires/parrainage")) return false;
+    if (pathname.startsWith("/partenaires/niveaux")) return false;
   }
   if (href === "/produits") {
     if (pathname.startsWith("/produits/categories")) return false;
@@ -103,6 +105,7 @@ function getAdminNav(t: (k: string) => string): NavGroup[] {
       items: [
         { href: "/partenaires", label: t("nav.partnerList"), icon: Users },
         { href: "/partenaires/parrainage", label: t("nav.referrals"), icon: UserPlus },
+        { href: "/partenaires/niveaux", label: t("nav.performanceLevels"), icon: Award },
         { href: "/annonces", label: t("nav.announcements"), icon: Megaphone },
         { href: "/performances", label: t("nav.performances"), icon: BarChart3 },
       ],

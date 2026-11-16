@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useTransition, type FormEvent } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
-import { Info, Plus, Trash2 } from "lucide-react";
+import { ArrowUpRight, Info, Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -147,12 +148,20 @@ export function PerformanceLevelsSection({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Niveaux de performance</CardTitle>
-        <CardDescription>
-          Les niveaux de performance déterminent le partage du profit. Chaque
-          niveau porte un pourcentage appliqué au profit pool de la commande.
-        </CardDescription>
+      <CardHeader className="flex flex-row items-start justify-between gap-4">
+        <div>
+          <CardTitle className="text-base">Niveaux de performance</CardTitle>
+          <CardDescription>
+            Les niveaux de performance déterminent le partage du profit. Chaque
+            niveau porte un pourcentage appliqué au profit pool de la commande.
+          </CardDescription>
+        </div>
+        <Link href="/partenaires/niveaux">
+          <Button variant="outline" size="sm" className="gap-1.5 text-xs shrink-0">
+            <span>Espace dédié</span>
+            <ArrowUpRight className="h-3.5 w-3.5" />
+          </Button>
+        </Link>
       </CardHeader>
 
       <CardContent className="space-y-4">

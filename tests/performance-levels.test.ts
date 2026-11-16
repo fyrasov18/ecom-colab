@@ -5,6 +5,11 @@ import {
   performanceLevelSchema,
   resolvePerformanceShare,
   orderLevelsAsLadder,
+  performanceLevelCriteriaSchema,
+  parsePerformanceCriteria,
+  evaluateLevelCriteria,
+  calculatePerformanceScore,
+  getLocalizedLevelName,
   type LevelLike,
 } from "@/modules/finance/performance-levels";
 
@@ -347,5 +352,168 @@ describe("assignPerformanceLevel — Automatic Level Upgrade Alerts & Idempotenc
     // Downgrade: no upgrade notification or popup
     expect(txMock.notification.create).not.toHaveBeenCalled();
     expect(txMock.partnerPopupEvent.upsert).not.toHaveBeenCalled();
+  });
+
+  it("includes manual assignment reason in audit log", async () => {
+    const txMock = {
+      partner: {
+        findUniqueOrThrow: vi.fn().mockResolvedValue({
+          id: "partner-1",
+          performanceLevelId: null,
+          userId: "user-1",
+        }),
+        update: vi.fn().mockResolvedValue({
+          id: "partner-1",
+          performanceLevelId: "lvl-gold",
+          performanceLevel: gold,
+        }),
+      },
+      performanceLevel: {
+        findUniqueOrThrow: vi.fn().mockResolvedValue(gold),
+        findUnique: vi.fn().mockResolvedValue(null),
+      },
+      auditLog: {
+        create: vi.fn().mockResolvedValue({}),
+      },
+      partnerPopupEvent: { upsert: vi.fn() },
+      notification: { create: vi.fn() },
+    };
+
+    vi.spyOn(prisma, "$transaction").mockImplementation(async (cb: any) => cb(txMock));
+
+    await assignPerformanceLevel("partner-1", "lvl-gold", "admin-1", {
+      reason: "Promotion manuelle exceptionnelle",
+    });
+
+    expect(txMock.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "PARTNER_LEVEL_CHANGED",
+          entityId: "partner-1",
+          after: expect.objectContaining({
+            performanceLevelId: "lvl-gold",
+            performanceLevelName: "Gold",
+            reason: "Promotion manuelle exceptionnelle",
+          }),
+        }),
+      }),
+    );
+  });
+});
+
+describe("Performance Criteria & Evaluation Engine", () => {
+  it("parses criteria correctly with fallbacks", () => {
+    const empty = parsePerformanceCriteria(null);
+    expect(empty.minDeliveredOrders).toBe(0);
+    expect(empty.maxReturnRate).toBe(100);
+    expect(empty.color).toBe("blue");
+    expect(empty.icon).toBe("Award");
+
+    const custom = parsePerformanceCriteria({
+      minDeliveredOrders: 50,
+      minDeliveryRate: 80,
+      minConfirmationRate: 85,
+      maxReturnRate: 15,
+      minTurnover: 5000,
+      color: "gold",
+      icon: "Trophy",
+      nameEn: "Gold Tier",
+      nameAr: "المستوى الذهبي",
+      benefits: ["VIP Support", "Fast Payouts"],
+    });
+
+    expect(custom.minDeliveredOrders).toBe(50);
+    expect(custom.minDeliveryRate).toBe(80);
+    expect(custom.color).toBe("gold");
+    expect(custom.benefits).toHaveLength(2);
+  });
+
+  it("correctly evaluates partner meeting all 5 thresholds", () => {
+    const criteria = {
+      minDeliveredOrders: 30,
+      minDeliveryRate: 75,
+      minConfirmationRate: 80,
+      maxReturnRate: 20,
+      minTurnover: 3000,
+    };
+
+    const metrics = {
+      totalOrders: 50,
+      deliveredOrders: 40,
+      deliveryRate: 80,
+      confirmationRate: 90,
+      returnRate: 10,
+      turnover: 4500,
+    };
+
+    const result = evaluateLevelCriteria(metrics, criteria);
+    expect(result.isEligible).toBe(true);
+    expect(result.metCount).toBe(5);
+    expect(result.checks.deliveredOrders.met).toBe(true);
+    expect(result.checks.deliveryRate.met).toBe(true);
+    expect(result.checks.confirmationRate.met).toBe(true);
+    expect(result.checks.returnRate.met).toBe(true);
+    expect(result.checks.turnover.met).toBe(true);
+  });
+
+  it("rejects eligibility if return rate exceeds maximum threshold", () => {
+    const criteria = {
+      minDeliveredOrders: 10,
+      minDeliveryRate: 70,
+      minConfirmationRate: 70,
+      maxReturnRate: 15,
+      minTurnover: 1000,
+    };
+
+    const metrics = {
+      totalOrders: 30,
+      deliveredOrders: 20,
+      deliveryRate: 75,
+      confirmationRate: 85,
+      returnRate: 25, // Exceeds 15%
+      turnover: 2000,
+    };
+
+    const result = evaluateLevelCriteria(metrics, criteria);
+    expect(result.isEligible).toBe(false);
+    expect(result.metCount).toBe(4);
+    expect(result.checks.returnRate.met).toBe(false);
+  });
+
+  it("calculates weighted performance score within 0-100", () => {
+    const highPerf = calculatePerformanceScore({
+      totalOrders: 60,
+      deliveredOrders: 55,
+      deliveryRate: 95,
+      confirmationRate: 90,
+      returnRate: 5,
+      turnover: 6000,
+    });
+    expect(highPerf).toBeGreaterThanOrEqual(90);
+    expect(highPerf).toBeLessThanOrEqual(100);
+
+    const lowPerf = calculatePerformanceScore({
+      totalOrders: 10,
+      deliveredOrders: 2,
+      deliveryRate: 20,
+      confirmationRate: 30,
+      returnRate: 60,
+      turnover: 200,
+    });
+    expect(lowPerf).toBeLessThan(35);
+  });
+
+  it("localizes level names by language preference", () => {
+    const levelObj = {
+      name: "Or",
+      criteria: {
+        nameEn: "Gold Tier",
+        nameAr: "المستوى الذهبي",
+      },
+    };
+
+    expect(getLocalizedLevelName(levelObj, "fr")).toBe("Or");
+    expect(getLocalizedLevelName(levelObj, "en")).toBe("Gold Tier");
+    expect(getLocalizedLevelName(levelObj, "ar")).toBe("المستوى الذهبي");
   });
 });
